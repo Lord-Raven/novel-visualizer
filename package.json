@@ -1,0 +1,45 @@
+{
+  "name": "@lord-raven/novel-visualizer",
+  "private": false,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts", 
+    "dev": "tsup src/index.ts --watch --format cjs,esm --dts"
+  },
+
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "framer-motion": "^11.0.0",
+    "@mui/material": "^6.1.7",
+    "@mui/icons-material": "^6.1.7"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "tsup": "^8.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "framer-motion": "^11.0.0",
+    "@mui/material": "^6.1.7",
+    "@mui/system": "^6.1.7",
+    "@mui/icons-material": "^6.1.7"
+  }
+}
