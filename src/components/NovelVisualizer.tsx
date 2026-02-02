@@ -95,27 +95,26 @@ const calculateActorXPosition = (actorIndex: number, totalActors: number, anySpe
  * @template TEntry - The script entry type
  */
 export interface NovelVisualizerProps<
+    TActor extends NovelActor,
     TScript extends NovelScript,
     TEntry extends NovelScriptEntry
 > {
     script: TScript;
-    actors: Record<string, NovelActor>;
+    actors: Record<string, TActor>;
     backgroundImageUrl: string;
     isVerticalLayout?: boolean;
     loading?: boolean;
     currentIndex?: number;
-    initialIndex?: number;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
-    onIndexChange?: (index: number) => void;
     onSubmitInput?: (inputText: string, context: { index: number; entry?: TEntry; wrapUp?: boolean }) => void;
     onUpdateMessage?: (index: number, message: string) => void;
     onReroll?: (index: number) => void;
     onWrapUp?: (index: number) => void;
     onClose?: () => void;
     inputPlaceholder?: string | ((context: { index: number; entry?: TEntry }) => string);
-    renderNameplate?: (params: { actor: NovelActor | null}) => React.ReactNode;
-    renderActorHoverInfo?: (actor: NovelActor | null) => React.ReactNode;
+    renderNameplate?: (params: { actor: TActor | null}) => React.ReactNode;
+    renderActorHoverInfo?: (actor: TActor | null) => React.ReactNode;
     /**
      * Determines which actors should be visible at the given script index.
      * @param script - The full script object
@@ -123,8 +122,8 @@ export interface NovelVisualizerProps<
      * @param actors - All available actors
      * @returns Array of actors that should be visible
      */
-    getPresentActors: (script: TScript, index: number) => NovelActor[];
-    resolveSpeaker: (script: TScript, index: number) => NovelActor | null;
+    getPresentActors: (script: TScript, index: number) => TActor[];
+    resolveSpeaker: (script: TScript, index: number) => TActor | null;
     /**
      * Resolves the image URL for an actor based on their emotion and script index.
      * This is where you implement your own logic to determine which image to display.
@@ -134,7 +133,7 @@ export interface NovelVisualizerProps<
      * @param index - The current script entry index
      * @returns The URL of the image to display
      */
-    getActorImageUrl: (actor: NovelActor, script: TScript, index: number) => string;
+    getActorImageUrl: (actor: TActor, script: TScript, index: number) => string;
     backgroundOptions?: {
         brightness?: number;
         contrast?: number;
@@ -147,20 +146,18 @@ export interface NovelVisualizerProps<
 }
 
 export function NovelVisualizer<
+    TActor extends NovelActor,
     TScript extends NovelScript,
     TEntry extends NovelScriptEntry
->(props: NovelVisualizerProps<TScript, TEntry>): JSX.Element {
+>(props: NovelVisualizerProps<TActor, TScript, TEntry>): JSX.Element {
     const {
     script,
     actors,
     backgroundImageUrl,
     isVerticalLayout = false,
     loading = false,
-    currentIndex,
-    initialIndex = 0,
     typingSpeed = 20,
     allowTypingSkip = true,
-    onIndexChange,
     onSubmitInput,
     onUpdateMessage,
     onReroll,
@@ -176,11 +173,10 @@ export function NovelVisualizer<
     hideInput = false,
     hideActionButtons = false
 } = props;
-    const [internalIndex, setInternalIndex] = useState<number>(initialIndex);
     const [inputText, setInputText] = useState<string>('');
     const [finishTyping, setFinishTyping] = useState<boolean>(false);
     const [messageKey, setMessageKey] = useState<number>(0);
-    const [hoveredActor, setHoveredActor] = useState<NovelActor | null>(null);
+    const [hoveredActor, setHoveredActor] = useState<TActor | null>(null);
     const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
     const [messageBoxTopVh, setMessageBoxTopVh] = useState<number>(isVerticalLayout ? 50 : 60);
     const messageBoxRef = useRef<HTMLDivElement>(null);
@@ -191,25 +187,11 @@ export function NovelVisualizer<
 
     const [localScript, setLocalScript] = useState<TScript>(script);
 
-    const prevIndexRef = useRef<number>(currentIndex ?? initialIndex);
+    const [index, setIndex] = useState<number>(0);
+    const prevIndexRef = useRef<number>(index);
 
     const activeScript = onUpdateMessage ? script : localScript;
     const entries = (activeScript.script || []) as TEntry[];
-
-    const index = useMemo(() => {
-        const raw = currentIndex ?? internalIndex;
-        if (entries.length === 0) return 0;
-        return Math.min(Math.max(raw, 0), entries.length - 1);
-    }, [currentIndex, internalIndex, entries.length]);
-
-    const setIndex = (nextIndex: number) => {
-        const clamped = entries.length === 0 ? 0 : Math.min(Math.max(nextIndex, 0), entries.length - 1);
-        if (onIndexChange) {
-            onIndexChange(clamped);
-        } else {
-            setInternalIndex(clamped);
-        }
-    };
 
     useEffect(() => {
         setLocalScript(script);

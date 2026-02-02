@@ -31,17 +31,15 @@ interface NovelScript<TEntry extends NovelScriptEntry = NovelScriptEntry> {
  * @template TScript - The script type
  * @template TEntry - The script entry type
  */
-interface NovelVisualizerProps<TScript extends NovelScript, TEntry extends NovelScriptEntry> {
+interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelScript, TEntry extends NovelScriptEntry> {
     script: TScript;
-    actors: Record<string, NovelActor>;
+    actors: Record<string, TActor>;
     backgroundImageUrl: string;
     isVerticalLayout?: boolean;
     loading?: boolean;
     currentIndex?: number;
-    initialIndex?: number;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
-    onIndexChange?: (index: number) => void;
     onSubmitInput?: (inputText: string, context: {
         index: number;
         entry?: TEntry;
@@ -56,9 +54,9 @@ interface NovelVisualizerProps<TScript extends NovelScript, TEntry extends Novel
         entry?: TEntry;
     }) => string);
     renderNameplate?: (params: {
-        actor: NovelActor | null;
+        actor: TActor | null;
     }) => React__default.ReactNode;
-    renderActorHoverInfo?: (actor: NovelActor | null) => React__default.ReactNode;
+    renderActorHoverInfo?: (actor: TActor | null) => React__default.ReactNode;
     /**
      * Determines which actors should be visible at the given script index.
      * @param script - The full script object
@@ -66,8 +64,8 @@ interface NovelVisualizerProps<TScript extends NovelScript, TEntry extends Novel
      * @param actors - All available actors
      * @returns Array of actors that should be visible
      */
-    getPresentActors: (script: TScript, index: number) => NovelActor[];
-    resolveSpeaker: (script: TScript, index: number) => NovelActor | null;
+    getPresentActors: (script: TScript, index: number) => TActor[];
+    resolveSpeaker: (script: TScript, index: number) => TActor | null;
     /**
      * Resolves the image URL for an actor based on their emotion and script index.
      * This is where you implement your own logic to determine which image to display.
@@ -77,7 +75,7 @@ interface NovelVisualizerProps<TScript extends NovelScript, TEntry extends Novel
      * @param index - The current script entry index
      * @returns The URL of the image to display
      */
-    getActorImageUrl: (actor: NovelActor, script: TScript, index: number) => string;
+    getActorImageUrl: (actor: TActor, script: TScript, index: number) => string;
     backgroundOptions?: {
         brightness?: number;
         contrast?: number;
@@ -88,7 +86,7 @@ interface NovelVisualizerProps<TScript extends NovelScript, TEntry extends Novel
     hideInput?: boolean;
     hideActionButtons?: boolean;
 }
-declare function NovelVisualizer<TScript extends NovelScript, TEntry extends NovelScriptEntry>(props: NovelVisualizerProps<TScript, TEntry>): JSX.Element;
+declare function NovelVisualizer<TActor extends NovelActor, TScript extends NovelScript, TEntry extends NovelScriptEntry>(props: NovelVisualizerProps<TActor, TScript, TEntry>): JSX.Element;
 
 interface ActorImageProps {
     id: string;

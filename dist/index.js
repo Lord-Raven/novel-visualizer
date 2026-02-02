@@ -502,11 +502,8 @@ function NovelVisualizer(props) {
     backgroundImageUrl,
     isVerticalLayout = false,
     loading = false,
-    currentIndex,
-    initialIndex = 0,
     typingSpeed = 20,
     allowTypingSkip = true,
-    onIndexChange,
     onSubmitInput,
     onUpdateMessage,
     onReroll,
@@ -522,7 +519,6 @@ function NovelVisualizer(props) {
     hideInput = false,
     hideActionButtons = false
   } = props;
-  const [internalIndex, setInternalIndex] = useState2(initialIndex);
   const [inputText, setInputText] = useState2("");
   const [finishTyping, setFinishTyping] = useState2(false);
   const [messageKey, setMessageKey] = useState2(0);
@@ -534,22 +530,10 @@ function NovelVisualizer(props) {
   const [editedMessage, setEditedMessage] = useState2("");
   const [originalMessage, setOriginalMessage] = useState2("");
   const [localScript, setLocalScript] = useState2(script);
-  const prevIndexRef = useRef2(currentIndex ?? initialIndex);
+  const [index, setIndex] = useState2(0);
+  const prevIndexRef = useRef2(index);
   const activeScript = onUpdateMessage ? script : localScript;
   const entries = activeScript.script || [];
-  const index = useMemo2(() => {
-    const raw = currentIndex ?? internalIndex;
-    if (entries.length === 0) return 0;
-    return Math.min(Math.max(raw, 0), entries.length - 1);
-  }, [currentIndex, internalIndex, entries.length]);
-  const setIndex = (nextIndex) => {
-    const clamped = entries.length === 0 ? 0 : Math.min(Math.max(nextIndex, 0), entries.length - 1);
-    if (onIndexChange) {
-      onIndexChange(clamped);
-    } else {
-      setInternalIndex(clamped);
-    }
-  };
   useEffect2(() => {
     setLocalScript(script);
   }, [script]);

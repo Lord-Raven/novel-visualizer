@@ -541,11 +541,8 @@ function NovelVisualizer(props) {
     backgroundImageUrl,
     isVerticalLayout = false,
     loading = false,
-    currentIndex,
-    initialIndex = 0,
     typingSpeed = 20,
     allowTypingSkip = true,
-    onIndexChange,
     onSubmitInput,
     onUpdateMessage,
     onReroll,
@@ -561,7 +558,6 @@ function NovelVisualizer(props) {
     hideInput = false,
     hideActionButtons = false
   } = props;
-  const [internalIndex, setInternalIndex] = (0, import_react3.useState)(initialIndex);
   const [inputText, setInputText] = (0, import_react3.useState)("");
   const [finishTyping, setFinishTyping] = (0, import_react3.useState)(false);
   const [messageKey, setMessageKey] = (0, import_react3.useState)(0);
@@ -573,22 +569,10 @@ function NovelVisualizer(props) {
   const [editedMessage, setEditedMessage] = (0, import_react3.useState)("");
   const [originalMessage, setOriginalMessage] = (0, import_react3.useState)("");
   const [localScript, setLocalScript] = (0, import_react3.useState)(script);
-  const prevIndexRef = (0, import_react3.useRef)(currentIndex ?? initialIndex);
+  const [index, setIndex] = (0, import_react3.useState)(0);
+  const prevIndexRef = (0, import_react3.useRef)(index);
   const activeScript = onUpdateMessage ? script : localScript;
   const entries = activeScript.script || [];
-  const index = (0, import_react3.useMemo)(() => {
-    const raw = currentIndex ?? internalIndex;
-    if (entries.length === 0) return 0;
-    return Math.min(Math.max(raw, 0), entries.length - 1);
-  }, [currentIndex, internalIndex, entries.length]);
-  const setIndex = (nextIndex) => {
-    const clamped = entries.length === 0 ? 0 : Math.min(Math.max(nextIndex, 0), entries.length - 1);
-    if (onIndexChange) {
-      onIndexChange(clamped);
-    } else {
-      setInternalIndex(clamped);
-    }
-  };
   (0, import_react3.useEffect)(() => {
     setLocalScript(script);
   }, [script]);
