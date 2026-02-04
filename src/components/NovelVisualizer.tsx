@@ -191,7 +191,7 @@ export function NovelVisualizer<
     const prevIndexRef = useRef<number>(index);
 
     const activeScript = onUpdateMessage ? script : localScript;
-    const entries = (activeScript.script || []) as TEntry[];
+    const entries = (activeScript?.script || []) as TEntry[];
 
     useEffect(() => {
         setLocalScript(script);
