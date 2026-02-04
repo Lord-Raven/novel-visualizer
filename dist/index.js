@@ -533,7 +533,7 @@ function NovelVisualizer(props) {
   const [index, setIndex] = useState2(0);
   const prevIndexRef = useRef2(index);
   const activeScript = onUpdateMessage ? script : localScript;
-  const entries = activeScript.script || [];
+  const entries = activeScript?.script || [];
   useEffect2(() => {
     setLocalScript(script);
   }, [script]);

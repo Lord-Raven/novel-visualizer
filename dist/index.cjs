@@ -572,7 +572,7 @@ function NovelVisualizer(props) {
   const [index, setIndex] = (0, import_react3.useState)(0);
   const prevIndexRef = (0, import_react3.useRef)(index);
   const activeScript = onUpdateMessage ? script : localScript;
-  const entries = activeScript.script || [];
+  const entries = activeScript?.script || [];
   (0, import_react3.useEffect)(() => {
     setLocalScript(script);
   }, [script]);
