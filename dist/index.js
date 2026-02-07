@@ -1,7 +1,8 @@
 // src/components/NovelVisualizer.tsx
-import { useEffect as useEffect2, useMemo as useMemo2, useRef as useRef2, useState as useState2 } from "react";
+import React2, { useEffect as useEffect2, useMemo as useMemo2, useRef as useRef2, useState as useState2 } from "react";
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from "@mui/material";
-import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, CardGiftcard } from "@mui/icons-material";
+import { alpha, darken, lighten, useTheme } from "@mui/material/styles";
+import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino } from "@mui/icons-material";
 
 // src/components/ActorImage.tsx
 import { motion, easeOut, easeIn, AnimatePresence } from "framer-motion";
@@ -455,7 +456,6 @@ function formatInlineStyles(text) {
 
 // src/components/NovelVisualizer.tsx
 import { Fragment as Fragment3, jsx as jsx5, jsxs as jsxs3 } from "react/jsx-runtime";
-var baseTextShadow = "2px 2px 2px rgba(0, 0, 0, 0.8)";
 var adjustColor = (color, amount = 0.6) => {
   const hex = color.replace("#", "");
   const r = parseInt(hex.substring(0, 2), 16);
@@ -466,21 +466,21 @@ var adjustColor = (color, amount = 0.6) => {
   const newB = Math.min(255, Math.round(b + (255 - b) * amount));
   return `#${newR.toString(16).padStart(2, "0")}${newG.toString(16).padStart(2, "0")}${newB.toString(16).padStart(2, "0")}`;
 };
-var formatMessage = (text, speakerActor) => {
+var formatMessage = (text, speakerActor, tokens) => {
   if (!text) return /* @__PURE__ */ jsx5(Fragment3, {});
   text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
   const dialogueParts = text.split(/(\"[^\"]*\")/g);
   return /* @__PURE__ */ jsx5(Fragment3, { children: dialogueParts.map((part, index) => {
     if (part.startsWith('"') && part.endsWith('"')) {
-      const brightenedColor = speakerActor?.themeColor ? adjustColor(speakerActor.themeColor, 0.6) : "#87CEEB";
+      const brightenedColor = speakerActor?.themeColor ? adjustColor(speakerActor.themeColor, 0.6) : tokens.defaultDialogueColor;
       const dialogueStyle = {
         color: brightenedColor,
-        fontFamily: speakerActor?.themeFontFamily || void 0,
-        textShadow: speakerActor?.themeColor ? `2px 2px 2px ${adjustColor(speakerActor.themeColor, -0.25)}` : "2px 2px 2px rgba(135, 206, 235, 0.5)"
+        fontFamily: speakerActor?.themeFontFamily || tokens.fallbackFontFamily,
+        textShadow: speakerActor?.themeColor ? `2px 2px 2px ${adjustColor(speakerActor.themeColor, -0.25)}` : tokens.defaultDialogueShadow
       };
       return /* @__PURE__ */ jsx5("span", { style: dialogueStyle, children: formatInlineStyles(part) }, index);
     }
-    return /* @__PURE__ */ jsx5("span", { style: { textShadow: baseTextShadow }, children: formatInlineStyles(part) }, index);
+    return /* @__PURE__ */ jsx5("span", { style: { textShadow: tokens.baseTextShadow }, children: formatInlineStyles(part) }, index);
   }) });
 };
 var calculateActorXPosition = (actorIndex, totalActors, anySpeaker) => {
@@ -496,18 +496,17 @@ var calculateActorXPosition = (actorIndex, totalActors, anySpeaker) => {
   return xPosition;
 };
 function NovelVisualizer(props) {
+  const theme = useTheme();
   const {
     script,
     actors,
     backgroundImageUrl,
     isVerticalLayout = false,
-    loading = false,
     typingSpeed = 20,
     allowTypingSkip = true,
     onSubmitInput,
     onUpdateMessage,
     onReroll,
-    onWrapUp,
     onClose,
     inputPlaceholder,
     renderNameplate,
@@ -521,10 +520,11 @@ function NovelVisualizer(props) {
   } = props;
   const [inputText, setInputText] = useState2("");
   const [finishTyping, setFinishTyping] = useState2(false);
-  const [messageKey, setMessageKey] = useState2(0);
+  const [messageKey, setMessageKey] = React2.useState(0);
   const [hoveredActor, setHoveredActor] = useState2(null);
   const [mousePosition, setMousePosition] = useState2(null);
   const [messageBoxTopVh, setMessageBoxTopVh] = useState2(isVerticalLayout ? 50 : 60);
+  const [loading, setLoading] = useState2(false);
   const messageBoxRef = useRef2(null);
   const [isEditingMessage, setIsEditingMessage] = useState2(false);
   const [editedMessage, setEditedMessage] = useState2("");
@@ -534,6 +534,23 @@ function NovelVisualizer(props) {
   const prevIndexRef = useRef2(index);
   const activeScript = onUpdateMessage ? script : localScript;
   const entries = activeScript?.script || [];
+  const accentMain = theme.palette.success.main;
+  const accentLight = theme.palette.success.light;
+  const errorMain = theme.palette.error.main;
+  const errorLight = theme.palette.error.light;
+  const baseTextShadow = useMemo2(
+    () => `2px 2px 2px ${alpha(theme.palette.common.black, 0.8)}`,
+    [theme]
+  );
+  const messageTokens = useMemo2(
+    () => ({
+      baseTextShadow,
+      defaultDialogueColor: theme.palette.info.light,
+      defaultDialogueShadow: `2px 2px 2px ${alpha(theme.palette.info.dark, 0.5)}`,
+      fallbackFontFamily: theme.typography.fontFamily
+    }),
+    [baseTextShadow, theme]
+  );
   useEffect2(() => {
     setLocalScript(script);
   }, [script]);
@@ -556,8 +573,8 @@ function NovelVisualizer(props) {
   }, [entries, index, actors, resolveSpeaker]);
   const displayMessage = useMemo2(() => {
     const message = entries[index]?.message || "";
-    return formatMessage(message, speakerActor);
-  }, [entries, index, speakerActor]);
+    return formatMessage(message, speakerActor, messageTokens);
+  }, [entries, index, speakerActor, messageTokens]);
   useEffect2(() => {
     if (prevIndexRef.current !== index) {
       setFinishTyping(false);
@@ -567,7 +584,7 @@ function NovelVisualizer(props) {
       }
       prevIndexRef.current = index;
     }
-    setMessageKey((prev2) => prev2 + 1);
+    setMessageKey(messageKey + 1);
   }, [index]);
   useEffect2(() => {
     if (!mousePosition) {
@@ -618,7 +635,7 @@ function NovelVisualizer(props) {
       handleConfirmEdit();
     }
     if (finishTyping) {
-      setIndex(index + 1);
+      setIndex(Math.min(entries.length - 1, index + 1));
     } else if (allowTypingSkip) {
       setFinishTyping(true);
     }
@@ -627,7 +644,7 @@ function NovelVisualizer(props) {
     if (isEditingMessage) {
       handleConfirmEdit();
     }
-    setIndex(index - 1);
+    setIndex(Math.max(0, index - 1));
   };
   const handleEnterEditMode = () => {
     const currentMessage = entries[index]?.message || "";
@@ -667,7 +684,7 @@ function NovelVisualizer(props) {
     }
     if (inputPlaceholder) return inputPlaceholder;
     if (sceneEnded) return "Scene concluded";
-    if (loading) return "Processing...";
+    if (loading) return "Loading...";
     return "Type your next action...";
   }, [inputPlaceholder, index, entries, sceneEnded, loading]);
   const renderNameplateNode = () => {
@@ -678,7 +695,7 @@ function NovelVisualizer(props) {
       {
         sx: {
           fontWeight: 700,
-          color: "#bfffd0",
+          color: theme.palette.success.light,
           fontSize: isVerticalLayout ? "0.85rem" : "1rem",
           textShadow: baseTextShadow
         },
@@ -714,7 +731,7 @@ function NovelVisualizer(props) {
       );
     });
   };
-  const handleSubmit = (wrapUp = false) => {
+  const handleSubmit = () => {
     if (isEditingMessage) {
       handleConfirmEdit();
     }
@@ -722,15 +739,15 @@ function NovelVisualizer(props) {
       next();
       return;
     }
-    onSubmitInput?.(inputText, { index, entry: entries[index], wrapUp });
-    setInputText("");
-  };
-  const handleWrapUp = () => {
-    if (onWrapUp) {
-      onWrapUp(index);
-      return;
+    if (onSubmitInput) {
+      setLoading(true);
+      onSubmitInput?.(inputText, activeScript, index).then(() => {
+        setLoading(false);
+      }).catch(() => {
+        setLoading(false);
+      });
     }
-    handleSubmit(true);
+    setInputText("");
   };
   const hoverInfoNode = renderActorHoverInfo ? renderActorHoverInfo(hoveredActor) : null;
   return /* @__PURE__ */ jsx5(
@@ -774,11 +791,11 @@ function NovelVisualizer(props) {
                   left: isVerticalLayout ? "2%" : "5%",
                   right: isVerticalLayout ? "2%" : "5%",
                   bottom: isVerticalLayout ? "1%" : "4%",
-                  background: "rgba(10,20,30,0.95)",
-                  border: "2px solid rgba(0,255,136,0.12)",
+                  background: alpha(theme.palette.background.paper, 0.92),
+                  border: `2px solid ${alpha(accentMain, 0.2)}`,
                   borderRadius: 3,
                   p: 2,
-                  color: "#e8fff0",
+                  color: theme.palette.text.primary,
                   zIndex: 2,
                   backdropFilter: "blur(8px)",
                   minHeight: isVerticalLayout ? "20vh" : void 0,
@@ -796,11 +813,11 @@ function NovelVisualizer(props) {
                           disabled: index === 0 || loading,
                           size: "small",
                           sx: {
-                            color: "#cfe",
-                            border: "1px solid rgba(255,255,255,0.08)",
+                            color: theme.palette.text.secondary,
+                            border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
                             padding: isVerticalLayout ? "4px" : void 0,
                             minWidth: isVerticalLayout ? "28px" : void 0,
-                            "&:disabled": { color: "rgba(255,255,255,0.3)" }
+                            "&:disabled": { color: theme.palette.text.disabled }
                           },
                           children: /* @__PURE__ */ jsx5(ChevronLeft, { fontSize: isVerticalLayout ? "inherit" : "small", sx: { fontSize: isVerticalLayout ? "14px" : void 0 } })
                         }
@@ -808,15 +825,15 @@ function NovelVisualizer(props) {
                       /* @__PURE__ */ jsx5(
                         Chip,
                         {
-                          label: loading ? /* @__PURE__ */ jsx5(CircularProgress, { size: isVerticalLayout ? 12 : 16, sx: { color: "#bfffd0" } }) : /* @__PURE__ */ jsx5("span", { style: { display: "flex", alignItems: "center", gap: isVerticalLayout ? "2px" : "4px" }, children: progressLabel }),
+                          label: loading ? /* @__PURE__ */ jsx5(CircularProgress, { size: isVerticalLayout ? 12 : 16, sx: { color: theme.palette.success.light } }) : /* @__PURE__ */ jsx5("span", { style: { display: "flex", alignItems: "center", gap: isVerticalLayout ? "2px" : "4px" }, children: progressLabel }),
                           sx: {
                             minWidth: isVerticalLayout ? 50 : 72,
                             height: isVerticalLayout ? "24px" : void 0,
                             fontSize: isVerticalLayout ? "0.7rem" : void 0,
                             fontWeight: 700,
-                            color: "#bfffd0",
-                            background: "rgba(255,255,255,0.02)",
-                            border: "1px solid rgba(255,255,255,0.03)",
+                            color: theme.palette.success.light,
+                            background: alpha(theme.palette.common.white, 0.04),
+                            border: `1px solid ${alpha(theme.palette.common.white, 0.06)}`,
                             transition: "all 0.3s ease",
                             "& .MuiChip-label": {
                               display: "flex",
@@ -834,11 +851,11 @@ function NovelVisualizer(props) {
                           disabled: index >= entries.length - 1 || loading,
                           size: "small",
                           sx: {
-                            color: "#cfe",
-                            border: "1px solid rgba(255,255,255,0.08)",
+                            color: theme.palette.text.secondary,
+                            border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
                             padding: isVerticalLayout ? "4px" : void 0,
                             minWidth: isVerticalLayout ? "28px" : void 0,
-                            "&:disabled": { color: "rgba(255,255,255,0.3)" }
+                            "&:disabled": { color: theme.palette.text.disabled }
                           },
                           children: /* @__PURE__ */ jsx5(ChevronRight, { fontSize: isVerticalLayout ? "inherit" : "small", sx: { fontSize: isVerticalLayout ? "14px" : void 0 } })
                         }
@@ -853,8 +870,8 @@ function NovelVisualizer(props) {
                           disabled: loading,
                           size: "small",
                           sx: {
-                            color: "#00ff88",
-                            border: "1px solid rgba(0,255,136,0.2)",
+                            color: accentMain,
+                            border: `1px solid ${alpha(accentMain, 0.25)}`,
                             padding: isVerticalLayout ? "4px" : void 0,
                             minWidth: isVerticalLayout ? "28px" : void 0,
                             opacity: 1,
@@ -866,10 +883,10 @@ function NovelVisualizer(props) {
                               to: { opacity: 1, transform: "scale(1)" }
                             },
                             "&:hover": {
-                              borderColor: "rgba(0,255,136,0.4)",
-                              color: "#00ffaa"
+                              borderColor: alpha(accentMain, 0.4),
+                              color: accentLight
                             },
-                            "&:disabled": { color: "rgba(255,255,255,0.3)" }
+                            "&:disabled": { color: theme.palette.text.disabled }
                           },
                           children: /* @__PURE__ */ jsx5(Edit, { fontSize: isVerticalLayout ? "inherit" : "small", sx: { fontSize: isVerticalLayout ? "16px" : void 0 } })
                         }
@@ -880,8 +897,8 @@ function NovelVisualizer(props) {
                             onClick: handleConfirmEdit,
                             size: "small",
                             sx: {
-                              color: "#00ff88",
-                              border: "1px solid rgba(0,255,136,0.2)",
+                              color: accentMain,
+                              border: `1px solid ${alpha(accentMain, 0.25)}`,
                               padding: isVerticalLayout ? "4px" : void 0,
                               minWidth: isVerticalLayout ? "28px" : void 0,
                               opacity: 1,
@@ -893,8 +910,8 @@ function NovelVisualizer(props) {
                                 to: { opacity: 1, transform: "scale(1)" }
                               },
                               "&:hover": {
-                                borderColor: "rgba(0,255,136,0.4)",
-                                color: "#00ffaa"
+                                borderColor: alpha(accentMain, 0.4),
+                                color: accentLight
                               }
                             },
                             children: /* @__PURE__ */ jsx5(Check, { fontSize: isVerticalLayout ? "inherit" : "small", sx: { fontSize: isVerticalLayout ? "16px" : void 0 } })
@@ -906,8 +923,8 @@ function NovelVisualizer(props) {
                             onClick: handleCancelEdit,
                             size: "small",
                             sx: {
-                              color: "#ff6b6b",
-                              border: "1px solid rgba(255,107,107,0.2)",
+                              color: errorMain,
+                              border: `1px solid ${alpha(errorMain, 0.25)}`,
                               padding: isVerticalLayout ? "4px" : void 0,
                               minWidth: isVerticalLayout ? "28px" : void 0,
                               opacity: 1,
@@ -919,8 +936,8 @@ function NovelVisualizer(props) {
                                 to: { opacity: 1, transform: "scale(1)" }
                               },
                               "&:hover": {
-                                borderColor: "rgba(255,107,107,0.4)",
-                                color: "#ff5252"
+                                borderColor: alpha(errorMain, 0.4),
+                                color: errorLight
                               }
                             },
                             children: /* @__PURE__ */ jsx5(Clear, { fontSize: isVerticalLayout ? "inherit" : "small", sx: { fontSize: isVerticalLayout ? "16px" : void 0 } })
@@ -934,17 +951,17 @@ function NovelVisualizer(props) {
                           disabled: loading,
                           size: "small",
                           sx: {
-                            color: "#00ff88",
-                            border: "1px solid rgba(0,255,136,0.2)",
+                            color: accentMain,
+                            border: `1px solid ${alpha(accentMain, 0.25)}`,
                             padding: isVerticalLayout ? "4px" : void 0,
                             minWidth: isVerticalLayout ? "28px" : void 0,
                             transition: "all 0.3s ease",
                             "&:hover": {
-                              borderColor: "rgba(0,255,136,0.4)",
-                              color: "#00ffaa",
+                              borderColor: alpha(accentMain, 0.4),
+                              color: accentLight,
                               transform: "rotate(180deg)"
                             },
-                            "&:disabled": { color: "rgba(255,255,255,0.3)" }
+                            "&:disabled": { color: theme.palette.text.disabled }
                           },
                           children: /* @__PURE__ */ jsx5(Casino, { fontSize: isVerticalLayout ? "inherit" : "small", sx: { fontSize: isVerticalLayout ? "16px" : void 0 } })
                         }
@@ -960,7 +977,7 @@ function NovelVisualizer(props) {
                         borderRadius: 1,
                         transition: "background-color 0.2s ease",
                         "&:hover": {
-                          backgroundColor: isEditingMessage ? "transparent" : "rgba(255,255,255,0.02)"
+                          backgroundColor: isEditingMessage ? "transparent" : alpha(theme.palette.common.white, 0.04)
                         }
                       },
                       onClick: () => {
@@ -993,9 +1010,9 @@ function NovelVisualizer(props) {
                             "& .MuiInputBase-root": {
                               fontSize: isVerticalLayout ? "clamp(0.75rem, 2vw, 1.18rem)" : "1.18rem",
                               lineHeight: 1.55,
-                              fontFamily: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial',
-                              color: "#e9fff7",
-                              backgroundColor: "rgba(255,255,255,0.05)",
+                              fontFamily: theme.typography.fontFamily,
+                              color: theme.palette.text.primary,
+                              backgroundColor: alpha(theme.palette.common.white, 0.06),
                               padding: "8px"
                             },
                             "& .MuiInputBase-input": {
@@ -1010,8 +1027,8 @@ function NovelVisualizer(props) {
                           sx: {
                             fontSize: isVerticalLayout ? "clamp(0.75rem, 2vw, 1.18rem)" : "1.18rem",
                             lineHeight: 1.55,
-                            fontFamily: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial',
-                            color: "#e9fff7",
+                            fontFamily: theme.typography.fontFamily,
+                            color: theme.palette.text.primary,
                             textShadow: baseTextShadow
                           },
                           children: entries.length > 0 ? /* @__PURE__ */ jsx5(
@@ -1022,7 +1039,7 @@ function NovelVisualizer(props) {
                               onTypingComplete: () => setFinishTyping(true),
                               children: displayMessage
                             },
-                            messageKey
+                            `typeout-${messageKey}`
                           ) : ""
                         }
                       )
@@ -1042,7 +1059,7 @@ function NovelVisualizer(props) {
                               if (sceneEnded && inputText.trim() === "") {
                                 onClose?.();
                               } else {
-                                handleSubmit(false);
+                                handleSubmit();
                               }
                             }
                           }
@@ -1053,22 +1070,22 @@ function NovelVisualizer(props) {
                         size: "small",
                         sx: {
                           "& .MuiOutlinedInput-root": {
-                            background: "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))",
-                            color: "#eafff2",
+                            background: `linear-gradient(180deg, ${alpha(theme.palette.common.white, 0.04)}, ${alpha(theme.palette.common.white, 0.02)})`,
+                            color: theme.palette.text.primary,
                             fontSize: isVerticalLayout ? "0.75rem" : void 0,
                             "& fieldset": {
-                              borderColor: "rgba(255,255,255,0.08)"
+                              borderColor: alpha(theme.palette.common.white, 0.12)
                             },
                             "&:hover fieldset": {
-                              borderColor: "rgba(255,255,255,0.12)"
+                              borderColor: alpha(theme.palette.common.white, 0.2)
                             },
                             "&.Mui-focused fieldset": {
-                              borderColor: "rgba(0,255,136,0.3)"
+                              borderColor: alpha(accentMain, 0.35)
                             },
                             "&.Mui-disabled": {
-                              color: "rgba(255,255,255,0.6)",
+                              color: theme.palette.text.disabled,
                               "& fieldset": {
-                                borderColor: "rgba(255,255,255,0.04)"
+                                borderColor: alpha(theme.palette.common.white, 0.08)
                               }
                             }
                           },
@@ -1076,17 +1093,17 @@ function NovelVisualizer(props) {
                             padding: isVerticalLayout ? "6px 8px" : void 0
                           },
                           "& .MuiInputBase-input::placeholder": {
-                            color: "rgba(255,255,255,0.5)",
+                            color: alpha(theme.palette.text.primary, 0.55),
                             opacity: 1,
                             fontSize: isVerticalLayout ? "0.75rem" : void 0
                           },
                           "& .MuiInputBase-input.Mui-disabled::placeholder": {
-                            color: "rgba(255,255,255,0.4)",
+                            color: alpha(theme.palette.text.primary, 0.4),
                             opacity: 1
                           },
                           "& .MuiInputBase-input.Mui-disabled": {
-                            color: "rgba(255,255,255,0.45)",
-                            WebkitTextFillColor: "rgba(255,255,255,0.45)"
+                            color: alpha(theme.palette.text.primary, 0.45),
+                            WebkitTextFillColor: alpha(theme.palette.text.primary, 0.45)
                           }
                         }
                       }
@@ -1098,49 +1115,28 @@ function NovelVisualizer(props) {
                           if (sceneEnded && !inputText.trim()) {
                             onClose?.();
                           } else {
-                            handleSubmit(false);
+                            handleSubmit();
                           }
                         },
                         disabled: loading,
                         variant: "contained",
                         startIcon: sceneEnded && !inputText.trim() ? /* @__PURE__ */ jsx5(Close, { fontSize: isVerticalLayout ? "small" : void 0 }) : inputText.trim() ? /* @__PURE__ */ jsx5(Send, { fontSize: isVerticalLayout ? "small" : void 0 }) : /* @__PURE__ */ jsx5(Forward, { fontSize: isVerticalLayout ? "small" : void 0 }),
                         sx: {
-                          background: sceneEnded && !inputText.trim() ? "linear-gradient(90deg,#ff8c66,#ff5a3b)" : "linear-gradient(90deg,#00ff88,#00b38f)",
-                          color: sceneEnded && !inputText.trim() ? "#fff" : "#00221a",
+                          background: sceneEnded && !inputText.trim() ? `linear-gradient(90deg, ${lighten(errorMain, 0.12)}, ${darken(errorMain, 0.2)})` : `linear-gradient(90deg, ${lighten(accentMain, 0.08)}, ${darken(accentMain, 0.2)})`,
+                          color: sceneEnded && !inputText.trim() ? theme.palette.getContrastText(errorMain) : theme.palette.getContrastText(accentMain),
                           fontWeight: 800,
                           minWidth: isVerticalLayout ? 76 : 100,
                           fontSize: isVerticalLayout ? "clamp(0.6rem, 2vw, 0.875rem)" : void 0,
                           padding: isVerticalLayout ? "4px 10px" : void 0,
                           "&:hover": {
-                            background: sceneEnded && !inputText.trim() ? "linear-gradient(90deg,#ff7a52,#ff4621)" : "linear-gradient(90deg,#00e67a,#009a7b)"
+                            background: sceneEnded && !inputText.trim() ? `linear-gradient(90deg, ${lighten(errorMain, 0.2)}, ${darken(errorMain, 0.28)})` : `linear-gradient(90deg, ${lighten(accentMain, 0.16)}, ${darken(accentMain, 0.28)})`
                           },
                           "&:disabled": {
-                            background: "rgba(255,255,255,0.04)",
-                            color: "rgba(255,255,255,0.3)"
+                            background: alpha(theme.palette.common.white, 0.06),
+                            color: theme.palette.text.disabled
                           }
                         },
                         children: sceneEnded && !inputText.trim() ? "End" : inputText.trim() ? "Send" : "Continue"
-                      }
-                    ),
-                    onWrapUp && /* @__PURE__ */ jsx5(
-                      IconButton,
-                      {
-                        onClick: handleWrapUp,
-                        disabled: loading,
-                        sx: {
-                          background: "linear-gradient(90deg,#00ff88,#00b38f)",
-                          color: "#00221a",
-                          padding: isVerticalLayout ? "4px" : "6px",
-                          borderRadius: "4px",
-                          "&:hover": {
-                            background: "linear-gradient(90deg,#00e67a,#009a7b)"
-                          },
-                          "&:disabled": {
-                            background: "rgba(255,255,255,0.04)",
-                            color: "rgba(255,255,255,0.3)"
-                          }
-                        },
-                        children: /* @__PURE__ */ jsx5(CardGiftcard, { fontSize: isVerticalLayout ? "small" : "medium" })
                       }
                     )
                   ] })

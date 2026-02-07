@@ -36,18 +36,11 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
     actors: Record<string, TActor>;
     backgroundImageUrl: string;
     isVerticalLayout?: boolean;
-    loading?: boolean;
-    currentIndex?: number;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
-    onSubmitInput?: (inputText: string, context: {
-        index: number;
-        entry?: TEntry;
-        wrapUp?: boolean;
-    }) => void;
+    onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<void>;
     onUpdateMessage?: (index: number, message: string) => void;
     onReroll?: (index: number) => void;
-    onWrapUp?: (index: number) => void;
     onClose?: () => void;
     inputPlaceholder?: string | ((context: {
         index: number;

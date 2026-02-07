@@ -1,5 +1,6 @@
 import React, { FC, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from '@mui/material';
+import { alpha, darken, lighten, useTheme } from '@mui/material/styles';
 import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, CardGiftcard } from '@mui/icons-material';
 import ActorImage from './ActorImage';
 import { BlurredBackground } from './BlurredBackground';
@@ -7,8 +8,12 @@ import TypeOut from './TypeOut';
 import { formatInlineStyles } from '../utils/TextFormatting';
 import type { NovelActor, NovelScript, NovelScriptEntry } from '../types';
 
-// Base text shadow for non-dialogue text
-const baseTextShadow = '2px 2px 2px rgba(0, 0, 0, 0.8)';
+interface MessageFormatTokens {
+    baseTextShadow: string;
+    defaultDialogueColor: string;
+    defaultDialogueShadow: string;
+    fallbackFontFamily: string;
+}
 
 // Helper function to brighten a color for better visibility
 const adjustColor = (color: string, amount: number = 0.6): string => {
@@ -24,7 +29,11 @@ const adjustColor = (color: string, amount: number = 0.6): string => {
     return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
 };
 
-const formatMessage = (text: string, speakerActor?: NovelActor | null): JSX.Element => {
+const formatMessage = (
+    text: string,
+    speakerActor: NovelActor | null | undefined,
+    tokens: MessageFormatTokens
+): JSX.Element => {
     if (!text) return <></>;
 
     text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
@@ -37,14 +46,14 @@ const formatMessage = (text: string, speakerActor?: NovelActor | null): JSX.Elem
                 if (part.startsWith('"') && part.endsWith('"')) {
                     const brightenedColor = speakerActor?.themeColor
                         ? adjustColor(speakerActor.themeColor, 0.6)
-                        : '#87CEEB';
+                        : tokens.defaultDialogueColor;
 
                     const dialogueStyle: React.CSSProperties = {
                         color: brightenedColor,
-                        fontFamily: speakerActor?.themeFontFamily || undefined,
+                        fontFamily: speakerActor?.themeFontFamily || tokens.fallbackFontFamily,
                         textShadow: speakerActor?.themeColor
                             ? `2px 2px 2px ${adjustColor(speakerActor.themeColor, -0.25)}`
-                            : '2px 2px 2px rgba(135, 206, 235, 0.5)'
+                            : tokens.defaultDialogueShadow
                     };
                     return (
                         <span key={index} style={dialogueStyle}>
@@ -53,7 +62,7 @@ const formatMessage = (text: string, speakerActor?: NovelActor | null): JSX.Elem
                     );
                 }
                 return (
-                    <span key={index} style={{ textShadow: baseTextShadow }}>
+                    <span key={index} style={{ textShadow: tokens.baseTextShadow }}>
                         {formatInlineStyles(part)}
                     </span>
                 );
@@ -103,14 +112,11 @@ export interface NovelVisualizerProps<
     actors: Record<string, TActor>;
     backgroundImageUrl: string;
     isVerticalLayout?: boolean;
-    loading?: boolean;
-    currentIndex?: number;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
-    onSubmitInput?: (inputText: string, context: { index: number; entry?: TEntry; wrapUp?: boolean }) => void;
+    onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<void>;
     onUpdateMessage?: (index: number, message: string) => void;
     onReroll?: (index: number) => void;
-    onWrapUp?: (index: number) => void;
     onClose?: () => void;
     inputPlaceholder?: string | ((context: { index: number; entry?: TEntry }) => string);
     renderNameplate?: (params: { actor: TActor | null}) => React.ReactNode;
@@ -150,35 +156,35 @@ export function NovelVisualizer<
     TScript extends NovelScript,
     TEntry extends NovelScriptEntry
 >(props: NovelVisualizerProps<TActor, TScript, TEntry>): JSX.Element {
+    const theme = useTheme();
     const {
-    script,
-    actors,
-    backgroundImageUrl,
-    isVerticalLayout = false,
-    loading = false,
-    typingSpeed = 20,
-    allowTypingSkip = true,
-    onSubmitInput,
-    onUpdateMessage,
-    onReroll,
-    onWrapUp,
-    onClose,
-    inputPlaceholder,
-    renderNameplate,
-    renderActorHoverInfo,
-    getActorImageUrl,
-    getPresentActors,
-    resolveSpeaker,
-    backgroundOptions,
-    hideInput = false,
-    hideActionButtons = false
-} = props;
+        script,
+        actors,
+        backgroundImageUrl,
+        isVerticalLayout = false,
+        typingSpeed = 20,
+        allowTypingSkip = true,
+        onSubmitInput,
+        onUpdateMessage,
+        onReroll,
+        onClose,
+        inputPlaceholder,
+        renderNameplate,
+        renderActorHoverInfo,
+        getActorImageUrl,
+        getPresentActors,
+        resolveSpeaker,
+        backgroundOptions,
+        hideInput = false,
+        hideActionButtons = false
+    } = props;
     const [inputText, setInputText] = useState<string>('');
     const [finishTyping, setFinishTyping] = useState<boolean>(false);
-    const [messageKey, setMessageKey] = useState<number>(0);
+    const [messageKey, setMessageKey] = React.useState<number>(0); // Key to force TypeOut reset
     const [hoveredActor, setHoveredActor] = useState<TActor | null>(null);
     const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
     const [messageBoxTopVh, setMessageBoxTopVh] = useState<number>(isVerticalLayout ? 50 : 60);
+    const [loading, setLoading] = useState<boolean>(false);
     const messageBoxRef = useRef<HTMLDivElement>(null);
 
     const [isEditingMessage, setIsEditingMessage] = useState<boolean>(false);
@@ -192,6 +198,24 @@ export function NovelVisualizer<
 
     const activeScript = onUpdateMessage ? script : localScript;
     const entries = (activeScript?.script || []) as TEntry[];
+
+    const accentMain = theme.palette.success.main;
+    const accentLight = theme.palette.success.light;
+    const errorMain = theme.palette.error.main;
+    const errorLight = theme.palette.error.light;
+    const baseTextShadow = useMemo(
+        () => `2px 2px 2px ${alpha(theme.palette.common.black, 0.8)}`,
+        [theme]
+    );
+    const messageTokens = useMemo(
+        () => ({
+            baseTextShadow,
+            defaultDialogueColor: theme.palette.info.light,
+            defaultDialogueShadow: `2px 2px 2px ${alpha(theme.palette.info.dark, 0.5)}`,
+            fallbackFontFamily: theme.typography.fontFamily as string
+        }),
+        [baseTextShadow, theme]
+    );
 
     useEffect(() => {
         setLocalScript(script);
@@ -220,8 +244,8 @@ export function NovelVisualizer<
 
     const displayMessage = useMemo(() => {
         const message = entries[index]?.message || '';
-        return formatMessage(message, speakerActor);
-    }, [entries, index, speakerActor]);
+        return formatMessage(message, speakerActor, messageTokens);
+    }, [entries, index, speakerActor, messageTokens]);
 
     useEffect(() => {
         if (prevIndexRef.current !== index) {
@@ -232,7 +256,7 @@ export function NovelVisualizer<
             }
             prevIndexRef.current = index;
         }
-        setMessageKey(prev => prev + 1);
+        setMessageKey(messageKey + 1);
     }, [index]);
 
     useEffect(() => {
@@ -294,7 +318,7 @@ export function NovelVisualizer<
             handleConfirmEdit();
         }
         if (finishTyping) {
-            setIndex(index + 1);
+            setIndex(Math.min(entries.length - 1, index + 1));
         } else if (allowTypingSkip) {
             setFinishTyping(true);
         }
@@ -304,7 +328,7 @@ export function NovelVisualizer<
         if (isEditingMessage) {
             handleConfirmEdit();
         }
-        setIndex(index - 1);
+        setIndex(Math.max(0, index - 1));
     };
 
     const handleEnterEditMode = () => {
@@ -352,7 +376,7 @@ export function NovelVisualizer<
         }
         if (inputPlaceholder) return inputPlaceholder;
         if (sceneEnded) return 'Scene concluded';
-        if (loading) return 'Processing...';
+        if (loading) return 'Loading...';
         return 'Type your next action...';
     }, [inputPlaceholder, index, entries, sceneEnded, loading]);
 
@@ -363,7 +387,7 @@ export function NovelVisualizer<
             <Typography
                 sx={{
                     fontWeight: 700,
-                    color: '#bfffd0',
+                    color: theme.palette.success.light,
                     fontSize: isVerticalLayout ? '0.85rem' : '1rem',
                     textShadow: baseTextShadow
                 }}
@@ -402,7 +426,7 @@ export function NovelVisualizer<
         });
     };
 
-    const handleSubmit = (wrapUp: boolean = false) => {
+    const handleSubmit = () => {
         if (isEditingMessage) {
             handleConfirmEdit();
         }
@@ -412,17 +436,18 @@ export function NovelVisualizer<
             return;
         }
 
-        onSubmitInput?.(inputText, { index, entry: entries[index], wrapUp });
+        // If onSubmitInput exists, call it and then set loading to false when the promise completes
+        if (onSubmitInput) {
+            setLoading(true);
+            onSubmitInput?.(inputText, activeScript, index).then(() => {
+                setLoading(false);
+            }).catch(() => {
+                setLoading(false);
+            });
+        }
         setInputText('');
     };
 
-    const handleWrapUp = () => {
-        if (onWrapUp) {
-            onWrapUp(index);
-            return;
-        }
-        handleSubmit(true);
-    };
 
     const hoverInfoNode = renderActorHoverInfo ? renderActorHoverInfo(hoveredActor) : null;
 
@@ -467,11 +492,11 @@ export function NovelVisualizer<
                         left: isVerticalLayout ? '2%' : '5%',
                         right: isVerticalLayout ? '2%' : '5%',
                         bottom: isVerticalLayout ? '1%' : '4%',
-                        background: 'rgba(10,20,30,0.95)',
-                        border: '2px solid rgba(0,255,136,0.12)',
+                        background: alpha(theme.palette.background.paper, 0.92),
+                        border: `2px solid ${alpha(accentMain, 0.2)}`,
                         borderRadius: 3,
                         p: 2,
-                        color: '#e8fff0',
+                        color: theme.palette.text.primary,
                         zIndex: 2,
                         backdropFilter: 'blur(8px)',
                         minHeight: isVerticalLayout ? '20vh' : undefined,
@@ -487,11 +512,11 @@ export function NovelVisualizer<
                                 disabled={index === 0 || loading}
                                 size="small"
                                 sx={{
-                                    color: '#cfe',
-                                    border: '1px solid rgba(255,255,255,0.08)',
+                                    color: theme.palette.text.secondary,
+                                    border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
                                     padding: isVerticalLayout ? '4px' : undefined,
                                     minWidth: isVerticalLayout ? '28px' : undefined,
-                                    '&:disabled': { color: 'rgba(255,255,255,0.3)' }
+                                    '&:disabled': { color: theme.palette.text.disabled }
                                 }}
                             >
                                 <ChevronLeft fontSize={isVerticalLayout ? 'inherit' : 'small'} sx={{ fontSize: isVerticalLayout ? '14px' : undefined }} />
@@ -499,7 +524,7 @@ export function NovelVisualizer<
 
                             <Chip
                                 label={loading ? (
-                                    <CircularProgress size={isVerticalLayout ? 12 : 16} sx={{ color: '#bfffd0' }} />
+                                    <CircularProgress size={isVerticalLayout ? 12 : 16} sx={{ color: theme.palette.success.light }} />
                                 ) : (
                                     <span style={{ display: 'flex', alignItems: 'center', gap: isVerticalLayout ? '2px' : '4px' }}>
                                         {progressLabel}
@@ -510,9 +535,9 @@ export function NovelVisualizer<
                                     height: isVerticalLayout ? '24px' : undefined,
                                     fontSize: isVerticalLayout ? '0.7rem' : undefined,
                                     fontWeight: 700,
-                                    color: '#bfffd0',
-                                    background: 'rgba(255,255,255,0.02)',
-                                    border: '1px solid rgba(255,255,255,0.03)',
+                                    color: theme.palette.success.light,
+                                    background: alpha(theme.palette.common.white, 0.04),
+                                    border: `1px solid ${alpha(theme.palette.common.white, 0.06)}`,
                                     transition: 'all 0.3s ease',
                                     '& .MuiChip-label': {
                                         display: 'flex',
@@ -528,11 +553,11 @@ export function NovelVisualizer<
                                 disabled={index >= entries.length - 1 || loading}
                                 size="small"
                                 sx={{
-                                    color: '#cfe',
-                                    border: '1px solid rgba(255,255,255,0.08)',
+                                    color: theme.palette.text.secondary,
+                                    border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
                                     padding: isVerticalLayout ? '4px' : undefined,
                                     minWidth: isVerticalLayout ? '28px' : undefined,
-                                    '&:disabled': { color: 'rgba(255,255,255,0.3)' }
+                                    '&:disabled': { color: theme.palette.text.disabled }
                                 }}
                             >
                                 <ChevronRight fontSize={isVerticalLayout ? 'inherit' : 'small'} sx={{ fontSize: isVerticalLayout ? '14px' : undefined }} />
@@ -549,8 +574,8 @@ export function NovelVisualizer<
                                         disabled={loading}
                                         size="small"
                                         sx={{
-                                            color: '#00ff88',
-                                            border: '1px solid rgba(0,255,136,0.2)',
+                                            color: accentMain,
+                                            border: `1px solid ${alpha(accentMain, 0.25)}`,
                                             padding: isVerticalLayout ? '4px' : undefined,
                                             minWidth: isVerticalLayout ? '28px' : undefined,
                                             opacity: 1,
@@ -562,10 +587,10 @@ export function NovelVisualizer<
                                                 to: { opacity: 1, transform: 'scale(1)' }
                                             },
                                             '&:hover': {
-                                                borderColor: 'rgba(0,255,136,0.4)',
-                                                color: '#00ffaa'
+                                                borderColor: alpha(accentMain, 0.4),
+                                                color: accentLight
                                             },
-                                            '&:disabled': { color: 'rgba(255,255,255,0.3)' }
+                                            '&:disabled': { color: theme.palette.text.disabled }
                                         }}
                                     >
                                         <Edit fontSize={isVerticalLayout ? 'inherit' : 'small'} sx={{ fontSize: isVerticalLayout ? '16px' : undefined }} />
@@ -576,8 +601,8 @@ export function NovelVisualizer<
                                             onClick={handleConfirmEdit}
                                             size="small"
                                             sx={{
-                                                color: '#00ff88',
-                                                border: '1px solid rgba(0,255,136,0.2)',
+                                                color: accentMain,
+                                                border: `1px solid ${alpha(accentMain, 0.25)}`,
                                                 padding: isVerticalLayout ? '4px' : undefined,
                                                 minWidth: isVerticalLayout ? '28px' : undefined,
                                                 opacity: 1,
@@ -589,8 +614,8 @@ export function NovelVisualizer<
                                                     to: { opacity: 1, transform: 'scale(1)' }
                                                 },
                                                 '&:hover': {
-                                                    borderColor: 'rgba(0,255,136,0.4)',
-                                                    color: '#00ffaa'
+                                                    borderColor: alpha(accentMain, 0.4),
+                                                    color: accentLight
                                                 }
                                             }}
                                         >
@@ -600,8 +625,8 @@ export function NovelVisualizer<
                                             onClick={handleCancelEdit}
                                             size="small"
                                             sx={{
-                                                color: '#ff6b6b',
-                                                border: '1px solid rgba(255,107,107,0.2)',
+                                                color: errorMain,
+                                                border: `1px solid ${alpha(errorMain, 0.25)}`,
                                                 padding: isVerticalLayout ? '4px' : undefined,
                                                 minWidth: isVerticalLayout ? '28px' : undefined,
                                                 opacity: 1,
@@ -613,8 +638,8 @@ export function NovelVisualizer<
                                                     to: { opacity: 1, transform: 'scale(1)' }
                                                 },
                                                 '&:hover': {
-                                                    borderColor: 'rgba(255,107,107,0.4)',
-                                                    color: '#ff5252'
+                                                    borderColor: alpha(errorMain, 0.4),
+                                                    color: errorLight
                                                 }
                                             }}
                                         >
@@ -629,17 +654,17 @@ export function NovelVisualizer<
                                         disabled={loading}
                                         size="small"
                                         sx={{
-                                            color: '#00ff88',
-                                            border: '1px solid rgba(0,255,136,0.2)',
+                                            color: accentMain,
+                                            border: `1px solid ${alpha(accentMain, 0.25)}`,
                                             padding: isVerticalLayout ? '4px' : undefined,
                                             minWidth: isVerticalLayout ? '28px' : undefined,
                                             transition: 'all 0.3s ease',
                                             '&:hover': {
-                                                borderColor: 'rgba(0,255,136,0.4)',
-                                                color: '#00ffaa',
+                                                borderColor: alpha(accentMain, 0.4),
+                                                color: accentLight,
                                                 transform: 'rotate(180deg)'
                                             },
-                                            '&:disabled': { color: 'rgba(255,255,255,0.3)' }
+                                            '&:disabled': { color: theme.palette.text.disabled }
                                         }}
                                     >
                                         <Casino fontSize={isVerticalLayout ? 'inherit' : 'small'} sx={{ fontSize: isVerticalLayout ? '16px' : undefined }} />
@@ -656,7 +681,7 @@ export function NovelVisualizer<
                             borderRadius: 1,
                             transition: 'background-color 0.2s ease',
                             '&:hover': {
-                                backgroundColor: isEditingMessage ? 'transparent' : 'rgba(255,255,255,0.02)'
+                                backgroundColor: isEditingMessage ? 'transparent' : alpha(theme.palette.common.white, 0.04)
                             }
                         }}
                         onClick={() => {
@@ -689,9 +714,9 @@ export function NovelVisualizer<
                                     '& .MuiInputBase-root': {
                                         fontSize: isVerticalLayout ? 'clamp(0.75rem, 2vw, 1.18rem)' : '1.18rem',
                                         lineHeight: 1.55,
-                                        fontFamily: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial',
-                                        color: '#e9fff7',
-                                        backgroundColor: 'rgba(255,255,255,0.05)',
+                                        fontFamily: theme.typography.fontFamily,
+                                        color: theme.palette.text.primary,
+                                        backgroundColor: alpha(theme.palette.common.white, 0.06),
                                         padding: '8px'
                                     },
                                     '& .MuiInputBase-input': {
@@ -705,14 +730,14 @@ export function NovelVisualizer<
                                 sx={{
                                     fontSize: isVerticalLayout ? 'clamp(0.75rem, 2vw, 1.18rem)' : '1.18rem',
                                     lineHeight: 1.55,
-                                    fontFamily: 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial',
-                                    color: '#e9fff7',
+                                    fontFamily: theme.typography.fontFamily,
+                                    color: theme.palette.text.primary,
                                     textShadow: baseTextShadow
                                 }}
                             >
                                 {entries.length > 0 ? (
                                     <TypeOut
-                                        key={messageKey}
+                                        key={`typeout-${messageKey}`}
                                         speed={typingSpeed}
                                         finishTyping={finishTyping}
                                         onTypingComplete={() => setFinishTyping(true)}
@@ -737,7 +762,7 @@ export function NovelVisualizer<
                                             if (sceneEnded && inputText.trim() === '') {
                                                 onClose?.();
                                             } else {
-                                                handleSubmit(false);
+                                                handleSubmit();
                                             }
                                         }
                                     }
@@ -748,22 +773,22 @@ export function NovelVisualizer<
                                 size="small"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
-                                        background: 'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))',
-                                        color: '#eafff2',
+                                        background: `linear-gradient(180deg, ${alpha(theme.palette.common.white, 0.04)}, ${alpha(theme.palette.common.white, 0.02)})`,
+                                        color: theme.palette.text.primary,
                                         fontSize: isVerticalLayout ? '0.75rem' : undefined,
                                         '& fieldset': {
-                                            borderColor: 'rgba(255,255,255,0.08)'
+                                            borderColor: alpha(theme.palette.common.white, 0.12)
                                         },
                                         '&:hover fieldset': {
-                                            borderColor: 'rgba(255,255,255,0.12)'
+                                            borderColor: alpha(theme.palette.common.white, 0.2)
                                         },
                                         '&.Mui-focused fieldset': {
-                                            borderColor: 'rgba(0,255,136,0.3)'
+                                            borderColor: alpha(accentMain, 0.35)
                                         },
                                         '&.Mui-disabled': {
-                                            color: 'rgba(255,255,255,0.6)',
+                                            color: theme.palette.text.disabled,
                                             '& fieldset': {
-                                                borderColor: 'rgba(255,255,255,0.04)'
+                                                borderColor: alpha(theme.palette.common.white, 0.08)
                                             }
                                         }
                                     },
@@ -771,17 +796,17 @@ export function NovelVisualizer<
                                         padding: isVerticalLayout ? '6px 8px' : undefined
                                     },
                                     '& .MuiInputBase-input::placeholder': {
-                                        color: 'rgba(255,255,255,0.5)',
+                                        color: alpha(theme.palette.text.primary, 0.55),
                                         opacity: 1,
                                         fontSize: isVerticalLayout ? '0.75rem' : undefined
                                     },
                                     '& .MuiInputBase-input.Mui-disabled::placeholder': {
-                                        color: 'rgba(255,255,255,0.4)',
+                                        color: alpha(theme.palette.text.primary, 0.4),
                                         opacity: 1
                                     },
                                     '& .MuiInputBase-input.Mui-disabled': {
-                                        color: 'rgba(255,255,255,0.45)',
-                                        WebkitTextFillColor: 'rgba(255,255,255,0.45)'
+                                        color: alpha(theme.palette.text.primary, 0.45),
+                                        WebkitTextFillColor: alpha(theme.palette.text.primary, 0.45)
                                     }
                                 }}
                             />
@@ -790,7 +815,7 @@ export function NovelVisualizer<
                                     if (sceneEnded && !inputText.trim()) {
                                         onClose?.();
                                     } else {
-                                        handleSubmit(false);
+                                        handleSubmit();
                                     }
                                 }}
                                 disabled={loading}
@@ -798,48 +823,28 @@ export function NovelVisualizer<
                                 startIcon={sceneEnded && !inputText.trim() ? <Close fontSize={isVerticalLayout ? 'small' : undefined} /> : (inputText.trim() ? <Send fontSize={isVerticalLayout ? 'small' : undefined} /> : <Forward fontSize={isVerticalLayout ? 'small' : undefined} />)}
                                 sx={{
                                     background: sceneEnded && !inputText.trim()
-                                        ? 'linear-gradient(90deg,#ff8c66,#ff5a3b)'
-                                        : 'linear-gradient(90deg,#00ff88,#00b38f)',
-                                    color: sceneEnded && !inputText.trim() ? '#fff' : '#00221a',
+                                        ? `linear-gradient(90deg, ${lighten(errorMain, 0.12)}, ${darken(errorMain, 0.2)})`
+                                        : `linear-gradient(90deg, ${lighten(accentMain, 0.08)}, ${darken(accentMain, 0.2)})`,
+                                    color: sceneEnded && !inputText.trim()
+                                        ? theme.palette.getContrastText(errorMain)
+                                        : theme.palette.getContrastText(accentMain),
                                     fontWeight: 800,
                                     minWidth: isVerticalLayout ? 76 : 100,
                                     fontSize: isVerticalLayout ? 'clamp(0.6rem, 2vw, 0.875rem)' : undefined,
                                     padding: isVerticalLayout ? '4px 10px' : undefined,
                                     '&:hover': {
                                         background: sceneEnded && !inputText.trim()
-                                            ? 'linear-gradient(90deg,#ff7a52,#ff4621)'
-                                            : 'linear-gradient(90deg,#00e67a,#009a7b)'
+                                            ? `linear-gradient(90deg, ${lighten(errorMain, 0.2)}, ${darken(errorMain, 0.28)})`
+                                            : `linear-gradient(90deg, ${lighten(accentMain, 0.16)}, ${darken(accentMain, 0.28)})`
                                     },
                                     '&:disabled': {
-                                        background: 'rgba(255,255,255,0.04)',
-                                        color: 'rgba(255,255,255,0.3)'
+                                        background: alpha(theme.palette.common.white, 0.06),
+                                        color: theme.palette.text.disabled
                                     }
                                 }}
                             >
                                 {sceneEnded && !inputText.trim() ? 'End' : (inputText.trim() ? 'Send' : 'Continue')}
                             </Button>
-
-                            {onWrapUp && (
-                                <IconButton
-                                    onClick={handleWrapUp}
-                                    disabled={loading}
-                                    sx={{
-                                        background: 'linear-gradient(90deg,#00ff88,#00b38f)',
-                                        color: '#00221a',
-                                        padding: isVerticalLayout ? '4px' : '6px',
-                                        borderRadius: '4px',
-                                        '&:hover': {
-                                            background: 'linear-gradient(90deg,#00e67a,#009a7b)'
-                                        },
-                                        '&:disabled': {
-                                            background: 'rgba(255,255,255,0.04)',
-                                            color: 'rgba(255,255,255,0.3)'
-                                        }
-                                    }}
-                                >
-                                    <CardGiftcard fontSize={isVerticalLayout ? 'small' : 'medium'} />
-                                </IconButton>
-                            )}
                         </Box>
                     )}
                 </Paper>
