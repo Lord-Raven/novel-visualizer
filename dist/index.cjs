@@ -38,7 +38,7 @@ __export(index_exports, {
 module.exports = __toCommonJS(index_exports);
 
 // src/components/NovelVisualizer.tsx
-var import_react3 = __toESM(require("react"), 1);
+var import_react4 = __toESM(require("react"), 1);
 var import_material = require("@mui/material");
 var import_styles = require("@mui/material/styles");
 var import_icons_material = require("@mui/icons-material");
@@ -59,7 +59,10 @@ var ActorImage = ({
   speaker,
   highlightColor,
   onMouseEnter,
-  onMouseLeave
+  onMouseLeave,
+  isGhost = false,
+  ghostSide = "left",
+  isAudioPlaying = false
 }) => {
   const [processedImageUrl, setProcessedImageUrl] = (0, import_react.useState)("");
   const [prevImageUrl, setPrevImageUrl] = (0, import_react.useState)("");
@@ -92,40 +95,101 @@ var ActorImage = ({
   }, [imageUrl, processedImageUrl]);
   const baseX = speaker ? 50 : xPosition;
   const baseY = yPosition;
-  const variants = (0, import_react.useMemo)(() => ({
-    absent: {
-      opacity: 0,
-      x: `150vw`,
-      bottom: `${baseY}vh`,
-      height: `${IDLE_HEIGHT * heightMultiplier}vh`,
-      filter: "brightness(0.8)",
-      transition: { x: { ease: import_framer_motion.easeIn, duration: 0.5 }, bottom: { duration: 0.5 }, opacity: { ease: import_framer_motion.easeOut, duration: 0.5 } }
-    },
-    talking: {
-      opacity: 1,
-      x: `${baseX}vw`,
-      bottom: `${baseY}vh`,
-      height: `${SPEAKING_HEIGHT * heightMultiplier}vh`,
-      filter: "brightness(1)",
-      transition: { x: { ease: import_framer_motion.easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: import_framer_motion.easeOut, duration: 0.3 } }
-    },
-    idle: {
-      opacity: 1,
-      x: `${baseX}vw`,
-      bottom: `${baseY}vh`,
-      height: `${IDLE_HEIGHT * heightMultiplier}vh`,
-      filter: "brightness(0.8)",
-      transition: { x: { ease: import_framer_motion.easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: import_framer_motion.easeOut, duration: 0.3 } }
+  const variants = (0, import_react.useMemo)(() => {
+    if (isGhost) {
+      const ghostX = ghostSide === "left" ? 10 : 90;
+      const offscreenX = ghostSide === "left" ? -20 : 120;
+      const tiltRotate = ghostSide === "left" ? -15 : 15;
+      return {
+        absent: {
+          opacity: 0,
+          x: `${offscreenX}vw`,
+          bottom: `${baseY}vh`,
+          height: `${SPEAKING_HEIGHT * heightMultiplier * 0.8}vh`,
+          filter: "brightness(0.7)",
+          rotate: tiltRotate * 1.5,
+          transition: {
+            x: { ease: import_framer_motion.easeIn, duration: 0.4 },
+            bottom: { duration: 0.4 },
+            opacity: { ease: import_framer_motion.easeOut, duration: 0.3 },
+            rotate: { duration: 0.4 }
+          }
+        },
+        talking: {
+          opacity: 0.85,
+          x: `${ghostX}vw`,
+          bottom: `${baseY}vh`,
+          height: `${SPEAKING_HEIGHT * heightMultiplier * 0.8}vh`,
+          filter: "brightness(0.9)",
+          rotate: tiltRotate,
+          transition: {
+            x: { ease: import_framer_motion.easeOut, duration: 0.4 },
+            bottom: { duration: 0.4 },
+            opacity: { ease: import_framer_motion.easeOut, duration: 0.4 },
+            rotate: { duration: 0.4 }
+          }
+        },
+        idle: {
+          opacity: 0.85,
+          x: `${ghostX}vw`,
+          bottom: `${baseY}vh`,
+          height: `${IDLE_HEIGHT * heightMultiplier * 0.8}vh`,
+          filter: "brightness(0.7)",
+          rotate: tiltRotate,
+          transition: {
+            x: { ease: import_framer_motion.easeOut, duration: 0.4 },
+            bottom: { duration: 0.4 },
+            opacity: { ease: import_framer_motion.easeOut, duration: 0.4 },
+            rotate: { duration: 0.4 }
+          }
+        }
+      };
     }
-  }), [baseX, baseY, yPosition, zIndex, heightMultiplier]);
+    return {
+      absent: {
+        opacity: 0,
+        x: `150vw`,
+        bottom: `${baseY}vh`,
+        height: `${IDLE_HEIGHT * heightMultiplier}vh`,
+        filter: "brightness(0.8)",
+        transition: { x: { ease: import_framer_motion.easeIn, duration: 0.5 }, bottom: { duration: 0.5 }, opacity: { ease: import_framer_motion.easeOut, duration: 0.5 } }
+      },
+      talking: {
+        opacity: 1,
+        x: `${baseX}vw`,
+        bottom: `${baseY}vh`,
+        height: `${SPEAKING_HEIGHT * heightMultiplier}vh`,
+        filter: "brightness(1)",
+        transition: { x: { ease: import_framer_motion.easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: import_framer_motion.easeOut, duration: 0.3 } }
+      },
+      idle: {
+        opacity: 1,
+        x: `${baseX}vw`,
+        bottom: `${baseY}vh`,
+        height: `${IDLE_HEIGHT * heightMultiplier}vh`,
+        filter: "brightness(0.8)",
+        transition: { x: { ease: import_framer_motion.easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: import_framer_motion.easeOut, duration: 0.3 } }
+      }
+    };
+  }, [baseX, baseY, yPosition, zIndex, heightMultiplier, isGhost, ghostSide]);
+  const talkingAnimationProps = isAudioPlaying ? {
+    scaleY: [1, 0.95, 1.05, 1],
+    transition: {
+      scaleY: {
+        duration: 0.6,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }
+    }
+  } : {};
   return processedImageUrl ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
     import_framer_motion.motion.div,
     {
       variants,
       initial: "absent",
       exit: "absent",
-      animate: speaker ? "talking" : "idle",
-      style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex },
+      animate: speaker ? { ...variants.talking, ...talkingAnimationProps } : "idle",
+      style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center" },
       children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: prevImageUrl && prevImageUrl !== processedImageUrl && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
           import_framer_motion.motion.img,
@@ -211,6 +275,7 @@ var multiplyImageByColor = (img, hex) => {
 var ActorImage_default = (0, import_react.memo)(ActorImage);
 
 // src/components/BlurredBackground.tsx
+var import_react2 = require("react");
 var import_jsx_runtime2 = require("react/jsx-runtime");
 var BlurredBackground = ({
   imageUrl,
@@ -219,26 +284,57 @@ var BlurredBackground = ({
   blur = 6,
   scale = 1.03,
   overlay,
+  transitionDuration = 600,
   children
 }) => {
+  const [currentImage, setCurrentImage] = (0, import_react2.useState)(imageUrl);
+  const [previousImage, setPreviousImage] = (0, import_react2.useState)(null);
+  const [isTransitioning, setIsTransitioning] = (0, import_react2.useState)(false);
+  (0, import_react2.useEffect)(() => {
+    if (imageUrl !== currentImage) {
+      setPreviousImage(currentImage);
+      setIsTransitioning(true);
+      const timer = setTimeout(() => {
+        setCurrentImage(imageUrl);
+        setIsTransitioning(false);
+        const cleanupTimer = setTimeout(() => {
+          setPreviousImage(null);
+        }, transitionDuration);
+        return () => clearTimeout(cleanupTimer);
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [imageUrl, currentImage, transitionDuration]);
+  const imageStyle = {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundRepeat: "no-repeat",
+    filter: `blur(${blur}px) brightness(${brightness}) contrast(${contrast})`,
+    transform: `scale(${scale})`,
+    transition: `opacity ${transitionDuration}ms ease-in-out`
+  };
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: {
     position: "relative",
     width: "100%",
     height: "100%",
     overflow: "hidden"
   }, children: [
+    previousImage && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: {
+      ...imageStyle,
+      backgroundImage: `url(${previousImage})`,
+      opacity: isTransitioning ? 0 : 1,
+      zIndex: 0
+    } }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundImage: `url(${imageUrl})`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-      backgroundRepeat: "no-repeat",
-      filter: `blur(${blur}px) brightness(${brightness}) contrast(${contrast})`,
-      transform: `scale(${scale})`
+      ...imageStyle,
+      backgroundImage: `url(${currentImage})`,
+      opacity: 1,
+      zIndex: previousImage ? 1 : 0
     } }),
     overlay && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: {
       position: "absolute",
@@ -260,7 +356,7 @@ var BlurredBackground = ({
 var BlurredBackground_default = BlurredBackground;
 
 // src/components/TypeOut.tsx
-var import_react2 = __toESM(require("react"), 1);
+var import_react3 = __toESM(require("react"), 1);
 var import_jsx_runtime3 = require("react/jsx-runtime");
 var extractTextContent = (node) => {
   if (typeof node === "string") {
@@ -269,7 +365,7 @@ var extractTextContent = (node) => {
   if (typeof node === "number") {
     return String(node);
   }
-  if (import_react2.default.isValidElement(node)) {
+  if (import_react3.default.isValidElement(node)) {
     if (node.props.children) {
       return extractTextContent(node.props.children);
     }
@@ -298,16 +394,16 @@ var truncateReactContent = (node, maxLength) => {
       currentLength += truncated.length;
       return truncated;
     }
-    if (import_react2.default.isValidElement(n)) {
+    if (import_react3.default.isValidElement(n)) {
       const children = n.props.children;
       if (children !== void 0 && children !== null) {
         const truncatedChildren = truncateNode(children);
         if (truncatedChildren !== null || !children) {
-          return import_react2.default.cloneElement(n, { ...n.props, key }, truncatedChildren);
+          return import_react3.default.cloneElement(n, { ...n.props, key }, truncatedChildren);
         }
         return null;
       }
-      return import_react2.default.cloneElement(n, { ...n.props, key });
+      return import_react3.default.cloneElement(n, { ...n.props, key });
     }
     if (Array.isArray(n)) {
       const result = [];
@@ -332,16 +428,16 @@ var TypeOut = ({
   finishTyping = false,
   onTypingComplete
 }) => {
-  const [displayLength, setDisplayLength] = import_react2.default.useState(0);
-  const [finished, setFinished] = import_react2.default.useState(false);
-  const timerRef = import_react2.default.useRef(null);
-  const textContent = import_react2.default.useMemo(() => extractTextContent(children), [children]);
-  const prevTextContentRef = import_react2.default.useRef("");
-  const onTypingCompleteRef = import_react2.default.useRef(onTypingComplete);
-  import_react2.default.useEffect(() => {
+  const [displayLength, setDisplayLength] = import_react3.default.useState(0);
+  const [finished, setFinished] = import_react3.default.useState(false);
+  const timerRef = import_react3.default.useRef(null);
+  const textContent = import_react3.default.useMemo(() => extractTextContent(children), [children]);
+  const prevTextContentRef = import_react3.default.useRef("");
+  const onTypingCompleteRef = import_react3.default.useRef(onTypingComplete);
+  import_react3.default.useEffect(() => {
     onTypingCompleteRef.current = onTypingComplete;
   }, [onTypingComplete]);
-  import_react2.default.useEffect(() => {
+  import_react3.default.useEffect(() => {
     if (textContent !== prevTextContentRef.current) {
       prevTextContentRef.current = textContent;
       setDisplayLength(0);
@@ -372,7 +468,7 @@ var TypeOut = ({
       };
     }
   }, [textContent, speed]);
-  import_react2.default.useEffect(() => {
+  import_react3.default.useEffect(() => {
     if (finishTyping && !finished) {
       if (timerRef.current !== null) {
         clearInterval(timerRef.current);
@@ -383,7 +479,7 @@ var TypeOut = ({
       onTypingCompleteRef.current?.();
     }
   }, [finishTyping, finished, textContent.length]);
-  const displayContent = import_react2.default.useMemo(() => {
+  const displayContent = import_react3.default.useMemo(() => {
     if (displayLength === 0) {
       return null;
     }
@@ -539,15 +635,15 @@ function NovelVisualizer(props) {
   const {
     script,
     actors,
-    backgroundImageUrl,
+    getBackgroundImageUrl,
     isVerticalLayout = false,
     typingSpeed = 20,
     allowTypingSkip = true,
     onSubmitInput,
     onUpdateMessage,
     onReroll,
-    onClose,
     inputPlaceholder,
+    getSubmitButtonConfig,
     renderNameplate,
     renderActorHoverInfo,
     getActorImageUrl,
@@ -555,33 +651,39 @@ function NovelVisualizer(props) {
     resolveSpeaker,
     backgroundOptions,
     hideInput = false,
-    hideActionButtons = false
+    hideActionButtons = false,
+    allowGhostSpeakers = false,
+    enableAudio = true,
+    enableTalkingAnimation = true
   } = props;
-  const [inputText, setInputText] = (0, import_react3.useState)("");
-  const [finishTyping, setFinishTyping] = (0, import_react3.useState)(false);
-  const [messageKey, setMessageKey] = import_react3.default.useState(0);
-  const [hoveredActor, setHoveredActor] = (0, import_react3.useState)(null);
-  const [mousePosition, setMousePosition] = (0, import_react3.useState)(null);
-  const [messageBoxTopVh, setMessageBoxTopVh] = (0, import_react3.useState)(isVerticalLayout ? 50 : 60);
-  const [loading, setLoading] = (0, import_react3.useState)(false);
-  const messageBoxRef = (0, import_react3.useRef)(null);
-  const [isEditingMessage, setIsEditingMessage] = (0, import_react3.useState)(false);
-  const [editedMessage, setEditedMessage] = (0, import_react3.useState)("");
-  const [originalMessage, setOriginalMessage] = (0, import_react3.useState)("");
-  const [localScript, setLocalScript] = (0, import_react3.useState)(script);
-  const [index, setIndex] = (0, import_react3.useState)(0);
-  const prevIndexRef = (0, import_react3.useRef)(index);
+  const [inputText, setInputText] = (0, import_react4.useState)("");
+  const [finishTyping, setFinishTyping] = (0, import_react4.useState)(false);
+  const [messageKey, setMessageKey] = import_react4.default.useState(0);
+  const [hoveredActor, setHoveredActor] = (0, import_react4.useState)(null);
+  const [audioEnabled, setAudioEnabled] = import_react4.default.useState(enableAudio);
+  const currentAudioRef = import_react4.default.useRef(null);
+  const [isAudioPlaying, setIsAudioPlaying] = import_react4.default.useState(false);
+  const [mousePosition, setMousePosition] = (0, import_react4.useState)(null);
+  const [messageBoxTopVh, setMessageBoxTopVh] = (0, import_react4.useState)(isVerticalLayout ? 50 : 60);
+  const [loading, setLoading] = (0, import_react4.useState)(false);
+  const messageBoxRef = (0, import_react4.useRef)(null);
+  const [isEditingMessage, setIsEditingMessage] = (0, import_react4.useState)(false);
+  const [editedMessage, setEditedMessage] = (0, import_react4.useState)("");
+  const [originalMessage, setOriginalMessage] = (0, import_react4.useState)("");
+  const [localScript, setLocalScript] = (0, import_react4.useState)(script);
+  const [index, setIndex] = (0, import_react4.useState)(0);
+  const prevIndexRef = (0, import_react4.useRef)(index);
   const activeScript = onUpdateMessage ? script : localScript;
   const entries = activeScript?.script || [];
   const accentMain = theme.palette.success.main;
   const accentLight = theme.palette.success.light;
   const errorMain = theme.palette.error.main;
   const errorLight = theme.palette.error.light;
-  const baseTextShadow = (0, import_react3.useMemo)(
+  const baseTextShadow = (0, import_react4.useMemo)(
     () => `2px 2px 2px ${(0, import_styles.alpha)(theme.palette.common.black, 0.8)}`,
     [theme]
   );
-  const messageTokens = (0, import_react3.useMemo)(
+  const messageTokens = (0, import_react4.useMemo)(
     () => ({
       baseTextShadow,
       defaultDialogueColor: theme.palette.info.light,
@@ -590,10 +692,10 @@ function NovelVisualizer(props) {
     }),
     [baseTextShadow, theme]
   );
-  (0, import_react3.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     setLocalScript(script);
   }, [script]);
-  (0, import_react3.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     if (messageBoxRef.current) {
       const rect = messageBoxRef.current.getBoundingClientRect();
       const topVh = rect.top / window.innerHeight * 100;
@@ -605,27 +707,43 @@ function NovelVisualizer(props) {
     const y = e.clientY / window.innerHeight * 100;
     setMousePosition({ x, y });
   };
-  const actorsAtIndex = (0, import_react3.useMemo)(() => getPresentActors(activeScript, index), [activeScript, index, actors, getPresentActors]);
-  const speakerActor = (0, import_react3.useMemo)(() => {
+  const actorsAtIndex = (0, import_react4.useMemo)(() => getPresentActors(activeScript, index), [activeScript, index, actors, getPresentActors]);
+  const speakerActor = (0, import_react4.useMemo)(() => {
     if (resolveSpeaker) return resolveSpeaker(script, index);
     return null;
   }, [entries, index, actors, resolveSpeaker]);
-  const displayMessage = (0, import_react3.useMemo)(() => {
+  const displayMessage = (0, import_react4.useMemo)(() => {
     const message = entries[index]?.message || "";
     return formatMessage(message, speakerActor, messageTokens);
   }, [entries, index, speakerActor, messageTokens]);
-  (0, import_react3.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     if (prevIndexRef.current !== index) {
       setFinishTyping(false);
       if (isEditingMessage) {
         setIsEditingMessage(false);
         setOriginalMessage("");
       }
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
+        setIsAudioPlaying(false);
+      }
+      if (audioEnabled && activeScript.script[index]?.speechUrl) {
+        const audio = new Audio(activeScript.script[index].speechUrl);
+        currentAudioRef.current = audio;
+        audio.addEventListener("play", () => setIsAudioPlaying(true));
+        audio.addEventListener("pause", () => setIsAudioPlaying(false));
+        audio.addEventListener("ended", () => setIsAudioPlaying(false));
+        audio.play().catch((err) => {
+          console.error("Error playing audio:", err);
+          setIsAudioPlaying(false);
+        });
+      }
       prevIndexRef.current = index;
     }
     setMessageKey(messageKey + 1);
   }, [index]);
-  (0, import_react3.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     if (!mousePosition) {
       setHoveredActor(null);
       return;
@@ -634,7 +752,7 @@ function NovelVisualizer(props) {
       setHoveredActor(null);
       return;
     }
-    if (actorsAtIndex.length === 0) {
+    if (actorsAtIndex.length === 0 && !(allowGhostSpeakers && speakerActor)) {
       setHoveredActor(null);
       return;
     }
@@ -642,19 +760,27 @@ function NovelVisualizer(props) {
       actor,
       xPosition: calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor))
     }));
+    if (allowGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
+      const ghostSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? "left" : "right";
+      actorPositions.push({
+        actor: speakerActor,
+        xPosition: ghostSide === "left" ? 10 : 90
+      });
+    }
     const HOVER_RANGE = 10;
     let closestActor = null;
     let closestDistance = Infinity;
     actorPositions.forEach(({ actor, xPosition }) => {
-      const distance = Math.abs(mousePosition.x - (actor === speakerActor ? 50 : xPosition));
+      const actualXPosition = actor === speakerActor && actorsAtIndex.includes(actor) ? 50 : xPosition;
+      const distance = Math.abs(mousePosition.x - actualXPosition);
       if (distance < closestDistance && distance <= HOVER_RANGE) {
         closestDistance = distance;
         closestActor = actor;
       }
     });
     setHoveredActor(closestActor);
-  }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor]);
-  (0, import_react3.useEffect)(() => {
+  }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, allowGhostSpeakers]);
+  (0, import_react4.useEffect)(() => {
     const handleKeyDown = (e) => {
       const target = e.target;
       const isInputFocused = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
@@ -717,7 +843,7 @@ function NovelVisualizer(props) {
   };
   const sceneEnded = Boolean(entries[index]?.endScene);
   const progressLabel = `${entries.length === 0 ? 0 : index + 1} / ${entries.length}`;
-  const placeholderText = (0, import_react3.useMemo)(() => {
+  const placeholderText = (0, import_react4.useMemo)(() => {
     if (typeof inputPlaceholder === "function") {
       return inputPlaceholder({ index, entry: entries[index] });
     }
@@ -743,7 +869,7 @@ function NovelVisualizer(props) {
     );
   };
   const renderActors = () => {
-    return actorsAtIndex.map((actor, i) => {
+    const actorElements = actorsAtIndex.map((actor, i) => {
       const xPosition = calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
       const isSpeaking = actor === speakerActor;
       const isHovered = actor === hoveredActor;
@@ -763,12 +889,38 @@ function NovelVisualizer(props) {
           heightMultiplier: isVerticalLayout ? isSpeaking ? 0.9 : 0.7 : 1,
           speaker: isSpeaking,
           highlightColor: isHovered ? "rgba(255,255,255,1)" : "rgba(225,225,225,1)",
-          panX: 0,
-          panY: 0
+          isAudioPlaying: isSpeaking && isAudioPlaying && enableTalkingAnimation
         },
         actor.id
       );
     });
+    if (allowGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
+      const yPosition = isVerticalLayout ? 20 : 0;
+      const isHovered = speakerActor === hoveredActor;
+      const ghostSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? "left" : "right";
+      actorElements.push(
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+          ActorImage_default,
+          {
+            id: `ghost-${speakerActor.id}`,
+            resolveImageUrl: () => {
+              return getActorImageUrl(speakerActor, activeScript, index);
+            },
+            xPosition: ghostSide === "left" ? 10 : 90,
+            yPosition,
+            zIndex: 45,
+            heightMultiplier: isVerticalLayout ? 0.65 : 0.85,
+            speaker: true,
+            highlightColor: isHovered ? "rgba(255,255,255,1)" : "rgba(200,200,200,0.9)",
+            isGhost: true,
+            ghostSide,
+            isAudioPlaying: isAudioPlaying && enableTalkingAnimation
+          },
+          `ghost-${speakerActor.id}`
+        )
+      );
+    }
+    return actorElements;
   };
   const handleSubmit = () => {
     if (isEditingMessage) {
@@ -789,6 +941,10 @@ function NovelVisualizer(props) {
     setInputText("");
   };
   const hoverInfoNode = renderActorHoverInfo ? renderActorHoverInfo(hoveredActor) : null;
+  const backgroundImageUrl = (0, import_react4.useMemo)(
+    () => getBackgroundImageUrl(activeScript, index),
+    [getBackgroundImageUrl, activeScript, index]
+  );
   return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
     BlurredBackground,
     {
@@ -798,6 +954,7 @@ function NovelVisualizer(props) {
       blur: backgroundOptions?.blur,
       scale: backgroundOptions?.scale,
       overlay: backgroundOptions?.overlay,
+      transitionDuration: backgroundOptions?.transitionDuration,
       children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
         "div",
         {
@@ -831,7 +988,7 @@ function NovelVisualizer(props) {
                   right: isVerticalLayout ? "2%" : "5%",
                   bottom: isVerticalLayout ? "1%" : "4%",
                   background: (0, import_styles.alpha)(theme.palette.background.paper, 0.92),
-                  border: `2px solid ${(0, import_styles.alpha)(accentMain, 0.2)}`,
+                  border: `2px solid ${(0, import_styles.alpha)(theme.palette.divider, 0.3)}`,
                   borderRadius: 3,
                   p: 2,
                   color: theme.palette.text.primary,
@@ -853,7 +1010,7 @@ function NovelVisualizer(props) {
                           size: "small",
                           sx: {
                             color: theme.palette.text.secondary,
-                            border: `1px solid ${(0, import_styles.alpha)(theme.palette.common.white, 0.08)}`,
+                            border: `1px solid ${(0, import_styles.alpha)(theme.palette.divider, 0.2)}`,
                             padding: isVerticalLayout ? "4px" : void 0,
                             minWidth: isVerticalLayout ? "28px" : void 0,
                             "&:disabled": { color: theme.palette.text.disabled }
@@ -871,8 +1028,8 @@ function NovelVisualizer(props) {
                             fontSize: isVerticalLayout ? "0.7rem" : void 0,
                             fontWeight: 700,
                             color: theme.palette.success.light,
-                            background: (0, import_styles.alpha)(theme.palette.common.white, 0.04),
-                            border: `1px solid ${(0, import_styles.alpha)(theme.palette.common.white, 0.06)}`,
+                            background: (0, import_styles.alpha)(theme.palette.action.hover, 0.5),
+                            border: `1px solid ${(0, import_styles.alpha)(theme.palette.divider, 0.15)}`,
                             transition: "all 0.3s ease",
                             "& .MuiChip-label": {
                               display: "flex",
@@ -891,7 +1048,7 @@ function NovelVisualizer(props) {
                           size: "small",
                           sx: {
                             color: theme.palette.text.secondary,
-                            border: `1px solid ${(0, import_styles.alpha)(theme.palette.common.white, 0.08)}`,
+                            border: `1px solid ${(0, import_styles.alpha)(theme.palette.divider, 0.2)}`,
                             padding: isVerticalLayout ? "4px" : void 0,
                             minWidth: isVerticalLayout ? "28px" : void 0,
                             "&:disabled": { color: theme.palette.text.disabled }
@@ -1016,7 +1173,7 @@ function NovelVisualizer(props) {
                         borderRadius: 1,
                         transition: "background-color 0.2s ease",
                         "&:hover": {
-                          backgroundColor: isEditingMessage ? "transparent" : (0, import_styles.alpha)(theme.palette.common.white, 0.04)
+                          backgroundColor: isEditingMessage ? "transparent" : theme.palette.action.hover
                         }
                       },
                       onClick: () => {
@@ -1051,7 +1208,7 @@ function NovelVisualizer(props) {
                               lineHeight: 1.55,
                               fontFamily: theme.typography.fontFamily,
                               color: theme.palette.text.primary,
-                              backgroundColor: (0, import_styles.alpha)(theme.palette.common.white, 0.06),
+                              backgroundColor: (0, import_styles.alpha)(theme.palette.action.selected, 0.5),
                               padding: "8px"
                             },
                             "& .MuiInputBase-input": {
@@ -1095,11 +1252,7 @@ function NovelVisualizer(props) {
                           if (e.key === "Enter") {
                             e.preventDefault();
                             if (!loading) {
-                              if (sceneEnded && inputText.trim() === "") {
-                                onClose?.();
-                              } else {
-                                handleSubmit();
-                              }
+                              handleSubmit();
                             }
                           }
                         },
@@ -1109,22 +1262,22 @@ function NovelVisualizer(props) {
                         size: "small",
                         sx: {
                           "& .MuiOutlinedInput-root": {
-                            background: `linear-gradient(180deg, ${(0, import_styles.alpha)(theme.palette.common.white, 0.04)}, ${(0, import_styles.alpha)(theme.palette.common.white, 0.02)})`,
+                            background: theme.palette.action.hover,
                             color: theme.palette.text.primary,
                             fontSize: isVerticalLayout ? "0.75rem" : void 0,
                             "& fieldset": {
-                              borderColor: (0, import_styles.alpha)(theme.palette.common.white, 0.12)
+                              borderColor: theme.palette.divider
                             },
                             "&:hover fieldset": {
-                              borderColor: (0, import_styles.alpha)(theme.palette.common.white, 0.2)
+                              borderColor: (0, import_styles.alpha)(theme.palette.divider, 0.8)
                             },
                             "&.Mui-focused fieldset": {
-                              borderColor: (0, import_styles.alpha)(accentMain, 0.35)
+                              borderColor: accentMain
                             },
                             "&.Mui-disabled": {
                               color: theme.palette.text.disabled,
                               "& fieldset": {
-                                borderColor: (0, import_styles.alpha)(theme.palette.common.white, 0.08)
+                                borderColor: (0, import_styles.alpha)(theme.palette.divider, 0.5)
                               }
                             }
                           },
@@ -1150,32 +1303,55 @@ function NovelVisualizer(props) {
                     /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                       import_material.Button,
                       {
-                        onClick: () => {
-                          if (sceneEnded && !inputText.trim()) {
-                            onClose?.();
-                          } else {
-                            handleSubmit();
-                          }
-                        },
+                        onClick: handleSubmit,
                         disabled: loading,
                         variant: "contained",
-                        startIcon: sceneEnded && !inputText.trim() ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_icons_material.Close, { fontSize: isVerticalLayout ? "small" : void 0 }) : inputText.trim() ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_icons_material.Send, { fontSize: isVerticalLayout ? "small" : void 0 }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_icons_material.Forward, { fontSize: isVerticalLayout ? "small" : void 0 }),
+                        startIcon: (() => {
+                          if (getSubmitButtonConfig) {
+                            const config = getSubmitButtonConfig(activeScript, index, inputText);
+                            return config.icon;
+                          }
+                          if (sceneEnded && !inputText.trim()) {
+                            return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_icons_material.Close, { fontSize: isVerticalLayout ? "small" : void 0 });
+                          }
+                          return inputText.trim() ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_icons_material.Send, { fontSize: isVerticalLayout ? "small" : void 0 }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_icons_material.Forward, { fontSize: isVerticalLayout ? "small" : void 0 });
+                        })(),
                         sx: {
-                          background: sceneEnded && !inputText.trim() ? `linear-gradient(90deg, ${(0, import_styles.lighten)(errorMain, 0.12)}, ${(0, import_styles.darken)(errorMain, 0.2)})` : `linear-gradient(90deg, ${(0, import_styles.lighten)(accentMain, 0.08)}, ${(0, import_styles.darken)(accentMain, 0.2)})`,
-                          color: sceneEnded && !inputText.trim() ? theme.palette.getContrastText(errorMain) : theme.palette.getContrastText(accentMain),
+                          background: (() => {
+                            const colorScheme = getSubmitButtonConfig ? getSubmitButtonConfig(activeScript, index, inputText).colorScheme : sceneEnded && !inputText.trim() ? "error" : "primary";
+                            const baseColor = colorScheme === "error" ? errorMain : accentMain;
+                            return `linear-gradient(90deg, ${(0, import_styles.lighten)(baseColor, 0.12)}, ${(0, import_styles.darken)(baseColor, 0.2)})`;
+                          })(),
+                          color: (() => {
+                            const colorScheme = getSubmitButtonConfig ? getSubmitButtonConfig(activeScript, index, inputText).colorScheme : sceneEnded && !inputText.trim() ? "error" : "primary";
+                            const baseColor = colorScheme === "error" ? errorMain : accentMain;
+                            return theme.palette.getContrastText(baseColor);
+                          })(),
                           fontWeight: 800,
                           minWidth: isVerticalLayout ? 76 : 100,
                           fontSize: isVerticalLayout ? "clamp(0.6rem, 2vw, 0.875rem)" : void 0,
                           padding: isVerticalLayout ? "4px 10px" : void 0,
                           "&:hover": {
-                            background: sceneEnded && !inputText.trim() ? `linear-gradient(90deg, ${(0, import_styles.lighten)(errorMain, 0.2)}, ${(0, import_styles.darken)(errorMain, 0.28)})` : `linear-gradient(90deg, ${(0, import_styles.lighten)(accentMain, 0.16)}, ${(0, import_styles.darken)(accentMain, 0.28)})`
+                            background: (() => {
+                              const colorScheme = getSubmitButtonConfig ? getSubmitButtonConfig(activeScript, index, inputText).colorScheme : sceneEnded && !inputText.trim() ? "error" : "primary";
+                              const baseColor = colorScheme === "error" ? errorMain : accentMain;
+                              return `linear-gradient(90deg, ${(0, import_styles.lighten)(baseColor, 0.2)}, ${(0, import_styles.darken)(baseColor, 0.28)})`;
+                            })()
                           },
                           "&:disabled": {
-                            background: (0, import_styles.alpha)(theme.palette.common.white, 0.06),
+                            background: theme.palette.action.disabledBackground,
                             color: theme.palette.text.disabled
                           }
                         },
-                        children: sceneEnded && !inputText.trim() ? "End" : inputText.trim() ? "Send" : "Continue"
+                        children: (() => {
+                          if (getSubmitButtonConfig) {
+                            return getSubmitButtonConfig(activeScript, index, inputText).label;
+                          }
+                          if (sceneEnded && !inputText.trim()) {
+                            return "End";
+                          }
+                          return inputText.trim() ? "Send" : "Continue";
+                        })()
                       }
                     )
                   ] })

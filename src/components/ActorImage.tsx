@@ -14,10 +14,14 @@ interface ActorImageProps {
     // 'speaker' indicates whether this actor is currently speaking and should be emphasized
     speaker?: boolean;
     highlightColor: string;
-    panX: number;
-    panY: number;
     onMouseEnter?: () => void;
     onMouseLeave?: () => void;
+    // 'isGhost' indicates a non-present actor that's appearing briefly for this message
+    isGhost?: boolean;
+    // 'ghostSide' determines which side of the screen the ghost enters from
+    ghostSide?: 'left' | 'right';
+    // 'isAudioPlaying' indicates whether audio is currently playing for this character
+    isAudioPlaying?: boolean;
 }
 
 const ActorImage: FC<ActorImageProps> = ({
@@ -30,7 +34,10 @@ const ActorImage: FC<ActorImageProps> = ({
     speaker,
     highlightColor,
     onMouseEnter,
-    onMouseLeave
+    onMouseLeave,
+    isGhost = false,
+    ghostSide = 'left',
+    isAudioPlaying = false
 }) => {
     const [processedImageUrl, setProcessedImageUrl] = useState<string>('');
     const [prevImageUrl, setPrevImageUrl] = useState<string>('');
@@ -72,32 +79,99 @@ const ActorImage: FC<ActorImageProps> = ({
     const baseX = speaker ? 50 : xPosition;
     const baseY = yPosition;
 
-    const variants: Variants = useMemo(() => ({
-        absent: {
-            opacity: 0,
-            x: `150vw`,
-            bottom: `${baseY}vh`,
-            height: `${IDLE_HEIGHT * heightMultiplier}vh`,
-            filter: 'brightness(0.8)',
-            transition: { x: { ease: easeIn, duration: 0.5 }, bottom: { duration: 0.5 }, opacity: { ease: easeOut, duration: 0.5 } }
-        },
-        talking: {
-            opacity: 1,
-            x: `${baseX}vw`,
-            bottom: `${baseY}vh`,
-            height: `${(SPEAKING_HEIGHT * heightMultiplier)}vh`,
-            filter: 'brightness(1)',
-            transition: { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } }
-        },
-        idle: {
-            opacity: 1,
-            x: `${baseX}vw`,
-            bottom: `${baseY}vh`,
-            height: `${(IDLE_HEIGHT * heightMultiplier)}vh`,
-            filter: 'brightness(0.8)',
-            transition: { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } }
+    const variants: Variants = useMemo(() => {
+        if (isGhost) {
+            // Ghost mode: tilt in from the side
+            const ghostX = ghostSide === 'left' ? 10 : 90;
+            const offscreenX = ghostSide === 'left' ? -20 : 120;
+            const tiltRotate = ghostSide === 'left' ? -15 : 15;
+            
+            return {
+                absent: {
+                    opacity: 0,
+                    x: `${offscreenX}vw`,
+                    bottom: `${baseY}vh`,
+                    height: `${SPEAKING_HEIGHT * heightMultiplier * 0.8}vh`,
+                    filter: 'brightness(0.7)',
+                    rotate: tiltRotate * 1.5,
+                    transition: { 
+                        x: { ease: easeIn, duration: 0.4 }, 
+                        bottom: { duration: 0.4 }, 
+                        opacity: { ease: easeOut, duration: 0.3 },
+                        rotate: { duration: 0.4 }
+                    }
+                },
+                talking: {
+                    opacity: 0.85,
+                    x: `${ghostX}vw`,
+                    bottom: `${baseY}vh`,
+                    height: `${SPEAKING_HEIGHT * heightMultiplier * 0.8}vh`,
+                    filter: 'brightness(0.9)',
+                    rotate: tiltRotate,
+                    transition: { 
+                        x: { ease: easeOut, duration: 0.4 }, 
+                        bottom: { duration: 0.4 }, 
+                        opacity: { ease: easeOut, duration: 0.4 },
+                        rotate: { duration: 0.4 }
+                    }
+                },
+                idle: {
+                    opacity: 0.85,
+                    x: `${ghostX}vw`,
+                    bottom: `${baseY}vh`,
+                    height: `${IDLE_HEIGHT * heightMultiplier * 0.8}vh`,
+                    filter: 'brightness(0.7)',
+                    rotate: tiltRotate,
+                    transition: { 
+                        x: { ease: easeOut, duration: 0.4 }, 
+                        bottom: { duration: 0.4 }, 
+                        opacity: { ease: easeOut, duration: 0.4 },
+                        rotate: { duration: 0.4 }
+                    }
+                }
+            };
         }
-    }), [baseX, baseY, yPosition, zIndex, heightMultiplier]);
+        
+        // Normal mode: existing behavior
+        return {
+            absent: {
+                opacity: 0,
+                x: `150vw`,
+                bottom: `${baseY}vh`,
+                height: `${IDLE_HEIGHT * heightMultiplier}vh`,
+                filter: 'brightness(0.8)',
+                transition: { x: { ease: easeIn, duration: 0.5 }, bottom: { duration: 0.5 }, opacity: { ease: easeOut, duration: 0.5 } }
+            },
+            talking: {
+                opacity: 1,
+                x: `${baseX}vw`,
+                bottom: `${baseY}vh`,
+                height: `${(SPEAKING_HEIGHT * heightMultiplier)}vh`,
+                filter: 'brightness(1)',
+                transition: { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } }
+            },
+            idle: {
+                opacity: 1,
+                x: `${baseX}vw`,
+                bottom: `${baseY}vh`,
+                height: `${(IDLE_HEIGHT * heightMultiplier)}vh`,
+                filter: 'brightness(0.8)',
+                transition: { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } }
+            }
+        };
+    }, [baseX, baseY, yPosition, zIndex, heightMultiplier, isGhost, ghostSide]);
+
+    // Talking animation: squish and stretch while audio plays
+    const talkingAnimationProps = isAudioPlaying ? {
+        scaleY: [1, 0.95, 1.05, 1],
+        transition: {
+            scaleY: {
+                duration: 0.6,
+                repeat: Infinity,
+                ease: "easeInOut"
+            }
+        }
+    } : {};
 
     return processedImageUrl ? (
         <motion.div
@@ -106,8 +180,8 @@ const ActorImage: FC<ActorImageProps> = ({
             // Prevent automatic initial animation on remounts/refreshes; rely on animate to move between states
             initial={'absent'}
             exit='absent'
-            animate={speaker ? 'talking' : 'idle'}
-            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex}}>
+            animate={speaker ? { ...variants.talking, ...talkingAnimationProps } : 'idle'}
+            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center'}}>
             <AnimatePresence>
                 {/* Previous image layer for crossfade */}
                 {prevImageUrl && prevImageUrl !== processedImageUrl && (

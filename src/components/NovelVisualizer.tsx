@@ -84,6 +84,12 @@ const findBestNameMatch = (speakerName: string, actors: Record<string, NovelActo
     return loose || null;
 };
 
+export interface SubmitButtonConfig {
+    label: string;
+    icon?: React.ReactElement;
+    colorScheme?: 'primary' | 'error';
+}
+
 const calculateActorXPosition = (actorIndex: number, totalActors: number, anySpeaker: boolean): number => {
     const leftRange = Math.min(40, Math.ceil((totalActors - 2) / 2) * 20);
     const rightRange = Math.min(40, Math.floor((totalActors - 2) / 2) * 20);
@@ -110,15 +116,19 @@ export interface NovelVisualizerProps<
 > {
     script: TScript;
     actors: Record<string, TActor>;
-    backgroundImageUrl: string;
+    getBackgroundImageUrl: (script: TScript, index: number) => string;
     isVerticalLayout?: boolean;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
     onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<void>;
     onUpdateMessage?: (index: number, message: string) => void;
     onReroll?: (index: number) => void;
-    onClose?: () => void;
     inputPlaceholder?: string | ((context: { index: number; entry?: TEntry }) => string);
+    /**
+     * Function to determine button label, icon, and color scheme based on script state.
+     * If not provided, defaults to showing "Continue"/"Send"/"End" based on input and scene state.
+     */
+    getSubmitButtonConfig?: (script: TScript, index: number, inputText: string) => SubmitButtonConfig;
     renderNameplate?: (params: { actor: TActor | null}) => React.ReactNode;
     renderActorHoverInfo?: (actor: TActor | null) => React.ReactNode;
     /**
@@ -146,9 +156,22 @@ export interface NovelVisualizerProps<
         blur?: number;
         scale?: number;
         overlay?: string;
+        transitionDuration?: number;
     };
     hideInput?: boolean;
     hideActionButtons?: boolean;
+    /**
+     * When enabled, non-present actors who speak can "ghost" into the scene,
+     * tilting in from the edge of the screen for visual presence.
+     */
+    allowGhostSpeakers?: boolean;
+    enableAudio?: boolean;
+    /**
+     * When enabled, speaking characters will squish and stretch slightly while audio plays.
+     * Requires enableAudio to be true to have any effect.
+     */
+    enableTalkingAnimation?: boolean;
+
 }
 
 export function NovelVisualizer<
@@ -160,15 +183,15 @@ export function NovelVisualizer<
     const {
         script,
         actors,
-        backgroundImageUrl,
+        getBackgroundImageUrl,
         isVerticalLayout = false,
         typingSpeed = 20,
         allowTypingSkip = true,
         onSubmitInput,
         onUpdateMessage,
         onReroll,
-        onClose,
         inputPlaceholder,
+        getSubmitButtonConfig,
         renderNameplate,
         renderActorHoverInfo,
         getActorImageUrl,
@@ -176,12 +199,18 @@ export function NovelVisualizer<
         resolveSpeaker,
         backgroundOptions,
         hideInput = false,
-        hideActionButtons = false
+        hideActionButtons = false,
+        allowGhostSpeakers = false,
+        enableAudio = true,
+        enableTalkingAnimation = true
     } = props;
     const [inputText, setInputText] = useState<string>('');
     const [finishTyping, setFinishTyping] = useState<boolean>(false);
     const [messageKey, setMessageKey] = React.useState<number>(0); // Key to force TypeOut reset
     const [hoveredActor, setHoveredActor] = useState<TActor | null>(null);
+    const [audioEnabled, setAudioEnabled] = React.useState<boolean>(enableAudio);
+    const currentAudioRef = React.useRef<HTMLAudioElement | null>(null);
+    const [isAudioPlaying, setIsAudioPlaying] = React.useState<boolean>(false);
     const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
     const [messageBoxTopVh, setMessageBoxTopVh] = useState<number>(isVerticalLayout ? 50 : 60);
     const [loading, setLoading] = useState<boolean>(false);
@@ -254,6 +283,26 @@ export function NovelVisualizer<
                 setIsEditingMessage(false);
                 setOriginalMessage('');
             }
+            if (currentAudioRef.current) {
+                // Stop any currently playing audio
+                currentAudioRef.current.pause();
+                currentAudioRef.current.currentTime = 0;
+                setIsAudioPlaying(false);
+            }
+            if (audioEnabled && activeScript.script[index]?.speechUrl) {
+                const audio = new Audio(activeScript.script[index].speechUrl);
+                currentAudioRef.current = audio;
+                
+                // Set up event listeners for audio state
+                audio.addEventListener('play', () => setIsAudioPlaying(true));
+                audio.addEventListener('pause', () => setIsAudioPlaying(false));
+                audio.addEventListener('ended', () => setIsAudioPlaying(false));
+                
+                audio.play().catch(err => {
+                    console.error('Error playing audio:', err);
+                    setIsAudioPlaying(false);
+                });
+            }
             prevIndexRef.current = index;
         }
         setMessageKey(messageKey + 1);
@@ -270,7 +319,7 @@ export function NovelVisualizer<
             return;
         }
 
-        if (actorsAtIndex.length === 0) {
+        if (actorsAtIndex.length === 0 && !(allowGhostSpeakers && speakerActor)) {
             setHoveredActor(null);
             return;
         }
@@ -280,12 +329,22 @@ export function NovelVisualizer<
             xPosition: calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor))
         }));
 
+        // Add ghost speaker to hover detection if present
+        if (allowGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
+            const ghostSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? 'left' : 'right';
+            actorPositions.push({
+                actor: speakerActor,
+                xPosition: ghostSide === 'left' ? 10 : 90
+            });
+        }
+
         const HOVER_RANGE = 10;
         let closestActor: NovelActor | null = null;
         let closestDistance = Infinity;
 
         actorPositions.forEach(({ actor, xPosition }) => {
-            const distance = Math.abs(mousePosition.x - (actor === speakerActor ? 50 : xPosition));
+            const actualXPosition = actor === speakerActor && actorsAtIndex.includes(actor) ? 50 : xPosition;
+            const distance = Math.abs(mousePosition.x - actualXPosition);
             if (distance < closestDistance && distance <= HOVER_RANGE) {
                 closestDistance = distance;
                 closestActor = actor;
@@ -293,7 +352,7 @@ export function NovelVisualizer<
         });
 
         setHoveredActor(closestActor);
-    }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor]);
+    }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, allowGhostSpeakers]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -398,7 +457,7 @@ export function NovelVisualizer<
     };
 
     const renderActors = () => {
-        return actorsAtIndex.map((actor, i) => {
+        const actorElements = actorsAtIndex.map((actor, i) => {
             const xPosition = calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
             const isSpeaking = actor === speakerActor;
             const isHovered = actor === hoveredActor;
@@ -419,11 +478,39 @@ export function NovelVisualizer<
                     heightMultiplier={isVerticalLayout ? (isSpeaking ? 0.9 : 0.7) : 1.0}
                     speaker={isSpeaking}
                     highlightColor={isHovered ? 'rgba(255,255,255,1)' : 'rgba(225,225,225,1)'}
-                    panX={0}
-                    panY={0}
+                    isAudioPlaying={isSpeaking && isAudioPlaying && enableTalkingAnimation}
                 />
             );
         });
+
+        // Check if we should render a ghost speaker
+        if (allowGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
+            const yPosition = isVerticalLayout ? 20 : 0;
+            const isHovered = speakerActor === hoveredActor;
+            // Alternate sides based on actor ID for consistency
+            const ghostSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? 'left' : 'right';
+            
+            actorElements.push(
+                <ActorImage
+                    key={`ghost-${speakerActor.id}`}
+                    id={`ghost-${speakerActor.id}`}
+                    resolveImageUrl={() => {
+                        return getActorImageUrl(speakerActor, activeScript, index);
+                    }}
+                    xPosition={ghostSide === 'left' ? 10 : 90}
+                    yPosition={yPosition}
+                    zIndex={45}
+                    heightMultiplier={isVerticalLayout ? 0.65 : 0.85}
+                    speaker={true}
+                    highlightColor={isHovered ? 'rgba(255,255,255,1)' : 'rgba(200,200,200,0.9)'}
+                    isGhost={true}
+                    ghostSide={ghostSide}
+                    isAudioPlaying={isAudioPlaying && enableTalkingAnimation}
+                />
+            );
+        }
+
+        return actorElements;
     };
 
     const handleSubmit = () => {
@@ -451,6 +538,11 @@ export function NovelVisualizer<
 
     const hoverInfoNode = renderActorHoverInfo ? renderActorHoverInfo(hoveredActor) : null;
 
+    const backgroundImageUrl = useMemo(
+        () => getBackgroundImageUrl(activeScript, index),
+        [getBackgroundImageUrl, activeScript, index]
+    );
+
     return (
         <BlurredBackground
             imageUrl={backgroundImageUrl}
@@ -459,6 +551,7 @@ export function NovelVisualizer<
             blur={backgroundOptions?.blur}
             scale={backgroundOptions?.scale}
             overlay={backgroundOptions?.overlay}
+            transitionDuration={backgroundOptions?.transitionDuration}
         >
             <div
                 style={{ position: 'relative', width: '100vw', height: '100vh' }}
@@ -493,7 +586,7 @@ export function NovelVisualizer<
                         right: isVerticalLayout ? '2%' : '5%',
                         bottom: isVerticalLayout ? '1%' : '4%',
                         background: alpha(theme.palette.background.paper, 0.92),
-                        border: `2px solid ${alpha(accentMain, 0.2)}`,
+                        border: `2px solid ${alpha(theme.palette.divider, 0.3)}`,
                         borderRadius: 3,
                         p: 2,
                         color: theme.palette.text.primary,
@@ -513,7 +606,7 @@ export function NovelVisualizer<
                                 size="small"
                                 sx={{
                                     color: theme.palette.text.secondary,
-                                    border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
+                                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                                     padding: isVerticalLayout ? '4px' : undefined,
                                     minWidth: isVerticalLayout ? '28px' : undefined,
                                     '&:disabled': { color: theme.palette.text.disabled }
@@ -536,8 +629,8 @@ export function NovelVisualizer<
                                     fontSize: isVerticalLayout ? '0.7rem' : undefined,
                                     fontWeight: 700,
                                     color: theme.palette.success.light,
-                                    background: alpha(theme.palette.common.white, 0.04),
-                                    border: `1px solid ${alpha(theme.palette.common.white, 0.06)}`,
+                                    background: alpha(theme.palette.action.hover, 0.5),
+                                    border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
                                     transition: 'all 0.3s ease',
                                     '& .MuiChip-label': {
                                         display: 'flex',
@@ -554,7 +647,7 @@ export function NovelVisualizer<
                                 size="small"
                                 sx={{
                                     color: theme.palette.text.secondary,
-                                    border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
+                                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                                     padding: isVerticalLayout ? '4px' : undefined,
                                     minWidth: isVerticalLayout ? '28px' : undefined,
                                     '&:disabled': { color: theme.palette.text.disabled }
@@ -681,7 +774,7 @@ export function NovelVisualizer<
                             borderRadius: 1,
                             transition: 'background-color 0.2s ease',
                             '&:hover': {
-                                backgroundColor: isEditingMessage ? 'transparent' : alpha(theme.palette.common.white, 0.04)
+                                backgroundColor: isEditingMessage ? 'transparent' : theme.palette.action.hover
                             }
                         }}
                         onClick={() => {
@@ -716,7 +809,7 @@ export function NovelVisualizer<
                                         lineHeight: 1.55,
                                         fontFamily: theme.typography.fontFamily,
                                         color: theme.palette.text.primary,
-                                        backgroundColor: alpha(theme.palette.common.white, 0.06),
+                                        backgroundColor: alpha(theme.palette.action.selected, 0.5),
                                         padding: '8px'
                                     },
                                     '& .MuiInputBase-input': {
@@ -759,11 +852,7 @@ export function NovelVisualizer<
                                     if (e.key === 'Enter') {
                                         e.preventDefault();
                                         if (!loading) {
-                                            if (sceneEnded && inputText.trim() === '') {
-                                                onClose?.();
-                                            } else {
-                                                handleSubmit();
-                                            }
+                                            handleSubmit();
                                         }
                                     }
                                 }}
@@ -773,22 +862,22 @@ export function NovelVisualizer<
                                 size="small"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
-                                        background: `linear-gradient(180deg, ${alpha(theme.palette.common.white, 0.04)}, ${alpha(theme.palette.common.white, 0.02)})`,
+                                        background: theme.palette.action.hover,
                                         color: theme.palette.text.primary,
                                         fontSize: isVerticalLayout ? '0.75rem' : undefined,
                                         '& fieldset': {
-                                            borderColor: alpha(theme.palette.common.white, 0.12)
+                                            borderColor: theme.palette.divider
                                         },
                                         '&:hover fieldset': {
-                                            borderColor: alpha(theme.palette.common.white, 0.2)
+                                            borderColor: alpha(theme.palette.divider, 0.8)
                                         },
                                         '&.Mui-focused fieldset': {
-                                            borderColor: alpha(accentMain, 0.35)
+                                            borderColor: accentMain
                                         },
                                         '&.Mui-disabled': {
                                             color: theme.palette.text.disabled,
                                             '& fieldset': {
-                                                borderColor: alpha(theme.palette.common.white, 0.08)
+                                                borderColor: alpha(theme.palette.divider, 0.5)
                                             }
                                         }
                                     },
@@ -811,39 +900,66 @@ export function NovelVisualizer<
                                 }}
                             />
                             <Button
-                                onClick={() => {
-                                    if (sceneEnded && !inputText.trim()) {
-                                        onClose?.();
-                                    } else {
-                                        handleSubmit();
-                                    }
-                                }}
+                                onClick={handleSubmit}
                                 disabled={loading}
                                 variant="contained"
-                                startIcon={sceneEnded && !inputText.trim() ? <Close fontSize={isVerticalLayout ? 'small' : undefined} /> : (inputText.trim() ? <Send fontSize={isVerticalLayout ? 'small' : undefined} /> : <Forward fontSize={isVerticalLayout ? 'small' : undefined} />)}
+                                startIcon={(() => {
+                                    if (getSubmitButtonConfig) {
+                                        const config = getSubmitButtonConfig(activeScript, index, inputText);
+                                        return config.icon;
+                                    }
+                                    // Default behavior
+                                    if (sceneEnded && !inputText.trim()) {
+                                        return <Close fontSize={isVerticalLayout ? 'small' : undefined} />;
+                                    }
+                                    return inputText.trim() 
+                                        ? <Send fontSize={isVerticalLayout ? 'small' : undefined} /> 
+                                        : <Forward fontSize={isVerticalLayout ? 'small' : undefined} />;
+                                })()}
                                 sx={{
-                                    background: sceneEnded && !inputText.trim()
-                                        ? `linear-gradient(90deg, ${lighten(errorMain, 0.12)}, ${darken(errorMain, 0.2)})`
-                                        : `linear-gradient(90deg, ${lighten(accentMain, 0.08)}, ${darken(accentMain, 0.2)})`,
-                                    color: sceneEnded && !inputText.trim()
-                                        ? theme.palette.getContrastText(errorMain)
-                                        : theme.palette.getContrastText(accentMain),
+                                    background: (() => {
+                                        const colorScheme = getSubmitButtonConfig 
+                                            ? getSubmitButtonConfig(activeScript, index, inputText).colorScheme 
+                                            : (sceneEnded && !inputText.trim() ? 'error' : 'primary');
+                                        const baseColor = colorScheme === 'error' ? errorMain : accentMain;
+                                        return `linear-gradient(90deg, ${lighten(baseColor, 0.12)}, ${darken(baseColor, 0.2)})`;
+                                    })(),
+                                    color: (() => {
+                                        const colorScheme = getSubmitButtonConfig 
+                                            ? getSubmitButtonConfig(activeScript, index, inputText).colorScheme 
+                                            : (sceneEnded && !inputText.trim() ? 'error' : 'primary');
+                                        const baseColor = colorScheme === 'error' ? errorMain : accentMain;
+                                        return theme.palette.getContrastText(baseColor);
+                                    })(),
                                     fontWeight: 800,
                                     minWidth: isVerticalLayout ? 76 : 100,
                                     fontSize: isVerticalLayout ? 'clamp(0.6rem, 2vw, 0.875rem)' : undefined,
                                     padding: isVerticalLayout ? '4px 10px' : undefined,
                                     '&:hover': {
-                                        background: sceneEnded && !inputText.trim()
-                                            ? `linear-gradient(90deg, ${lighten(errorMain, 0.2)}, ${darken(errorMain, 0.28)})`
-                                            : `linear-gradient(90deg, ${lighten(accentMain, 0.16)}, ${darken(accentMain, 0.28)})`
+                                        background: (() => {
+                                            const colorScheme = getSubmitButtonConfig 
+                                                ? getSubmitButtonConfig(activeScript, index, inputText).colorScheme 
+                                                : (sceneEnded && !inputText.trim() ? 'error' : 'primary');
+                                            const baseColor = colorScheme === 'error' ? errorMain : accentMain;
+                                            return `linear-gradient(90deg, ${lighten(baseColor, 0.2)}, ${darken(baseColor, 0.28)})`;
+                                        })()
                                     },
                                     '&:disabled': {
-                                        background: alpha(theme.palette.common.white, 0.06),
+                                        background: theme.palette.action.disabledBackground,
                                         color: theme.palette.text.disabled
                                     }
                                 }}
                             >
-                                {sceneEnded && !inputText.trim() ? 'End' : (inputText.trim() ? 'Send' : 'Continue')}
+                                {(() => {
+                                    if (getSubmitButtonConfig) {
+                                        return getSubmitButtonConfig(activeScript, index, inputText).label;
+                                    }
+                                    // Default behavior
+                                    if (sceneEnded && !inputText.trim()) {
+                                        return 'End';
+                                    }
+                                    return inputText.trim() ? 'Send' : 'Continue';
+                                })()}
                             </Button>
                         </Box>
                     )}

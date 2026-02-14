@@ -26,6 +26,11 @@ interface NovelScript<TEntry extends NovelScriptEntry = NovelScriptEntry> {
     script: TEntry[];
 }
 
+interface SubmitButtonConfig {
+    label: string;
+    icon?: React__default.ReactElement;
+    colorScheme?: 'primary' | 'error';
+}
 /**
  * Props for the NovelVisualizer component.
  * @template TScript - The script type
@@ -34,18 +39,22 @@ interface NovelScript<TEntry extends NovelScriptEntry = NovelScriptEntry> {
 interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelScript, TEntry extends NovelScriptEntry> {
     script: TScript;
     actors: Record<string, TActor>;
-    backgroundImageUrl: string;
+    getBackgroundImageUrl: (script: TScript, index: number) => string;
     isVerticalLayout?: boolean;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
     onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<void>;
     onUpdateMessage?: (index: number, message: string) => void;
     onReroll?: (index: number) => void;
-    onClose?: () => void;
     inputPlaceholder?: string | ((context: {
         index: number;
         entry?: TEntry;
     }) => string);
+    /**
+     * Function to determine button label, icon, and color scheme based on script state.
+     * If not provided, defaults to showing "Continue"/"Send"/"End" based on input and scene state.
+     */
+    getSubmitButtonConfig?: (script: TScript, index: number, inputText: string) => SubmitButtonConfig;
     renderNameplate?: (params: {
         actor: TActor | null;
     }) => React__default.ReactNode;
@@ -75,9 +84,21 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
         blur?: number;
         scale?: number;
         overlay?: string;
+        transitionDuration?: number;
     };
     hideInput?: boolean;
     hideActionButtons?: boolean;
+    /**
+     * When enabled, non-present actors who speak can "ghost" into the scene,
+     * tilting in from the edge of the screen for visual presence.
+     */
+    allowGhostSpeakers?: boolean;
+    enableAudio?: boolean;
+    /**
+     * When enabled, speaking characters will squish and stretch slightly while audio plays.
+     * Requires enableAudio to be true to have any effect.
+     */
+    enableTalkingAnimation?: boolean;
 }
 declare function NovelVisualizer<TActor extends NovelActor, TScript extends NovelScript, TEntry extends NovelScriptEntry>(props: NovelVisualizerProps<TActor, TScript, TEntry>): JSX.Element;
 
@@ -90,10 +111,11 @@ interface ActorImageProps {
     heightMultiplier: number;
     speaker?: boolean;
     highlightColor: string;
-    panX: number;
-    panY: number;
     onMouseEnter?: () => void;
     onMouseLeave?: () => void;
+    isGhost?: boolean;
+    ghostSide?: 'left' | 'right';
+    isAudioPlaying?: boolean;
 }
 declare const _default: React.NamedExoticComponent<ActorImageProps>;
 
@@ -104,11 +126,13 @@ interface BlurredBackgroundProps {
     blur?: number;
     scale?: number;
     overlay?: string;
+    transitionDuration?: number;
     children?: React__default.ReactNode;
 }
 /**
  * A reusable component that provides a blurred background image with consistent styling
- * across all screens in the application.
+ * across all screens in the application. Features smooth fade transitions when the image changes.
+ * @param transitionDuration - Duration of the fade transition in milliseconds (default: 600)
  */
 declare const BlurredBackground: FC<BlurredBackgroundProps>;
 
@@ -121,4 +145,4 @@ interface TypeOutProps {
 }
 declare const TypeOut: React__default.FC<TypeOutProps>;
 
-export { _default as ActorImage, type NovelScript as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, type NovelActor, NovelVisualizer, type NovelVisualizerProps, TypeOut };
+export { _default as ActorImage, type NovelScript as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, type NovelActor, NovelVisualizer, type NovelVisualizerProps, type SubmitButtonConfig, TypeOut };

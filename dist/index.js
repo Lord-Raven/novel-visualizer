@@ -1,5 +1,5 @@
 // src/components/NovelVisualizer.tsx
-import React2, { useEffect as useEffect2, useMemo as useMemo2, useRef as useRef2, useState as useState2 } from "react";
+import React3, { useEffect as useEffect3, useMemo as useMemo2, useRef as useRef2, useState as useState3 } from "react";
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from "@mui/material";
 import { alpha, darken, lighten, useTheme } from "@mui/material/styles";
 import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino } from "@mui/icons-material";
@@ -20,7 +20,10 @@ var ActorImage = ({
   speaker,
   highlightColor,
   onMouseEnter,
-  onMouseLeave
+  onMouseLeave,
+  isGhost = false,
+  ghostSide = "left",
+  isAudioPlaying = false
 }) => {
   const [processedImageUrl, setProcessedImageUrl] = useState("");
   const [prevImageUrl, setPrevImageUrl] = useState("");
@@ -53,40 +56,101 @@ var ActorImage = ({
   }, [imageUrl, processedImageUrl]);
   const baseX = speaker ? 50 : xPosition;
   const baseY = yPosition;
-  const variants = useMemo(() => ({
-    absent: {
-      opacity: 0,
-      x: `150vw`,
-      bottom: `${baseY}vh`,
-      height: `${IDLE_HEIGHT * heightMultiplier}vh`,
-      filter: "brightness(0.8)",
-      transition: { x: { ease: easeIn, duration: 0.5 }, bottom: { duration: 0.5 }, opacity: { ease: easeOut, duration: 0.5 } }
-    },
-    talking: {
-      opacity: 1,
-      x: `${baseX}vw`,
-      bottom: `${baseY}vh`,
-      height: `${SPEAKING_HEIGHT * heightMultiplier}vh`,
-      filter: "brightness(1)",
-      transition: { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } }
-    },
-    idle: {
-      opacity: 1,
-      x: `${baseX}vw`,
-      bottom: `${baseY}vh`,
-      height: `${IDLE_HEIGHT * heightMultiplier}vh`,
-      filter: "brightness(0.8)",
-      transition: { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } }
+  const variants = useMemo(() => {
+    if (isGhost) {
+      const ghostX = ghostSide === "left" ? 10 : 90;
+      const offscreenX = ghostSide === "left" ? -20 : 120;
+      const tiltRotate = ghostSide === "left" ? -15 : 15;
+      return {
+        absent: {
+          opacity: 0,
+          x: `${offscreenX}vw`,
+          bottom: `${baseY}vh`,
+          height: `${SPEAKING_HEIGHT * heightMultiplier * 0.8}vh`,
+          filter: "brightness(0.7)",
+          rotate: tiltRotate * 1.5,
+          transition: {
+            x: { ease: easeIn, duration: 0.4 },
+            bottom: { duration: 0.4 },
+            opacity: { ease: easeOut, duration: 0.3 },
+            rotate: { duration: 0.4 }
+          }
+        },
+        talking: {
+          opacity: 0.85,
+          x: `${ghostX}vw`,
+          bottom: `${baseY}vh`,
+          height: `${SPEAKING_HEIGHT * heightMultiplier * 0.8}vh`,
+          filter: "brightness(0.9)",
+          rotate: tiltRotate,
+          transition: {
+            x: { ease: easeOut, duration: 0.4 },
+            bottom: { duration: 0.4 },
+            opacity: { ease: easeOut, duration: 0.4 },
+            rotate: { duration: 0.4 }
+          }
+        },
+        idle: {
+          opacity: 0.85,
+          x: `${ghostX}vw`,
+          bottom: `${baseY}vh`,
+          height: `${IDLE_HEIGHT * heightMultiplier * 0.8}vh`,
+          filter: "brightness(0.7)",
+          rotate: tiltRotate,
+          transition: {
+            x: { ease: easeOut, duration: 0.4 },
+            bottom: { duration: 0.4 },
+            opacity: { ease: easeOut, duration: 0.4 },
+            rotate: { duration: 0.4 }
+          }
+        }
+      };
     }
-  }), [baseX, baseY, yPosition, zIndex, heightMultiplier]);
+    return {
+      absent: {
+        opacity: 0,
+        x: `150vw`,
+        bottom: `${baseY}vh`,
+        height: `${IDLE_HEIGHT * heightMultiplier}vh`,
+        filter: "brightness(0.8)",
+        transition: { x: { ease: easeIn, duration: 0.5 }, bottom: { duration: 0.5 }, opacity: { ease: easeOut, duration: 0.5 } }
+      },
+      talking: {
+        opacity: 1,
+        x: `${baseX}vw`,
+        bottom: `${baseY}vh`,
+        height: `${SPEAKING_HEIGHT * heightMultiplier}vh`,
+        filter: "brightness(1)",
+        transition: { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } }
+      },
+      idle: {
+        opacity: 1,
+        x: `${baseX}vw`,
+        bottom: `${baseY}vh`,
+        height: `${IDLE_HEIGHT * heightMultiplier}vh`,
+        filter: "brightness(0.8)",
+        transition: { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } }
+      }
+    };
+  }, [baseX, baseY, yPosition, zIndex, heightMultiplier, isGhost, ghostSide]);
+  const talkingAnimationProps = isAudioPlaying ? {
+    scaleY: [1, 0.95, 1.05, 1],
+    transition: {
+      scaleY: {
+        duration: 0.6,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }
+    }
+  } : {};
   return processedImageUrl ? /* @__PURE__ */ jsxs(
     motion.div,
     {
       variants,
       initial: "absent",
       exit: "absent",
-      animate: speaker ? "talking" : "idle",
-      style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex },
+      animate: speaker ? { ...variants.talking, ...talkingAnimationProps } : "idle",
+      style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center" },
       children: [
         /* @__PURE__ */ jsx(AnimatePresence, { children: prevImageUrl && prevImageUrl !== processedImageUrl && /* @__PURE__ */ jsx(
           motion.img,
@@ -172,6 +236,7 @@ var multiplyImageByColor = (img, hex) => {
 var ActorImage_default = memo(ActorImage);
 
 // src/components/BlurredBackground.tsx
+import { useEffect as useEffect2, useState as useState2 } from "react";
 import { jsx as jsx2, jsxs as jsxs2 } from "react/jsx-runtime";
 var BlurredBackground = ({
   imageUrl,
@@ -180,26 +245,57 @@ var BlurredBackground = ({
   blur = 6,
   scale = 1.03,
   overlay,
+  transitionDuration = 600,
   children
 }) => {
+  const [currentImage, setCurrentImage] = useState2(imageUrl);
+  const [previousImage, setPreviousImage] = useState2(null);
+  const [isTransitioning, setIsTransitioning] = useState2(false);
+  useEffect2(() => {
+    if (imageUrl !== currentImage) {
+      setPreviousImage(currentImage);
+      setIsTransitioning(true);
+      const timer = setTimeout(() => {
+        setCurrentImage(imageUrl);
+        setIsTransitioning(false);
+        const cleanupTimer = setTimeout(() => {
+          setPreviousImage(null);
+        }, transitionDuration);
+        return () => clearTimeout(cleanupTimer);
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [imageUrl, currentImage, transitionDuration]);
+  const imageStyle = {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundRepeat: "no-repeat",
+    filter: `blur(${blur}px) brightness(${brightness}) contrast(${contrast})`,
+    transform: `scale(${scale})`,
+    transition: `opacity ${transitionDuration}ms ease-in-out`
+  };
   return /* @__PURE__ */ jsxs2("div", { style: {
     position: "relative",
     width: "100%",
     height: "100%",
     overflow: "hidden"
   }, children: [
+    previousImage && /* @__PURE__ */ jsx2("div", { style: {
+      ...imageStyle,
+      backgroundImage: `url(${previousImage})`,
+      opacity: isTransitioning ? 0 : 1,
+      zIndex: 0
+    } }),
     /* @__PURE__ */ jsx2("div", { style: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundImage: `url(${imageUrl})`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-      backgroundRepeat: "no-repeat",
-      filter: `blur(${blur}px) brightness(${brightness}) contrast(${contrast})`,
-      transform: `scale(${scale})`
+      ...imageStyle,
+      backgroundImage: `url(${currentImage})`,
+      opacity: 1,
+      zIndex: previousImage ? 1 : 0
     } }),
     overlay && /* @__PURE__ */ jsx2("div", { style: {
       position: "absolute",
@@ -221,7 +317,7 @@ var BlurredBackground = ({
 var BlurredBackground_default = BlurredBackground;
 
 // src/components/TypeOut.tsx
-import React from "react";
+import React2 from "react";
 import { jsx as jsx3 } from "react/jsx-runtime";
 var extractTextContent = (node) => {
   if (typeof node === "string") {
@@ -230,7 +326,7 @@ var extractTextContent = (node) => {
   if (typeof node === "number") {
     return String(node);
   }
-  if (React.isValidElement(node)) {
+  if (React2.isValidElement(node)) {
     if (node.props.children) {
       return extractTextContent(node.props.children);
     }
@@ -259,16 +355,16 @@ var truncateReactContent = (node, maxLength) => {
       currentLength += truncated.length;
       return truncated;
     }
-    if (React.isValidElement(n)) {
+    if (React2.isValidElement(n)) {
       const children = n.props.children;
       if (children !== void 0 && children !== null) {
         const truncatedChildren = truncateNode(children);
         if (truncatedChildren !== null || !children) {
-          return React.cloneElement(n, { ...n.props, key }, truncatedChildren);
+          return React2.cloneElement(n, { ...n.props, key }, truncatedChildren);
         }
         return null;
       }
-      return React.cloneElement(n, { ...n.props, key });
+      return React2.cloneElement(n, { ...n.props, key });
     }
     if (Array.isArray(n)) {
       const result = [];
@@ -293,16 +389,16 @@ var TypeOut = ({
   finishTyping = false,
   onTypingComplete
 }) => {
-  const [displayLength, setDisplayLength] = React.useState(0);
-  const [finished, setFinished] = React.useState(false);
-  const timerRef = React.useRef(null);
-  const textContent = React.useMemo(() => extractTextContent(children), [children]);
-  const prevTextContentRef = React.useRef("");
-  const onTypingCompleteRef = React.useRef(onTypingComplete);
-  React.useEffect(() => {
+  const [displayLength, setDisplayLength] = React2.useState(0);
+  const [finished, setFinished] = React2.useState(false);
+  const timerRef = React2.useRef(null);
+  const textContent = React2.useMemo(() => extractTextContent(children), [children]);
+  const prevTextContentRef = React2.useRef("");
+  const onTypingCompleteRef = React2.useRef(onTypingComplete);
+  React2.useEffect(() => {
     onTypingCompleteRef.current = onTypingComplete;
   }, [onTypingComplete]);
-  React.useEffect(() => {
+  React2.useEffect(() => {
     if (textContent !== prevTextContentRef.current) {
       prevTextContentRef.current = textContent;
       setDisplayLength(0);
@@ -333,7 +429,7 @@ var TypeOut = ({
       };
     }
   }, [textContent, speed]);
-  React.useEffect(() => {
+  React2.useEffect(() => {
     if (finishTyping && !finished) {
       if (timerRef.current !== null) {
         clearInterval(timerRef.current);
@@ -344,7 +440,7 @@ var TypeOut = ({
       onTypingCompleteRef.current?.();
     }
   }, [finishTyping, finished, textContent.length]);
-  const displayContent = React.useMemo(() => {
+  const displayContent = React2.useMemo(() => {
     if (displayLength === 0) {
       return null;
     }
@@ -500,15 +596,15 @@ function NovelVisualizer(props) {
   const {
     script,
     actors,
-    backgroundImageUrl,
+    getBackgroundImageUrl,
     isVerticalLayout = false,
     typingSpeed = 20,
     allowTypingSkip = true,
     onSubmitInput,
     onUpdateMessage,
     onReroll,
-    onClose,
     inputPlaceholder,
+    getSubmitButtonConfig,
     renderNameplate,
     renderActorHoverInfo,
     getActorImageUrl,
@@ -516,21 +612,27 @@ function NovelVisualizer(props) {
     resolveSpeaker,
     backgroundOptions,
     hideInput = false,
-    hideActionButtons = false
+    hideActionButtons = false,
+    allowGhostSpeakers = false,
+    enableAudio = true,
+    enableTalkingAnimation = true
   } = props;
-  const [inputText, setInputText] = useState2("");
-  const [finishTyping, setFinishTyping] = useState2(false);
-  const [messageKey, setMessageKey] = React2.useState(0);
-  const [hoveredActor, setHoveredActor] = useState2(null);
-  const [mousePosition, setMousePosition] = useState2(null);
-  const [messageBoxTopVh, setMessageBoxTopVh] = useState2(isVerticalLayout ? 50 : 60);
-  const [loading, setLoading] = useState2(false);
+  const [inputText, setInputText] = useState3("");
+  const [finishTyping, setFinishTyping] = useState3(false);
+  const [messageKey, setMessageKey] = React3.useState(0);
+  const [hoveredActor, setHoveredActor] = useState3(null);
+  const [audioEnabled, setAudioEnabled] = React3.useState(enableAudio);
+  const currentAudioRef = React3.useRef(null);
+  const [isAudioPlaying, setIsAudioPlaying] = React3.useState(false);
+  const [mousePosition, setMousePosition] = useState3(null);
+  const [messageBoxTopVh, setMessageBoxTopVh] = useState3(isVerticalLayout ? 50 : 60);
+  const [loading, setLoading] = useState3(false);
   const messageBoxRef = useRef2(null);
-  const [isEditingMessage, setIsEditingMessage] = useState2(false);
-  const [editedMessage, setEditedMessage] = useState2("");
-  const [originalMessage, setOriginalMessage] = useState2("");
-  const [localScript, setLocalScript] = useState2(script);
-  const [index, setIndex] = useState2(0);
+  const [isEditingMessage, setIsEditingMessage] = useState3(false);
+  const [editedMessage, setEditedMessage] = useState3("");
+  const [originalMessage, setOriginalMessage] = useState3("");
+  const [localScript, setLocalScript] = useState3(script);
+  const [index, setIndex] = useState3(0);
   const prevIndexRef = useRef2(index);
   const activeScript = onUpdateMessage ? script : localScript;
   const entries = activeScript?.script || [];
@@ -551,10 +653,10 @@ function NovelVisualizer(props) {
     }),
     [baseTextShadow, theme]
   );
-  useEffect2(() => {
+  useEffect3(() => {
     setLocalScript(script);
   }, [script]);
-  useEffect2(() => {
+  useEffect3(() => {
     if (messageBoxRef.current) {
       const rect = messageBoxRef.current.getBoundingClientRect();
       const topVh = rect.top / window.innerHeight * 100;
@@ -575,18 +677,34 @@ function NovelVisualizer(props) {
     const message = entries[index]?.message || "";
     return formatMessage(message, speakerActor, messageTokens);
   }, [entries, index, speakerActor, messageTokens]);
-  useEffect2(() => {
+  useEffect3(() => {
     if (prevIndexRef.current !== index) {
       setFinishTyping(false);
       if (isEditingMessage) {
         setIsEditingMessage(false);
         setOriginalMessage("");
       }
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
+        setIsAudioPlaying(false);
+      }
+      if (audioEnabled && activeScript.script[index]?.speechUrl) {
+        const audio = new Audio(activeScript.script[index].speechUrl);
+        currentAudioRef.current = audio;
+        audio.addEventListener("play", () => setIsAudioPlaying(true));
+        audio.addEventListener("pause", () => setIsAudioPlaying(false));
+        audio.addEventListener("ended", () => setIsAudioPlaying(false));
+        audio.play().catch((err) => {
+          console.error("Error playing audio:", err);
+          setIsAudioPlaying(false);
+        });
+      }
       prevIndexRef.current = index;
     }
     setMessageKey(messageKey + 1);
   }, [index]);
-  useEffect2(() => {
+  useEffect3(() => {
     if (!mousePosition) {
       setHoveredActor(null);
       return;
@@ -595,7 +713,7 @@ function NovelVisualizer(props) {
       setHoveredActor(null);
       return;
     }
-    if (actorsAtIndex.length === 0) {
+    if (actorsAtIndex.length === 0 && !(allowGhostSpeakers && speakerActor)) {
       setHoveredActor(null);
       return;
     }
@@ -603,19 +721,27 @@ function NovelVisualizer(props) {
       actor,
       xPosition: calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor))
     }));
+    if (allowGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
+      const ghostSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? "left" : "right";
+      actorPositions.push({
+        actor: speakerActor,
+        xPosition: ghostSide === "left" ? 10 : 90
+      });
+    }
     const HOVER_RANGE = 10;
     let closestActor = null;
     let closestDistance = Infinity;
     actorPositions.forEach(({ actor, xPosition }) => {
-      const distance = Math.abs(mousePosition.x - (actor === speakerActor ? 50 : xPosition));
+      const actualXPosition = actor === speakerActor && actorsAtIndex.includes(actor) ? 50 : xPosition;
+      const distance = Math.abs(mousePosition.x - actualXPosition);
       if (distance < closestDistance && distance <= HOVER_RANGE) {
         closestDistance = distance;
         closestActor = actor;
       }
     });
     setHoveredActor(closestActor);
-  }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor]);
-  useEffect2(() => {
+  }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, allowGhostSpeakers]);
+  useEffect3(() => {
     const handleKeyDown = (e) => {
       const target = e.target;
       const isInputFocused = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
@@ -704,7 +830,7 @@ function NovelVisualizer(props) {
     );
   };
   const renderActors = () => {
-    return actorsAtIndex.map((actor, i) => {
+    const actorElements = actorsAtIndex.map((actor, i) => {
       const xPosition = calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
       const isSpeaking = actor === speakerActor;
       const isHovered = actor === hoveredActor;
@@ -724,12 +850,38 @@ function NovelVisualizer(props) {
           heightMultiplier: isVerticalLayout ? isSpeaking ? 0.9 : 0.7 : 1,
           speaker: isSpeaking,
           highlightColor: isHovered ? "rgba(255,255,255,1)" : "rgba(225,225,225,1)",
-          panX: 0,
-          panY: 0
+          isAudioPlaying: isSpeaking && isAudioPlaying && enableTalkingAnimation
         },
         actor.id
       );
     });
+    if (allowGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
+      const yPosition = isVerticalLayout ? 20 : 0;
+      const isHovered = speakerActor === hoveredActor;
+      const ghostSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? "left" : "right";
+      actorElements.push(
+        /* @__PURE__ */ jsx5(
+          ActorImage_default,
+          {
+            id: `ghost-${speakerActor.id}`,
+            resolveImageUrl: () => {
+              return getActorImageUrl(speakerActor, activeScript, index);
+            },
+            xPosition: ghostSide === "left" ? 10 : 90,
+            yPosition,
+            zIndex: 45,
+            heightMultiplier: isVerticalLayout ? 0.65 : 0.85,
+            speaker: true,
+            highlightColor: isHovered ? "rgba(255,255,255,1)" : "rgba(200,200,200,0.9)",
+            isGhost: true,
+            ghostSide,
+            isAudioPlaying: isAudioPlaying && enableTalkingAnimation
+          },
+          `ghost-${speakerActor.id}`
+        )
+      );
+    }
+    return actorElements;
   };
   const handleSubmit = () => {
     if (isEditingMessage) {
@@ -750,6 +902,10 @@ function NovelVisualizer(props) {
     setInputText("");
   };
   const hoverInfoNode = renderActorHoverInfo ? renderActorHoverInfo(hoveredActor) : null;
+  const backgroundImageUrl = useMemo2(
+    () => getBackgroundImageUrl(activeScript, index),
+    [getBackgroundImageUrl, activeScript, index]
+  );
   return /* @__PURE__ */ jsx5(
     BlurredBackground,
     {
@@ -759,6 +915,7 @@ function NovelVisualizer(props) {
       blur: backgroundOptions?.blur,
       scale: backgroundOptions?.scale,
       overlay: backgroundOptions?.overlay,
+      transitionDuration: backgroundOptions?.transitionDuration,
       children: /* @__PURE__ */ jsxs3(
         "div",
         {
@@ -792,7 +949,7 @@ function NovelVisualizer(props) {
                   right: isVerticalLayout ? "2%" : "5%",
                   bottom: isVerticalLayout ? "1%" : "4%",
                   background: alpha(theme.palette.background.paper, 0.92),
-                  border: `2px solid ${alpha(accentMain, 0.2)}`,
+                  border: `2px solid ${alpha(theme.palette.divider, 0.3)}`,
                   borderRadius: 3,
                   p: 2,
                   color: theme.palette.text.primary,
@@ -814,7 +971,7 @@ function NovelVisualizer(props) {
                           size: "small",
                           sx: {
                             color: theme.palette.text.secondary,
-                            border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
+                            border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                             padding: isVerticalLayout ? "4px" : void 0,
                             minWidth: isVerticalLayout ? "28px" : void 0,
                             "&:disabled": { color: theme.palette.text.disabled }
@@ -832,8 +989,8 @@ function NovelVisualizer(props) {
                             fontSize: isVerticalLayout ? "0.7rem" : void 0,
                             fontWeight: 700,
                             color: theme.palette.success.light,
-                            background: alpha(theme.palette.common.white, 0.04),
-                            border: `1px solid ${alpha(theme.palette.common.white, 0.06)}`,
+                            background: alpha(theme.palette.action.hover, 0.5),
+                            border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
                             transition: "all 0.3s ease",
                             "& .MuiChip-label": {
                               display: "flex",
@@ -852,7 +1009,7 @@ function NovelVisualizer(props) {
                           size: "small",
                           sx: {
                             color: theme.palette.text.secondary,
-                            border: `1px solid ${alpha(theme.palette.common.white, 0.08)}`,
+                            border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                             padding: isVerticalLayout ? "4px" : void 0,
                             minWidth: isVerticalLayout ? "28px" : void 0,
                             "&:disabled": { color: theme.palette.text.disabled }
@@ -977,7 +1134,7 @@ function NovelVisualizer(props) {
                         borderRadius: 1,
                         transition: "background-color 0.2s ease",
                         "&:hover": {
-                          backgroundColor: isEditingMessage ? "transparent" : alpha(theme.palette.common.white, 0.04)
+                          backgroundColor: isEditingMessage ? "transparent" : theme.palette.action.hover
                         }
                       },
                       onClick: () => {
@@ -1012,7 +1169,7 @@ function NovelVisualizer(props) {
                               lineHeight: 1.55,
                               fontFamily: theme.typography.fontFamily,
                               color: theme.palette.text.primary,
-                              backgroundColor: alpha(theme.palette.common.white, 0.06),
+                              backgroundColor: alpha(theme.palette.action.selected, 0.5),
                               padding: "8px"
                             },
                             "& .MuiInputBase-input": {
@@ -1056,11 +1213,7 @@ function NovelVisualizer(props) {
                           if (e.key === "Enter") {
                             e.preventDefault();
                             if (!loading) {
-                              if (sceneEnded && inputText.trim() === "") {
-                                onClose?.();
-                              } else {
-                                handleSubmit();
-                              }
+                              handleSubmit();
                             }
                           }
                         },
@@ -1070,22 +1223,22 @@ function NovelVisualizer(props) {
                         size: "small",
                         sx: {
                           "& .MuiOutlinedInput-root": {
-                            background: `linear-gradient(180deg, ${alpha(theme.palette.common.white, 0.04)}, ${alpha(theme.palette.common.white, 0.02)})`,
+                            background: theme.palette.action.hover,
                             color: theme.palette.text.primary,
                             fontSize: isVerticalLayout ? "0.75rem" : void 0,
                             "& fieldset": {
-                              borderColor: alpha(theme.palette.common.white, 0.12)
+                              borderColor: theme.palette.divider
                             },
                             "&:hover fieldset": {
-                              borderColor: alpha(theme.palette.common.white, 0.2)
+                              borderColor: alpha(theme.palette.divider, 0.8)
                             },
                             "&.Mui-focused fieldset": {
-                              borderColor: alpha(accentMain, 0.35)
+                              borderColor: accentMain
                             },
                             "&.Mui-disabled": {
                               color: theme.palette.text.disabled,
                               "& fieldset": {
-                                borderColor: alpha(theme.palette.common.white, 0.08)
+                                borderColor: alpha(theme.palette.divider, 0.5)
                               }
                             }
                           },
@@ -1111,32 +1264,55 @@ function NovelVisualizer(props) {
                     /* @__PURE__ */ jsx5(
                       Button,
                       {
-                        onClick: () => {
-                          if (sceneEnded && !inputText.trim()) {
-                            onClose?.();
-                          } else {
-                            handleSubmit();
-                          }
-                        },
+                        onClick: handleSubmit,
                         disabled: loading,
                         variant: "contained",
-                        startIcon: sceneEnded && !inputText.trim() ? /* @__PURE__ */ jsx5(Close, { fontSize: isVerticalLayout ? "small" : void 0 }) : inputText.trim() ? /* @__PURE__ */ jsx5(Send, { fontSize: isVerticalLayout ? "small" : void 0 }) : /* @__PURE__ */ jsx5(Forward, { fontSize: isVerticalLayout ? "small" : void 0 }),
+                        startIcon: (() => {
+                          if (getSubmitButtonConfig) {
+                            const config = getSubmitButtonConfig(activeScript, index, inputText);
+                            return config.icon;
+                          }
+                          if (sceneEnded && !inputText.trim()) {
+                            return /* @__PURE__ */ jsx5(Close, { fontSize: isVerticalLayout ? "small" : void 0 });
+                          }
+                          return inputText.trim() ? /* @__PURE__ */ jsx5(Send, { fontSize: isVerticalLayout ? "small" : void 0 }) : /* @__PURE__ */ jsx5(Forward, { fontSize: isVerticalLayout ? "small" : void 0 });
+                        })(),
                         sx: {
-                          background: sceneEnded && !inputText.trim() ? `linear-gradient(90deg, ${lighten(errorMain, 0.12)}, ${darken(errorMain, 0.2)})` : `linear-gradient(90deg, ${lighten(accentMain, 0.08)}, ${darken(accentMain, 0.2)})`,
-                          color: sceneEnded && !inputText.trim() ? theme.palette.getContrastText(errorMain) : theme.palette.getContrastText(accentMain),
+                          background: (() => {
+                            const colorScheme = getSubmitButtonConfig ? getSubmitButtonConfig(activeScript, index, inputText).colorScheme : sceneEnded && !inputText.trim() ? "error" : "primary";
+                            const baseColor = colorScheme === "error" ? errorMain : accentMain;
+                            return `linear-gradient(90deg, ${lighten(baseColor, 0.12)}, ${darken(baseColor, 0.2)})`;
+                          })(),
+                          color: (() => {
+                            const colorScheme = getSubmitButtonConfig ? getSubmitButtonConfig(activeScript, index, inputText).colorScheme : sceneEnded && !inputText.trim() ? "error" : "primary";
+                            const baseColor = colorScheme === "error" ? errorMain : accentMain;
+                            return theme.palette.getContrastText(baseColor);
+                          })(),
                           fontWeight: 800,
                           minWidth: isVerticalLayout ? 76 : 100,
                           fontSize: isVerticalLayout ? "clamp(0.6rem, 2vw, 0.875rem)" : void 0,
                           padding: isVerticalLayout ? "4px 10px" : void 0,
                           "&:hover": {
-                            background: sceneEnded && !inputText.trim() ? `linear-gradient(90deg, ${lighten(errorMain, 0.2)}, ${darken(errorMain, 0.28)})` : `linear-gradient(90deg, ${lighten(accentMain, 0.16)}, ${darken(accentMain, 0.28)})`
+                            background: (() => {
+                              const colorScheme = getSubmitButtonConfig ? getSubmitButtonConfig(activeScript, index, inputText).colorScheme : sceneEnded && !inputText.trim() ? "error" : "primary";
+                              const baseColor = colorScheme === "error" ? errorMain : accentMain;
+                              return `linear-gradient(90deg, ${lighten(baseColor, 0.2)}, ${darken(baseColor, 0.28)})`;
+                            })()
                           },
                           "&:disabled": {
-                            background: alpha(theme.palette.common.white, 0.06),
+                            background: theme.palette.action.disabledBackground,
                             color: theme.palette.text.disabled
                           }
                         },
-                        children: sceneEnded && !inputText.trim() ? "End" : inputText.trim() ? "Send" : "Continue"
+                        children: (() => {
+                          if (getSubmitButtonConfig) {
+                            return getSubmitButtonConfig(activeScript, index, inputText).label;
+                          }
+                          if (sceneEnded && !inputText.trim()) {
+                            return "End";
+                          }
+                          return inputText.trim() ? "Send" : "Continue";
+                        })()
                       }
                     )
                   ] })
