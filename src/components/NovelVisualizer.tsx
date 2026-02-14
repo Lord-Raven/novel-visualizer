@@ -71,18 +71,6 @@ const formatMessage = (
     );
 };
 
-const namesMatch = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
-
-const findBestNameMatch = (speakerName: string, actors: Record<string, NovelActor>): NovelActor | null => {
-    const normalized = speakerName.trim().toLowerCase();
-    if (!normalized) return null;
-
-    const exact = Object.values(actors).find(actor => namesMatch(actor.name, normalized));
-    if (exact) return exact;
-
-    const loose = Object.values(actors).find(actor => actor.name.toLowerCase().includes(normalized));
-    return loose || null;
-};
 
 export interface SubmitButtonConfig {
     label: string;
@@ -339,7 +327,7 @@ export function NovelVisualizer<
         }
 
         const HOVER_RANGE = 10;
-        let closestActor: NovelActor | null = null;
+        let closestActor: TActor | null = null;
         let closestDistance = Infinity;
 
         actorPositions.forEach(({ actor, xPosition }) => {
@@ -542,6 +530,20 @@ export function NovelVisualizer<
         () => getBackgroundImageUrl(activeScript, index),
         [getBackgroundImageUrl, activeScript, index]
     );
+
+    
+    const namesMatch = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+    const findBestNameMatch = (speakerName: string, actors: Record<string, TActor>): TActor | null => {
+        const normalized = speakerName.trim().toLowerCase();
+        if (!normalized) return null;
+
+        const exact = Object.values(actors).find(actor => namesMatch(actor.name, normalized));
+        if (exact) return exact;
+
+        const loose = Object.values(actors).find(actor => actor.name.toLowerCase().includes(normalized));
+        return loose || null;
+    };
 
     return (
         <BlurredBackground
