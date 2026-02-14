@@ -906,6 +906,15 @@ function NovelVisualizer(props) {
     () => getBackgroundImageUrl(activeScript, index),
     [getBackgroundImageUrl, activeScript, index]
   );
+  const namesMatch = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+  const findBestNameMatch = (speakerName, actors2) => {
+    const normalized = speakerName.trim().toLowerCase();
+    if (!normalized) return null;
+    const exact = Object.values(actors2).find((actor) => namesMatch(actor.name, normalized));
+    if (exact) return exact;
+    const loose = Object.values(actors2).find((actor) => actor.name.toLowerCase().includes(normalized));
+    return loose || null;
+  };
   return /* @__PURE__ */ jsx5(
     BlurredBackground,
     {
