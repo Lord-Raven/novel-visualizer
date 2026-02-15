@@ -12,7 +12,7 @@ export interface NovelActor {
  * Consumers can extend this with their own custom properties.
  */
 export interface NovelScriptEntry {
-    speaker?: string;
+    speakerId?: string;
     message?: string;
     speechUrl?: string;
     endScene?: boolean;

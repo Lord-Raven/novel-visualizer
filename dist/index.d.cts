@@ -13,7 +13,7 @@ interface NovelActor {
  * Consumers can extend this with their own custom properties.
  */
 interface NovelScriptEntry {
-    speaker?: string;
+    speakerId?: string;
     message?: string;
     speechUrl?: string;
     endScene?: boolean;
@@ -39,11 +39,12 @@ interface SubmitButtonConfig {
 interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelScript, TEntry extends NovelScriptEntry> {
     script: TScript;
     actors: Record<string, TActor>;
+    playerActorId: string;
     getBackgroundImageUrl: (script: TScript, index: number) => string;
     isVerticalLayout?: boolean;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
-    onSubmitInput?: (inputText: string, script: TScript, index: number, setIndex: (newIndex: number) => void) => Promise<void>;
+    onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<void>;
     onUpdateMessage?: (index: number, message: string) => void;
     onReroll?: (index: number) => void;
     inputPlaceholder?: string | ((context: {

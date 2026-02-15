@@ -579,6 +579,7 @@ function NovelVisualizer(props) {
   const {
     script,
     actors,
+    playerActorId,
     getBackgroundImageUrl,
     isVerticalLayout = false,
     typingSpeed = 20,
@@ -592,7 +593,6 @@ function NovelVisualizer(props) {
     renderActorHoverInfo,
     getActorImageUrl,
     getPresentActors,
-    resolveSpeaker,
     backgroundOptions,
     hideInput = false,
     hideActionButtons = false,
@@ -653,9 +653,8 @@ function NovelVisualizer(props) {
   };
   const actorsAtIndex = useMemo2(() => getPresentActors(activeScript, index), [activeScript, index, actors, getPresentActors]);
   const speakerActor = useMemo2(() => {
-    if (resolveSpeaker) return resolveSpeaker(script, index);
-    return null;
-  }, [entries, index, actors, resolveSpeaker]);
+    return entries[index] && entries[index].speakerId ? actors[entries[index].speakerId] : null;
+  }, [entries, index, actors]);
   const displayMessage = useMemo2(() => {
     const message = entries[index]?.message || "";
     return formatMessage(message, speakerActor, messageTokens);
@@ -874,13 +873,23 @@ function NovelVisualizer(props) {
       next();
       return;
     }
+    if (inputText.trim()) {
+      activeScript.script = activeScript.script.slice(0, index + 1);
+      activeScript.script.push({
+        speakerId: playerActorId,
+        message: inputText,
+        speechUrl: ""
+      });
+      setIndex(index + 1);
+    }
     if (onSubmitInput) {
       setLoading(true);
-      onSubmitInput?.(inputText, activeScript, index, setIndex).then(() => {
+      onSubmitInput?.(inputText, activeScript, index).then(() => {
         setLoading(false);
       }).catch(() => {
         setLoading(false);
       });
+      setIndex(Math.min(entries.length - 1, index + 1));
     }
     setInputText("");
   };

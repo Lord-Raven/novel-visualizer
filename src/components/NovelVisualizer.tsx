@@ -61,11 +61,12 @@ export interface NovelVisualizerProps<
 > {
     script: TScript;
     actors: Record<string, TActor>;
+    playerActorId: string;
     getBackgroundImageUrl: (script: TScript, index: number) => string;
     isVerticalLayout?: boolean;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
-    onSubmitInput?: (inputText: string, script: TScript, index: number, setIndex: (newIndex: number) => void) => Promise<void>;
+    onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<void>;
     onUpdateMessage?: (index: number, message: string) => void;
     onReroll?: (index: number) => void;
     inputPlaceholder?: string | ((context: { index: number; entry?: TEntry }) => string);
@@ -128,6 +129,7 @@ export function NovelVisualizer<
     const {
         script,
         actors,
+        playerActorId,
         getBackgroundImageUrl,
         isVerticalLayout = false,
         typingSpeed = 20,
@@ -141,7 +143,6 @@ export function NovelVisualizer<
         renderActorHoverInfo,
         getActorImageUrl,
         getPresentActors,
-        resolveSpeaker,
         backgroundOptions,
         hideInput = false,
         hideActionButtons = false,
@@ -212,9 +213,8 @@ export function NovelVisualizer<
     const actorsAtIndex = useMemo(() => getPresentActors(activeScript, index), [activeScript, index, actors, getPresentActors]);
 
     const speakerActor = useMemo(() => {
-        if (resolveSpeaker) return resolveSpeaker(script, index);
-        return null
-    }, [entries, index, actors, resolveSpeaker]);
+        return entries[index] && entries[index].speakerId ? actors[entries[index].speakerId] : null;
+    }, [entries, index, actors]);
 
     const displayMessage = useMemo(() => {
         const message = entries[index]?.message || '';
@@ -469,13 +469,24 @@ export function NovelVisualizer<
         }
 
         // If onSubmitInput exists, call it and then set loading to false when the promise completes
+        if (inputText.trim()) {
+            // Slice skit to current index + 1 to remove any future entries, then add player's input as a new entry:
+            activeScript.script = activeScript.script.slice(0, index + 1);
+            activeScript.script.push({
+                speakerId: playerActorId,
+                message: inputText,
+                speechUrl: '',
+            });
+            setIndex(index + 1); // Move to this input.
+        }
         if (onSubmitInput) {
             setLoading(true);
-            onSubmitInput?.(inputText, activeScript, index, setIndex).then(() => {
+            onSubmitInput?.(inputText, activeScript, index).then(() => {
                 setLoading(false);
             }).catch(() => {
                 setLoading(false);
             });
+            setIndex(Math.min(entries.length - 1, index + 1)); // Move to next entry after submission
         }
         setInputText('');
     };
