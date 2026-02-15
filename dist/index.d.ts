@@ -43,7 +43,7 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
     isVerticalLayout?: boolean;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
-    onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<void>;
+    onSubmitInput?: (inputText: string, script: TScript, index: number, setIndex: (newIndex: number) => void) => Promise<void>;
     onUpdateMessage?: (index: number, message: string) => void;
     onReroll?: (index: number) => void;
     inputPlaceholder?: string | ((context: {
@@ -92,7 +92,7 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
      * When enabled, non-present actors who speak can "ghost" into the scene,
      * tilting in from the edge of the screen for visual presence.
      */
-    allowGhostSpeakers?: boolean;
+    enableGhostSpeakers?: boolean;
     enableAudio?: boolean;
     /**
      * When enabled, speaking characters will squish and stretch slightly while audio plays.

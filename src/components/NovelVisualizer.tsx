@@ -29,49 +29,6 @@ const adjustColor = (color: string, amount: number = 0.6): string => {
     return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
 };
 
-const formatMessage = (
-    text: string,
-    speakerActor: NovelActor | null | undefined,
-    tokens: MessageFormatTokens
-): JSX.Element => {
-    if (!text) return <></>;
-
-    text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-
-    const dialogueParts = text.split(/(\"[^\"]*\")/g);
-
-    return (
-        <>
-            {dialogueParts.map((part, index) => {
-                if (part.startsWith('"') && part.endsWith('"')) {
-                    const brightenedColor = speakerActor?.themeColor
-                        ? adjustColor(speakerActor.themeColor, 0.6)
-                        : tokens.defaultDialogueColor;
-
-                    const dialogueStyle: React.CSSProperties = {
-                        color: brightenedColor,
-                        fontFamily: speakerActor?.themeFontFamily || tokens.fallbackFontFamily,
-                        textShadow: speakerActor?.themeColor
-                            ? `2px 2px 2px ${adjustColor(speakerActor.themeColor, -0.25)}`
-                            : tokens.defaultDialogueShadow
-                    };
-                    return (
-                        <span key={index} style={dialogueStyle}>
-                            {formatInlineStyles(part)}
-                        </span>
-                    );
-                }
-                return (
-                    <span key={index} style={{ textShadow: tokens.baseTextShadow }}>
-                        {formatInlineStyles(part)}
-                    </span>
-                );
-            })}
-        </>
-    );
-};
-
-
 export interface SubmitButtonConfig {
     label: string;
     icon?: React.ReactElement;
@@ -108,7 +65,7 @@ export interface NovelVisualizerProps<
     isVerticalLayout?: boolean;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
-    onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<void>;
+    onSubmitInput?: (inputText: string, script: TScript, index: number, setIndex: (newIndex: number) => void) => Promise<void>;
     onUpdateMessage?: (index: number, message: string) => void;
     onReroll?: (index: number) => void;
     inputPlaceholder?: string | ((context: { index: number; entry?: TEntry }) => string);
@@ -152,7 +109,7 @@ export interface NovelVisualizerProps<
      * When enabled, non-present actors who speak can "ghost" into the scene,
      * tilting in from the edge of the screen for visual presence.
      */
-    allowGhostSpeakers?: boolean;
+    enableGhostSpeakers?: boolean;
     enableAudio?: boolean;
     /**
      * When enabled, speaking characters will squish and stretch slightly while audio plays.
@@ -188,7 +145,7 @@ export function NovelVisualizer<
         backgroundOptions,
         hideInput = false,
         hideActionButtons = false,
-        allowGhostSpeakers = false,
+        enableGhostSpeakers = false,
         enableAudio = true,
         enableTalkingAnimation = true
     } = props;
@@ -216,8 +173,8 @@ export function NovelVisualizer<
     const activeScript = onUpdateMessage ? script : localScript;
     const entries = (activeScript?.script || []) as TEntry[];
 
-    const accentMain = theme.palette.success.main;
-    const accentLight = theme.palette.success.light;
+    const accentMain = theme.palette.primary.main;
+    const accentLight = theme.palette.primary.light;
     const errorMain = theme.palette.error.main;
     const errorLight = theme.palette.error.light;
     const baseTextShadow = useMemo(
@@ -307,7 +264,7 @@ export function NovelVisualizer<
             return;
         }
 
-        if (actorsAtIndex.length === 0 && !(allowGhostSpeakers && speakerActor)) {
+        if (actorsAtIndex.length === 0 && !(enableGhostSpeakers && speakerActor)) {
             setHoveredActor(null);
             return;
         }
@@ -318,7 +275,7 @@ export function NovelVisualizer<
         }));
 
         // Add ghost speaker to hover detection if present
-        if (allowGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
+        if (enableGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
             const ghostSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? 'left' : 'right';
             actorPositions.push({
                 actor: speakerActor,
@@ -340,7 +297,7 @@ export function NovelVisualizer<
         });
 
         setHoveredActor(closestActor);
-    }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, allowGhostSpeakers]);
+    }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enableGhostSpeakers]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -434,7 +391,7 @@ export function NovelVisualizer<
             <Typography
                 sx={{
                     fontWeight: 700,
-                    color: theme.palette.success.light,
+                    color: theme.palette.primary.light,
                     fontSize: isVerticalLayout ? '0.85rem' : '1rem',
                     textShadow: baseTextShadow
                 }}
@@ -472,7 +429,7 @@ export function NovelVisualizer<
         });
 
         // Check if we should render a ghost speaker
-        if (allowGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
+        if (enableGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
             const yPosition = isVerticalLayout ? 20 : 0;
             const isHovered = speakerActor === hoveredActor;
             // Alternate sides based on actor ID for consistency
@@ -514,7 +471,7 @@ export function NovelVisualizer<
         // If onSubmitInput exists, call it and then set loading to false when the promise completes
         if (onSubmitInput) {
             setLoading(true);
-            onSubmitInput?.(inputText, activeScript, index).then(() => {
+            onSubmitInput?.(inputText, activeScript, index, setIndex).then(() => {
                 setLoading(false);
             }).catch(() => {
                 setLoading(false);
@@ -544,6 +501,49 @@ export function NovelVisualizer<
         const loose = Object.values(actors).find(actor => actor.name.toLowerCase().includes(normalized));
         return loose || null;
     };
+
+    const formatMessage = (
+        text: string,
+        speakerActor: TActor | null | undefined,
+        tokens: MessageFormatTokens
+    ): JSX.Element => {
+        if (!text) return <></>;
+
+        text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+
+        const dialogueParts = text.split(/(\"[^\"]*\")/g);
+
+        return (
+            <>
+                {dialogueParts.map((part, index) => {
+                    if (part.startsWith('"') && part.endsWith('"')) {
+                        const brightenedColor = speakerActor?.themeColor
+                            ? adjustColor(speakerActor.themeColor, 0.6)
+                            : tokens.defaultDialogueColor;
+
+                        const dialogueStyle: React.CSSProperties = {
+                            color: brightenedColor,
+                            fontFamily: speakerActor?.themeFontFamily || tokens.fallbackFontFamily,
+                            textShadow: speakerActor?.themeColor
+                                ? `2px 2px 2px ${adjustColor(speakerActor.themeColor, -0.25)}`
+                                : tokens.defaultDialogueShadow
+                        };
+                        return (
+                            <span key={index} style={dialogueStyle}>
+                                {formatInlineStyles(part)}
+                            </span>
+                        );
+                    }
+                    return (
+                        <span key={index} style={{ textShadow: tokens.baseTextShadow }}>
+                            {formatInlineStyles(part)}
+                        </span>
+                    );
+                })}
+            </>
+        );
+    };
+
 
     return (
         <BlurredBackground
@@ -619,7 +619,7 @@ export function NovelVisualizer<
 
                             <Chip
                                 label={loading ? (
-                                    <CircularProgress size={isVerticalLayout ? 12 : 16} sx={{ color: theme.palette.success.light }} />
+                                    <CircularProgress size={isVerticalLayout ? 12 : 16} sx={{ color: theme.palette.primary.light }} />
                                 ) : (
                                     <span style={{ display: 'flex', alignItems: 'center', gap: isVerticalLayout ? '2px' : '4px' }}>
                                         {progressLabel}
@@ -630,7 +630,7 @@ export function NovelVisualizer<
                                     height: isVerticalLayout ? '24px' : undefined,
                                     fontSize: isVerticalLayout ? '0.7rem' : undefined,
                                     fontWeight: 700,
-                                    color: theme.palette.success.light,
+                                    color: theme.palette.primary.light,
                                     background: alpha(theme.palette.action.hover, 0.5),
                                     border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
                                     transition: 'all 0.3s ease',

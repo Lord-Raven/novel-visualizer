@@ -562,23 +562,6 @@ var adjustColor = (color, amount = 0.6) => {
   const newB = Math.min(255, Math.round(b + (255 - b) * amount));
   return `#${newR.toString(16).padStart(2, "0")}${newG.toString(16).padStart(2, "0")}${newB.toString(16).padStart(2, "0")}`;
 };
-var formatMessage = (text, speakerActor, tokens) => {
-  if (!text) return /* @__PURE__ */ jsx5(Fragment3, {});
-  text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-  const dialogueParts = text.split(/(\"[^\"]*\")/g);
-  return /* @__PURE__ */ jsx5(Fragment3, { children: dialogueParts.map((part, index) => {
-    if (part.startsWith('"') && part.endsWith('"')) {
-      const brightenedColor = speakerActor?.themeColor ? adjustColor(speakerActor.themeColor, 0.6) : tokens.defaultDialogueColor;
-      const dialogueStyle = {
-        color: brightenedColor,
-        fontFamily: speakerActor?.themeFontFamily || tokens.fallbackFontFamily,
-        textShadow: speakerActor?.themeColor ? `2px 2px 2px ${adjustColor(speakerActor.themeColor, -0.25)}` : tokens.defaultDialogueShadow
-      };
-      return /* @__PURE__ */ jsx5("span", { style: dialogueStyle, children: formatInlineStyles(part) }, index);
-    }
-    return /* @__PURE__ */ jsx5("span", { style: { textShadow: tokens.baseTextShadow }, children: formatInlineStyles(part) }, index);
-  }) });
-};
 var calculateActorXPosition = (actorIndex, totalActors, anySpeaker) => {
   const leftRange = Math.min(40, Math.ceil((totalActors - 2) / 2) * 20);
   const rightRange = Math.min(40, Math.floor((totalActors - 2) / 2) * 20);
@@ -613,7 +596,7 @@ function NovelVisualizer(props) {
     backgroundOptions,
     hideInput = false,
     hideActionButtons = false,
-    allowGhostSpeakers = false,
+    enableGhostSpeakers = false,
     enableAudio = true,
     enableTalkingAnimation = true
   } = props;
@@ -636,8 +619,8 @@ function NovelVisualizer(props) {
   const prevIndexRef = useRef2(index);
   const activeScript = onUpdateMessage ? script : localScript;
   const entries = activeScript?.script || [];
-  const accentMain = theme.palette.success.main;
-  const accentLight = theme.palette.success.light;
+  const accentMain = theme.palette.primary.main;
+  const accentLight = theme.palette.primary.light;
   const errorMain = theme.palette.error.main;
   const errorLight = theme.palette.error.light;
   const baseTextShadow = useMemo2(
@@ -713,7 +696,7 @@ function NovelVisualizer(props) {
       setHoveredActor(null);
       return;
     }
-    if (actorsAtIndex.length === 0 && !(allowGhostSpeakers && speakerActor)) {
+    if (actorsAtIndex.length === 0 && !(enableGhostSpeakers && speakerActor)) {
       setHoveredActor(null);
       return;
     }
@@ -721,7 +704,7 @@ function NovelVisualizer(props) {
       actor,
       xPosition: calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor))
     }));
-    if (allowGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
+    if (enableGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
       const ghostSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? "left" : "right";
       actorPositions.push({
         actor: speakerActor,
@@ -740,7 +723,7 @@ function NovelVisualizer(props) {
       }
     });
     setHoveredActor(closestActor);
-  }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, allowGhostSpeakers]);
+  }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enableGhostSpeakers]);
   useEffect3(() => {
     const handleKeyDown = (e) => {
       const target = e.target;
@@ -821,7 +804,7 @@ function NovelVisualizer(props) {
       {
         sx: {
           fontWeight: 700,
-          color: theme.palette.success.light,
+          color: theme.palette.primary.light,
           fontSize: isVerticalLayout ? "0.85rem" : "1rem",
           textShadow: baseTextShadow
         },
@@ -855,7 +838,7 @@ function NovelVisualizer(props) {
         actor.id
       );
     });
-    if (allowGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
+    if (enableGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
       const yPosition = isVerticalLayout ? 20 : 0;
       const isHovered = speakerActor === hoveredActor;
       const ghostSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? "left" : "right";
@@ -893,7 +876,7 @@ function NovelVisualizer(props) {
     }
     if (onSubmitInput) {
       setLoading(true);
-      onSubmitInput?.(inputText, activeScript, index).then(() => {
+      onSubmitInput?.(inputText, activeScript, index, setIndex).then(() => {
         setLoading(false);
       }).catch(() => {
         setLoading(false);
@@ -914,6 +897,23 @@ function NovelVisualizer(props) {
     if (exact) return exact;
     const loose = Object.values(actors2).find((actor) => actor.name.toLowerCase().includes(normalized));
     return loose || null;
+  };
+  const formatMessage = (text, speakerActor2, tokens) => {
+    if (!text) return /* @__PURE__ */ jsx5(Fragment3, {});
+    text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+    const dialogueParts = text.split(/(\"[^\"]*\")/g);
+    return /* @__PURE__ */ jsx5(Fragment3, { children: dialogueParts.map((part, index2) => {
+      if (part.startsWith('"') && part.endsWith('"')) {
+        const brightenedColor = speakerActor2?.themeColor ? adjustColor(speakerActor2.themeColor, 0.6) : tokens.defaultDialogueColor;
+        const dialogueStyle = {
+          color: brightenedColor,
+          fontFamily: speakerActor2?.themeFontFamily || tokens.fallbackFontFamily,
+          textShadow: speakerActor2?.themeColor ? `2px 2px 2px ${adjustColor(speakerActor2.themeColor, -0.25)}` : tokens.defaultDialogueShadow
+        };
+        return /* @__PURE__ */ jsx5("span", { style: dialogueStyle, children: formatInlineStyles(part) }, index2);
+      }
+      return /* @__PURE__ */ jsx5("span", { style: { textShadow: tokens.baseTextShadow }, children: formatInlineStyles(part) }, index2);
+    }) });
   };
   return /* @__PURE__ */ jsx5(
     BlurredBackground,
@@ -991,13 +991,13 @@ function NovelVisualizer(props) {
                       /* @__PURE__ */ jsx5(
                         Chip,
                         {
-                          label: loading ? /* @__PURE__ */ jsx5(CircularProgress, { size: isVerticalLayout ? 12 : 16, sx: { color: theme.palette.success.light } }) : /* @__PURE__ */ jsx5("span", { style: { display: "flex", alignItems: "center", gap: isVerticalLayout ? "2px" : "4px" }, children: progressLabel }),
+                          label: loading ? /* @__PURE__ */ jsx5(CircularProgress, { size: isVerticalLayout ? 12 : 16, sx: { color: theme.palette.primary.light } }) : /* @__PURE__ */ jsx5("span", { style: { display: "flex", alignItems: "center", gap: isVerticalLayout ? "2px" : "4px" }, children: progressLabel }),
                           sx: {
                             minWidth: isVerticalLayout ? 50 : 72,
                             height: isVerticalLayout ? "24px" : void 0,
                             fontSize: isVerticalLayout ? "0.7rem" : void 0,
                             fontWeight: 700,
-                            color: theme.palette.success.light,
+                            color: theme.palette.primary.light,
                             background: alpha(theme.palette.action.hover, 0.5),
                             border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
                             transition: "all 0.3s ease",
