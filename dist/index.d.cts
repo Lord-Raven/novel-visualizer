@@ -68,7 +68,6 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
      * @returns Array of actors that should be visible
      */
     getPresentActors: (script: TScript, index: number) => TActor[];
-    resolveSpeaker: (script: TScript, index: number) => TActor | null;
     /**
      * Resolves the image URL for an actor based on their emotion and script index.
      * This is where you implement your own logic to determine which image to display.
