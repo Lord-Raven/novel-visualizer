@@ -133,11 +133,20 @@ var ActorImage = ({
       }
     };
   }, [baseX, baseY, yPosition, zIndex, heightMultiplier, isGhost, ghostSide]);
+  const animationParams = useMemo(() => {
+    const seed = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const random1 = Math.sin(seed) * 1e4 % 1;
+    const random2 = Math.sin(seed + 1) * 1e4 % 1;
+    const squish = 0.97 + (random1 * 0.01 - 5e-3);
+    const stretch = 1.03 + (random2 * 0.01 - 5e-3);
+    const duration = 0.3 + random1 * 0.1;
+    return { squish, stretch, duration };
+  }, [id]);
   const talkingAnimationProps = isAudioPlaying ? {
-    scaleY: [1, 0.95, 1.05, 1],
+    scaleY: [1, animationParams.squish, animationParams.stretch, 1],
     transition: {
       scaleY: {
-        duration: 0.6,
+        duration: animationParams.duration,
         repeat: Infinity,
         ease: "easeInOut"
       }
@@ -897,7 +906,7 @@ function NovelVisualizer(props) {
         message: inputText,
         speechUrl: ""
       });
-      setIndex(index + 1);
+      setIndex(activeScript.script.length - 1);
     }
     if (onSubmitInput) {
       setLoading(true);
@@ -906,7 +915,7 @@ function NovelVisualizer(props) {
       }).catch(() => {
         setLoading(false);
       });
-      setIndex(Math.min(entries.length - 1, index + 1));
+      setIndex(Math.min(activeScript.script.length - 1, index + 1));
     }
     setInputText("");
   };

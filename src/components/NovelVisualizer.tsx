@@ -520,7 +520,7 @@ export function NovelVisualizer<
                 message: inputText,
                 speechUrl: '',
             });
-            setIndex(index + 1); // Move to this input.
+            setIndex(activeScript.script.length - 1); // Move to this input.
         }
         if (onSubmitInput) {
             setLoading(true);
@@ -529,7 +529,7 @@ export function NovelVisualizer<
             }).catch(() => {
                 setLoading(false);
             });
-            setIndex(Math.min(entries.length - 1, index + 1)); // Move to next entry after submission
+            setIndex(Math.min(activeScript.script.length - 1, index + 1)); // Move to next entry after submission
         }
         setInputText('');
     };
