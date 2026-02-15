@@ -191,6 +191,50 @@ export function NovelVisualizer<
         [baseTextShadow, theme]
     );
 
+
+    const formatMessage = (
+        text: string,
+        speakerActor: TActor | null | undefined,
+        tokens: MessageFormatTokens
+    ): JSX.Element => {
+        if (!text) return <></>;
+
+        text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+
+        const dialogueParts = text.split(/(\"[^\"]*\")/g);
+
+        return (
+            <>
+                {dialogueParts.map((part, index) => {
+                    if (part.startsWith('"') && part.endsWith('"')) {
+                        const brightenedColor = speakerActor?.themeColor
+                            ? adjustColor(speakerActor.themeColor, 0.6)
+                            : tokens.defaultDialogueColor;
+
+                        const dialogueStyle: React.CSSProperties = {
+                            color: brightenedColor,
+                            fontFamily: speakerActor?.themeFontFamily || tokens.fallbackFontFamily,
+                            textShadow: speakerActor?.themeColor
+                                ? `2px 2px 2px ${adjustColor(speakerActor.themeColor, -0.25)}`
+                                : tokens.defaultDialogueShadow
+                        };
+                        return (
+                            <span key={index} style={dialogueStyle}>
+                                {formatInlineStyles(part)}
+                            </span>
+                        );
+                    }
+                    return (
+                        <span key={index} style={{ textShadow: tokens.baseTextShadow }}>
+                            {formatInlineStyles(part)}
+                        </span>
+                    );
+                })}
+            </>
+        );
+    };
+
+
     useEffect(() => {
         setLocalScript(script);
     }, [script]);
@@ -497,63 +541,6 @@ export function NovelVisualizer<
         () => getBackgroundImageUrl(activeScript, index),
         [getBackgroundImageUrl, activeScript, index]
     );
-
-    
-    const namesMatch = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
-
-    const findBestNameMatch = (speakerName: string, actors: Record<string, TActor>): TActor | null => {
-        const normalized = speakerName.trim().toLowerCase();
-        if (!normalized) return null;
-
-        const exact = Object.values(actors).find(actor => namesMatch(actor.name, normalized));
-        if (exact) return exact;
-
-        const loose = Object.values(actors).find(actor => actor.name.toLowerCase().includes(normalized));
-        return loose || null;
-    };
-
-    const formatMessage = (
-        text: string,
-        speakerActor: TActor | null | undefined,
-        tokens: MessageFormatTokens
-    ): JSX.Element => {
-        if (!text) return <></>;
-
-        text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-
-        const dialogueParts = text.split(/(\"[^\"]*\")/g);
-
-        return (
-            <>
-                {dialogueParts.map((part, index) => {
-                    if (part.startsWith('"') && part.endsWith('"')) {
-                        const brightenedColor = speakerActor?.themeColor
-                            ? adjustColor(speakerActor.themeColor, 0.6)
-                            : tokens.defaultDialogueColor;
-
-                        const dialogueStyle: React.CSSProperties = {
-                            color: brightenedColor,
-                            fontFamily: speakerActor?.themeFontFamily || tokens.fallbackFontFamily,
-                            textShadow: speakerActor?.themeColor
-                                ? `2px 2px 2px ${adjustColor(speakerActor.themeColor, -0.25)}`
-                                : tokens.defaultDialogueShadow
-                        };
-                        return (
-                            <span key={index} style={dialogueStyle}>
-                                {formatInlineStyles(part)}
-                            </span>
-                        );
-                    }
-                    return (
-                        <span key={index} style={{ textShadow: tokens.baseTextShadow }}>
-                            {formatInlineStyles(part)}
-                        </span>
-                    );
-                })}
-            </>
-        );
-    };
-
 
     return (
         <BlurredBackground

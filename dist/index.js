@@ -636,6 +636,23 @@ function NovelVisualizer(props) {
     }),
     [baseTextShadow, theme]
   );
+  const formatMessage = (text, speakerActor2, tokens) => {
+    if (!text) return /* @__PURE__ */ jsx5(Fragment3, {});
+    text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+    const dialogueParts = text.split(/(\"[^\"]*\")/g);
+    return /* @__PURE__ */ jsx5(Fragment3, { children: dialogueParts.map((part, index2) => {
+      if (part.startsWith('"') && part.endsWith('"')) {
+        const brightenedColor = speakerActor2?.themeColor ? adjustColor(speakerActor2.themeColor, 0.6) : tokens.defaultDialogueColor;
+        const dialogueStyle = {
+          color: brightenedColor,
+          fontFamily: speakerActor2?.themeFontFamily || tokens.fallbackFontFamily,
+          textShadow: speakerActor2?.themeColor ? `2px 2px 2px ${adjustColor(speakerActor2.themeColor, -0.25)}` : tokens.defaultDialogueShadow
+        };
+        return /* @__PURE__ */ jsx5("span", { style: dialogueStyle, children: formatInlineStyles(part) }, index2);
+      }
+      return /* @__PURE__ */ jsx5("span", { style: { textShadow: tokens.baseTextShadow }, children: formatInlineStyles(part) }, index2);
+    }) });
+  };
   useEffect3(() => {
     setLocalScript(script);
   }, [script]);
@@ -898,32 +915,6 @@ function NovelVisualizer(props) {
     () => getBackgroundImageUrl(activeScript, index),
     [getBackgroundImageUrl, activeScript, index]
   );
-  const namesMatch = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
-  const findBestNameMatch = (speakerName, actors2) => {
-    const normalized = speakerName.trim().toLowerCase();
-    if (!normalized) return null;
-    const exact = Object.values(actors2).find((actor) => namesMatch(actor.name, normalized));
-    if (exact) return exact;
-    const loose = Object.values(actors2).find((actor) => actor.name.toLowerCase().includes(normalized));
-    return loose || null;
-  };
-  const formatMessage = (text, speakerActor2, tokens) => {
-    if (!text) return /* @__PURE__ */ jsx5(Fragment3, {});
-    text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-    const dialogueParts = text.split(/(\"[^\"]*\")/g);
-    return /* @__PURE__ */ jsx5(Fragment3, { children: dialogueParts.map((part, index2) => {
-      if (part.startsWith('"') && part.endsWith('"')) {
-        const brightenedColor = speakerActor2?.themeColor ? adjustColor(speakerActor2.themeColor, 0.6) : tokens.defaultDialogueColor;
-        const dialogueStyle = {
-          color: brightenedColor,
-          fontFamily: speakerActor2?.themeFontFamily || tokens.fallbackFontFamily,
-          textShadow: speakerActor2?.themeColor ? `2px 2px 2px ${adjustColor(speakerActor2.themeColor, -0.25)}` : tokens.defaultDialogueShadow
-        };
-        return /* @__PURE__ */ jsx5("span", { style: dialogueStyle, children: formatInlineStyles(part) }, index2);
-      }
-      return /* @__PURE__ */ jsx5("span", { style: { textShadow: tokens.baseTextShadow }, children: formatInlineStyles(part) }, index2);
-    }) });
-  };
   return /* @__PURE__ */ jsx5(
     BlurredBackground,
     {
