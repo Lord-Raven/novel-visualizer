@@ -23,6 +23,7 @@ export interface NovelScriptEntry {
  * Consumers can extend this with their own custom properties.
  */
 export interface NovelScript<TEntry extends NovelScriptEntry = NovelScriptEntry> {
+    id: string;
     script: TEntry[];
 }
 

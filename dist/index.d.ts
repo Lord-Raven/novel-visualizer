@@ -23,6 +23,7 @@ interface NovelScriptEntry {
  * Consumers can extend this with their own custom properties.
  */
 interface NovelScript<TEntry extends NovelScriptEntry = NovelScriptEntry> {
+    id: string;
     script: TEntry[];
 }
 
@@ -44,7 +45,7 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
     isVerticalLayout?: boolean;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
-    onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<void>;
+    onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<TScript>;
     onUpdateMessage?: (index: number, message: string) => void;
     onReroll?: (index: number) => void;
     inputPlaceholder?: string | ((context: {

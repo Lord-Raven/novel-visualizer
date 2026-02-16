@@ -66,7 +66,7 @@ export interface NovelVisualizerProps<
     isVerticalLayout?: boolean;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
-    onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<void>;
+    onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<TScript>;
     onUpdateMessage?: (index: number, message: string) => void;
     onReroll?: (index: number) => void;
     inputPlaceholder?: string | ((context: { index: number; entry?: TEntry }) => string);
@@ -170,9 +170,6 @@ export function NovelVisualizer<
     const [index, setIndex] = useState<number>(0);
     const prevIndexRef = useRef<number>(index);
 
-    const activeScript = onUpdateMessage ? script : localScript;
-    const entries = (activeScript?.script || []) as TEntry[];
-
     const accentMain = theme.palette.primary.main;
     const accentLight = theme.palette.primary.light;
     const errorMain = theme.palette.error.main;
@@ -245,7 +242,7 @@ export function NovelVisualizer<
             const topVh = (rect.top / window.innerHeight) * 100;
             setMessageBoxTopVh(topVh);
         }
-    }, [isVerticalLayout, activeScript]);
+    }, [isVerticalLayout, localScript]);
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         const x = (e.clientX / window.innerWidth) * 100;
@@ -253,16 +250,16 @@ export function NovelVisualizer<
         setMousePosition({ x, y });
     };
 
-    const actorsAtIndex = useMemo(() => getPresentActors(activeScript, index), [activeScript, index, actors, getPresentActors]);
+    const actorsAtIndex = useMemo(() => getPresentActors(localScript, index), [localScript, index, actors, getPresentActors]);
 
     const speakerActor = useMemo(() => {
-        return entries[index] && entries[index].speakerId ? actors[entries[index].speakerId] : null;
-    }, [entries, index, actors]);
+        return localScript.script[index] && localScript.script[index].speakerId ? actors[localScript.script[index].speakerId] : null;
+    }, [localScript, index, actors]);
 
     const displayMessage = useMemo(() => {
-        const message = entries[index]?.message || '';
+        const message = localScript.script[index]?.message || '';
         return formatMessage(message, speakerActor, messageTokens);
-    }, [entries, index, speakerActor, messageTokens]);
+    }, [localScript, index, speakerActor, messageTokens]);
 
     useEffect(() => {
         if (prevIndexRef.current !== index) {
@@ -277,8 +274,8 @@ export function NovelVisualizer<
                 currentAudioRef.current.currentTime = 0;
                 setIsAudioPlaying(false);
             }
-            if (audioEnabled && activeScript.script[index]?.speechUrl) {
-                const audio = new Audio(activeScript.script[index].speechUrl);
+            if (audioEnabled && localScript.script[index]?.speechUrl) {
+                const audio = new Audio(localScript.script[index].speechUrl);
                 currentAudioRef.current = audio;
                 
                 // Set up event listeners for audio state
@@ -358,14 +355,14 @@ export function NovelVisualizer<
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [inputText, index, entries.length, finishTyping, loading]);
+    }, [inputText, index, localScript, finishTyping, loading]);
 
     const next = () => {
         if (isEditingMessage) {
             handleConfirmEdit();
         }
         if (finishTyping) {
-            setIndex(Math.min(entries.length - 1, index + 1));
+            setIndex(Math.min(localScript.script.length - 1, index + 1));
         } else if (allowTypingSkip) {
             setFinishTyping(true);
         }
@@ -379,14 +376,14 @@ export function NovelVisualizer<
     };
 
     const handleEnterEditMode = () => {
-        const currentMessage = entries[index]?.message || '';
+        const currentMessage = localScript.script[index]?.message || '';
         setOriginalMessage(currentMessage);
         setEditedMessage(currentMessage);
         setIsEditingMessage(true);
     };
 
     const handleConfirmEdit = () => {
-        const currentMessage = entries[index]?.message || '';
+        const currentMessage = localScript.script[index]?.message || '';
         if (editedMessage === currentMessage) {
             setIsEditingMessage(false);
             setOriginalMessage('');
@@ -396,7 +393,7 @@ export function NovelVisualizer<
         if (onUpdateMessage) {
             onUpdateMessage(index, editedMessage);
         } else {
-            const updated = { ...activeScript, script: [...entries] };
+            const updated = { ...localScript };
             if (updated.script[index]) {
                 updated.script[index] = { ...updated.script[index], message: editedMessage };
             }
@@ -413,19 +410,19 @@ export function NovelVisualizer<
         setOriginalMessage('');
     };
 
-    const sceneEnded = Boolean(entries[index]?.endScene);
+    const sceneEnded = Boolean(localScript.script[index]?.endScene);
 
-    const progressLabel = `${entries.length === 0 ? 0 : index + 1} / ${entries.length}`;
+    const progressLabel = `${localScript.script.length === 0 ? 0 : index + 1} / ${localScript.script.length}`;
 
     const placeholderText = useMemo(() => {
         if (typeof inputPlaceholder === 'function') {
-            return inputPlaceholder({ index, entry: entries[index] });
+            return inputPlaceholder({ index, entry: localScript.script[index] as TEntry });
         }
         if (inputPlaceholder) return inputPlaceholder;
         if (sceneEnded) return 'Scene concluded';
         if (loading) return 'Loading...';
         return 'Type your next action...';
-    }, [inputPlaceholder, index, entries, sceneEnded, loading]);
+    }, [inputPlaceholder, index, localScript, sceneEnded, loading]);
 
     const renderNameplateNode = () => {
         if (renderNameplate)
@@ -449,7 +446,7 @@ export function NovelVisualizer<
             const xPosition = calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
             const isSpeaking = actor === speakerActor;
             const isHovered = actor === hoveredActor;
-            const imageUrl = getActorImageUrl(actor, activeScript, index);
+            const imageUrl = getActorImageUrl(actor, localScript, index);
             const yPosition = isVerticalLayout ? 20 : 0;
             const zIndex = 50 - Math.abs(xPosition - 50);
 
@@ -458,7 +455,7 @@ export function NovelVisualizer<
                     key={actor.id}
                     id={actor.id}
                     resolveImageUrl={() => {
-                        return getActorImageUrl(actor, activeScript, index);
+                        return getActorImageUrl(actor, localScript, index);
                     }}
                     xPosition={xPosition}
                     yPosition={yPosition}
@@ -483,7 +480,7 @@ export function NovelVisualizer<
                     key={`ghost-${speakerActor.id}`}
                     id={`ghost-${speakerActor.id}`}
                     resolveImageUrl={() => {
-                        return getActorImageUrl(speakerActor, activeScript, index);
+                        return getActorImageUrl(speakerActor, localScript, index);
                     }}
                     xPosition={ghostSide === 'left' ? 10 : 90}
                     yPosition={yPosition}
@@ -506,7 +503,7 @@ export function NovelVisualizer<
             handleConfirmEdit();
         }
 
-        if (!inputText.trim() && index < entries.length - 1) {
+        if (!inputText.trim() && index < localScript.script.length - 1) {
             next();
             return;
         }
@@ -514,22 +511,28 @@ export function NovelVisualizer<
         // If onSubmitInput exists, call it and then set loading to false when the promise completes
         if (inputText.trim()) {
             // Slice skit to current index + 1 to remove any future entries, then add player's input as a new entry:
-            activeScript.script = activeScript.script.slice(0, index + 1);
-            activeScript.script.push({
+            localScript.script = localScript.script.slice(0, index + 1);
+            localScript.script.push({
                 speakerId: playerActorId,
                 message: inputText,
                 speechUrl: '',
             });
-            setIndex(activeScript.script.length - 1); // Move to this input.
+            setIndex(localScript.script.length - 1); // Move to this input.
         }
         if (onSubmitInput) {
             setLoading(true);
-            onSubmitInput?.(inputText, activeScript, index).then(() => {
+            onSubmitInput?.(inputText, localScript, index).then((newScript) => {
                 setLoading(false);
+                if (newScript.id !== localScript.id) {
+                    console.log('New script detected.');
+                    setIndex(0); // Move to first entry, if this is a new script.
+                } else {
+                    setIndex(Math.min(localScript.script.length - 1, index + 1)); // Move to next entry after submission
+                }
+                setLocalScript({...newScript});
             }).catch(() => {
                 setLoading(false);
             });
-            setIndex(Math.min(activeScript.script.length - 1, index + 1)); // Move to next entry after submission
         }
         setInputText('');
     };
@@ -538,8 +541,8 @@ export function NovelVisualizer<
     const hoverInfoNode = renderActorHoverInfo ? renderActorHoverInfo(hoveredActor) : null;
 
     const backgroundImageUrl = useMemo(
-        () => getBackgroundImageUrl(activeScript, index),
-        [getBackgroundImageUrl, activeScript, index]
+        () => getBackgroundImageUrl(localScript, index),
+        [getBackgroundImageUrl, localScript, index]
     );
 
     return (
@@ -642,7 +645,7 @@ export function NovelVisualizer<
 
                             <IconButton
                                 onClick={next}
-                                disabled={index >= entries.length - 1 || loading}
+                                disabled={index >= localScript.script.length - 1 || loading}
                                 size="small"
                                 sx={{
                                     color: theme.palette.text.secondary,
@@ -827,7 +830,7 @@ export function NovelVisualizer<
                                     textShadow: baseTextShadow
                                 }}
                             >
-                                {entries.length > 0 ? (
+                                {localScript.script.length > 0 ? (
                                     <TypeOut
                                         key={`typeout-${messageKey}`}
                                         speed={typingSpeed}
@@ -904,7 +907,7 @@ export function NovelVisualizer<
                                 variant="contained"
                                 startIcon={(() => {
                                     if (getSubmitButtonConfig) {
-                                        const config = getSubmitButtonConfig(activeScript, index, inputText);
+                                        const config = getSubmitButtonConfig(localScript, index, inputText);
                                         return config.icon;
                                     }
                                     // Default behavior
@@ -918,14 +921,14 @@ export function NovelVisualizer<
                                 sx={{
                                     background: (() => {
                                         const colorScheme = getSubmitButtonConfig 
-                                            ? getSubmitButtonConfig(activeScript, index, inputText).colorScheme 
+                                            ? getSubmitButtonConfig(localScript, index, inputText).colorScheme 
                                             : (sceneEnded && !inputText.trim() ? 'error' : 'primary');
                                         const baseColor = colorScheme === 'error' ? errorMain : accentMain;
                                         return `linear-gradient(90deg, ${lighten(baseColor, 0.12)}, ${darken(baseColor, 0.2)})`;
                                     })(),
                                     color: (() => {
                                         const colorScheme = getSubmitButtonConfig 
-                                            ? getSubmitButtonConfig(activeScript, index, inputText).colorScheme 
+                                            ? getSubmitButtonConfig(localScript, index, inputText).colorScheme 
                                             : (sceneEnded && !inputText.trim() ? 'error' : 'primary');
                                         const baseColor = colorScheme === 'error' ? errorMain : accentMain;
                                         return theme.palette.getContrastText(baseColor);
@@ -937,7 +940,7 @@ export function NovelVisualizer<
                                     '&:hover': {
                                         background: (() => {
                                             const colorScheme = getSubmitButtonConfig 
-                                                ? getSubmitButtonConfig(activeScript, index, inputText).colorScheme 
+                                                ? getSubmitButtonConfig(localScript, index, inputText).colorScheme 
                                                 : (sceneEnded && !inputText.trim() ? 'error' : 'primary');
                                             const baseColor = colorScheme === 'error' ? errorMain : accentMain;
                                             return `linear-gradient(90deg, ${lighten(baseColor, 0.2)}, ${darken(baseColor, 0.28)})`;
@@ -951,7 +954,7 @@ export function NovelVisualizer<
                             >
                                 {(() => {
                                     if (getSubmitButtonConfig) {
-                                        return getSubmitButtonConfig(activeScript, index, inputText).label;
+                                        return getSubmitButtonConfig(localScript, index, inputText).label;
                                     }
                                     // Default behavior
                                     if (sceneEnded && !inputText.trim()) {
