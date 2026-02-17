@@ -47,7 +47,6 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
     allowTypingSkip?: boolean;
     onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<TScript>;
     onUpdateMessage?: (index: number, message: string) => void;
-    onReroll?: (index: number) => void;
     inputPlaceholder?: string | ((context: {
         index: number;
         entry?: TEntry;
@@ -100,6 +99,8 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
      * Requires enableAudio to be true to have any effect.
      */
     enableTalkingAnimation?: boolean;
+    enableReroll?: boolean;
+    narratorLabel?: string;
 }
 declare function NovelVisualizer<TActor extends NovelActor, TScript extends NovelScript, TEntry extends NovelScriptEntry>(props: NovelVisualizerProps<TActor, TScript, TEntry>): JSX.Element;
 

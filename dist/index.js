@@ -472,7 +472,7 @@ var TypeOut_default = TypeOut;
 
 // src/utils/TextFormatting.tsx
 import { Fragment as Fragment2, jsx as jsx4 } from "react/jsx-runtime";
-function formatInlineStyles(text) {
+var formatInlineStyles = (text) => {
   if (!text) return /* @__PURE__ */ jsx4(Fragment2, {});
   const formatItalics = (text2) => {
     const italicParts = text2.split(/(\*(?!\*)[^*]+\*|_[^_]+_)/g);
@@ -557,7 +557,7 @@ function formatInlineStyles(text) {
     }) });
   };
   return formatHeaders(text);
-}
+};
 
 // src/components/NovelVisualizer.tsx
 import { Fragment as Fragment3, jsx as jsx5, jsxs as jsxs3 } from "react/jsx-runtime";
@@ -595,7 +595,6 @@ function NovelVisualizer(props) {
     allowTypingSkip = true,
     onSubmitInput,
     onUpdateMessage,
-    onReroll,
     inputPlaceholder,
     getSubmitButtonConfig,
     renderNameplate,
@@ -607,7 +606,9 @@ function NovelVisualizer(props) {
     hideActionButtons = false,
     enableGhostSpeakers = false,
     enableAudio = true,
-    enableTalkingAnimation = true
+    enableTalkingAnimation = true,
+    enableReroll = true,
+    narratorLabel = ""
   } = props;
   const [inputText, setInputText] = useState3("");
   const [finishTyping, setFinishTyping] = useState3(false);
@@ -831,7 +832,7 @@ function NovelVisualizer(props) {
           fontSize: isVerticalLayout ? "0.85rem" : "1rem",
           textShadow: baseTextShadow
         },
-        children: speakerActor ? speakerActor.name : "Narrator"
+        children: speakerActor ? speakerActor.name : narratorLabel
       }
     );
   };
@@ -914,7 +915,7 @@ function NovelVisualizer(props) {
           console.log("New script detected.");
           setIndex(0);
         } else {
-          setIndex(Math.min(localScript.script.length - 1, index + 1));
+          setIndex(Math.min(newScript.script.length - 1, index + 1));
         }
         setLocalScript({ ...newScript });
       }).catch(() => {
@@ -922,6 +923,19 @@ function NovelVisualizer(props) {
       });
     }
     setInputText("");
+  };
+  const handleReroll = (rerollIndex) => {
+    const tempScript = { ...localScript, script: localScript.script.slice(0, rerollIndex) };
+    if (onSubmitInput) {
+      setLoading(true);
+      onSubmitInput?.(inputText, tempScript, rerollIndex).then((newScript) => {
+        setLoading(false);
+        setIndex(rerollIndex);
+        setLocalScript({ ...newScript });
+      }).catch(() => {
+        setLoading(false);
+      });
+    }
   };
   const hoverInfoNode = renderActorHoverInfo ? renderActorHoverInfo(hoveredActor) : null;
   const backgroundImageUrl = useMemo2(
@@ -1123,10 +1137,10 @@ function NovelVisualizer(props) {
                           }
                         )
                       ] }),
-                      onReroll && /* @__PURE__ */ jsx5(
+                      enableReroll && /* @__PURE__ */ jsx5(
                         IconButton,
                         {
-                          onClick: () => onReroll(index),
+                          onClick: () => handleReroll(index),
                           disabled: loading,
                           size: "small",
                           sx: {
@@ -1311,7 +1325,6 @@ function NovelVisualizer(props) {
                             return theme.palette.getContrastText(baseColor);
                           })(),
                           fontWeight: 800,
-                          minWidth: isVerticalLayout ? 76 : 100,
                           fontSize: isVerticalLayout ? "clamp(0.6rem, 2vw, 0.875rem)" : void 0,
                           padding: isVerticalLayout ? "4px 10px" : void 0,
                           "&:hover": {

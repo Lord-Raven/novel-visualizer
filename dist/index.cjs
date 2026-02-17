@@ -511,7 +511,7 @@ var TypeOut_default = TypeOut;
 
 // src/utils/TextFormatting.tsx
 var import_jsx_runtime4 = require("react/jsx-runtime");
-function formatInlineStyles(text) {
+var formatInlineStyles = (text) => {
   if (!text) return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_jsx_runtime4.Fragment, {});
   const formatItalics = (text2) => {
     const italicParts = text2.split(/(\*(?!\*)[^*]+\*|_[^_]+_)/g);
@@ -596,7 +596,7 @@ function formatInlineStyles(text) {
     }) });
   };
   return formatHeaders(text);
-}
+};
 
 // src/components/NovelVisualizer.tsx
 var import_jsx_runtime5 = require("react/jsx-runtime");
@@ -634,7 +634,6 @@ function NovelVisualizer(props) {
     allowTypingSkip = true,
     onSubmitInput,
     onUpdateMessage,
-    onReroll,
     inputPlaceholder,
     getSubmitButtonConfig,
     renderNameplate,
@@ -646,7 +645,9 @@ function NovelVisualizer(props) {
     hideActionButtons = false,
     enableGhostSpeakers = false,
     enableAudio = true,
-    enableTalkingAnimation = true
+    enableTalkingAnimation = true,
+    enableReroll = true,
+    narratorLabel = ""
   } = props;
   const [inputText, setInputText] = (0, import_react4.useState)("");
   const [finishTyping, setFinishTyping] = (0, import_react4.useState)(false);
@@ -870,7 +871,7 @@ function NovelVisualizer(props) {
           fontSize: isVerticalLayout ? "0.85rem" : "1rem",
           textShadow: baseTextShadow
         },
-        children: speakerActor ? speakerActor.name : "Narrator"
+        children: speakerActor ? speakerActor.name : narratorLabel
       }
     );
   };
@@ -953,7 +954,7 @@ function NovelVisualizer(props) {
           console.log("New script detected.");
           setIndex(0);
         } else {
-          setIndex(Math.min(localScript.script.length - 1, index + 1));
+          setIndex(Math.min(newScript.script.length - 1, index + 1));
         }
         setLocalScript({ ...newScript });
       }).catch(() => {
@@ -961,6 +962,19 @@ function NovelVisualizer(props) {
       });
     }
     setInputText("");
+  };
+  const handleReroll = (rerollIndex) => {
+    const tempScript = { ...localScript, script: localScript.script.slice(0, rerollIndex) };
+    if (onSubmitInput) {
+      setLoading(true);
+      onSubmitInput?.(inputText, tempScript, rerollIndex).then((newScript) => {
+        setLoading(false);
+        setIndex(rerollIndex);
+        setLocalScript({ ...newScript });
+      }).catch(() => {
+        setLoading(false);
+      });
+    }
   };
   const hoverInfoNode = renderActorHoverInfo ? renderActorHoverInfo(hoveredActor) : null;
   const backgroundImageUrl = (0, import_react4.useMemo)(
@@ -1162,10 +1176,10 @@ function NovelVisualizer(props) {
                           }
                         )
                       ] }),
-                      onReroll && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                      enableReroll && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                         import_material.IconButton,
                         {
-                          onClick: () => onReroll(index),
+                          onClick: () => handleReroll(index),
                           disabled: loading,
                           size: "small",
                           sx: {
@@ -1350,7 +1364,6 @@ function NovelVisualizer(props) {
                             return theme.palette.getContrastText(baseColor);
                           })(),
                           fontWeight: 800,
-                          minWidth: isVerticalLayout ? 76 : 100,
                           fontSize: isVerticalLayout ? "clamp(0.6rem, 2vw, 0.875rem)" : void 0,
                           padding: isVerticalLayout ? "4px 10px" : void 0,
                           "&:hover": {
