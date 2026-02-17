@@ -68,7 +68,6 @@ export interface NovelVisualizerProps<
     allowTypingSkip?: boolean;
     onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<TScript>;
     onUpdateMessage?: (index: number, message: string) => void;
-    onReroll?: (index: number) => void;
     inputPlaceholder?: string | ((context: { index: number; entry?: TEntry }) => string);
     /**
      * Function to determine button label, icon, and color scheme based on script state.
@@ -116,6 +115,8 @@ export interface NovelVisualizerProps<
      * Requires enableAudio to be true to have any effect.
      */
     enableTalkingAnimation?: boolean;
+    enableReroll?: boolean;
+    narratorLabel?: string;
 
 }
 
@@ -135,7 +136,6 @@ export function NovelVisualizer<
         allowTypingSkip = true,
         onSubmitInput,
         onUpdateMessage,
-        onReroll,
         inputPlaceholder,
         getSubmitButtonConfig,
         renderNameplate,
@@ -147,7 +147,9 @@ export function NovelVisualizer<
         hideActionButtons = false,
         enableGhostSpeakers = false,
         enableAudio = true,
-        enableTalkingAnimation = true
+        enableTalkingAnimation = true,
+        enableReroll = true,
+        narratorLabel = ''
     } = props;
     const [inputText, setInputText] = useState<string>('');
     const [finishTyping, setFinishTyping] = useState<boolean>(false);
@@ -436,7 +438,7 @@ export function NovelVisualizer<
                     textShadow: baseTextShadow
                 }}
             >
-                {speakerActor ? speakerActor.name : 'Narrator'}
+                {speakerActor ? speakerActor.name : narratorLabel}
             </Typography>
         );
     };
@@ -527,7 +529,7 @@ export function NovelVisualizer<
                     console.log('New script detected.');
                     setIndex(0); // Move to first entry, if this is a new script.
                 } else {
-                    setIndex(Math.min(localScript.script.length - 1, index + 1)); // Move to next entry after submission
+                    setIndex(Math.min(newScript.script.length - 1, index + 1)); // Move to next entry after submission
                 }
                 setLocalScript({...newScript});
             }).catch(() => {
@@ -537,6 +539,20 @@ export function NovelVisualizer<
         setInputText('');
     };
 
+    const handleReroll = (rerollIndex: number) => {
+        // Trim script to index before reroll point, then call onSubmitInput with the same input to regenerate from that point
+        const tempScript = {...localScript, script: localScript.script.slice(0, rerollIndex)};
+        if (onSubmitInput) {
+            setLoading(true);
+            onSubmitInput?.(inputText, tempScript, rerollIndex).then((newScript) => {
+                setLoading(false);
+                setIndex(rerollIndex); // Move to reroll point, which will now have new content
+                setLocalScript({...newScript});
+            }).catch(() => {
+                setLoading(false);
+            });
+        }
+    };
 
     const hoverInfoNode = renderActorHoverInfo ? renderActorHoverInfo(hoveredActor) : null;
 
@@ -743,9 +759,9 @@ export function NovelVisualizer<
                                     </>
                                 )}
 
-                                {onReroll && (
+                                {enableReroll && (
                                     <IconButton
-                                        onClick={() => onReroll(index)}
+                                        onClick={() => handleReroll(index)}
                                         disabled={loading}
                                         size="small"
                                         sx={{
@@ -934,7 +950,6 @@ export function NovelVisualizer<
                                         return theme.palette.getContrastText(baseColor);
                                     })(),
                                     fontWeight: 800,
-                                    minWidth: isVerticalLayout ? 76 : 100,
                                     fontSize: isVerticalLayout ? 'clamp(0.6rem, 2vw, 0.875rem)' : undefined,
                                     padding: isVerticalLayout ? '4px 10px' : undefined,
                                     '&:hover': {

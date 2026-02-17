@@ -1,9 +1,8 @@
-
 // Helper function to format bold, italic, underlined, strikethrough, subscript, and header texts, following markdown-like syntax
-export function formatInlineStyles(text: string): JSX.Element {
+export const formatInlineStyles = (text: string): React.JSX.Element => {
     if (!text) return <></>;
 
-    const formatItalics = (text: string): JSX.Element => {
+    const formatItalics = (text: string): React.JSX.Element => {
         
         // Process both * and _ for italics, but avoid ** (bold)
         const italicParts = text.split(/(\*(?!\*)[^*]+\*|_[^_]+_)/g);
@@ -23,7 +22,7 @@ export function formatInlineStyles(text: string): JSX.Element {
         );
     }
 
-    const formatBold = (text: string): JSX.Element => {
+    const formatBold = (text: string): React.JSX.Element => {
         const boldParts = text.split(/(\*\*[^*]+\*\*)/g);
         
         return (
@@ -44,7 +43,7 @@ export function formatInlineStyles(text: string): JSX.Element {
         );
     }
 
-    const formatStrikethrough = (text: string): JSX.Element => {
+    const formatStrikethrough = (text: string): React.JSX.Element => {
         const strikeParts = text.split(/(~~[^~]+~~)/g);
         
         return (
@@ -65,7 +64,7 @@ export function formatInlineStyles(text: string): JSX.Element {
         );
     }
 
-    const formatUnderline = (text: string): JSX.Element => {
+    const formatUnderline = (text: string): React.JSX.Element => {
         const underlineParts = text.split(/(__[^_]+__)/g);
         
         return (
@@ -86,7 +85,7 @@ export function formatInlineStyles(text: string): JSX.Element {
         );
     }
 
-    const formatSubscript = (text: string): JSX.Element => {
+    const formatSubscript = (text: string): React.JSX.Element => {
         const subscriptParts = text.split(/(~[^~]+~)/g);
         
         return (
@@ -107,7 +106,7 @@ export function formatInlineStyles(text: string): JSX.Element {
         );
     }
 
-    const formatHeaders = (text: string): JSX.Element => {
+    const formatHeaders = (text: string): React.JSX.Element => {
         const headerParts = text.split(/(#{1,6} [^\n]+)/g);
         
         return (
