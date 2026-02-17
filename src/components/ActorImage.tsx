@@ -84,7 +84,7 @@ const ActorImage: FC<ActorImageProps> = ({
             // Ghost mode: tilt in from the side
             const ghostX = ghostSide === 'left' ? 10 : 90;
             const offscreenX = ghostSide === 'left' ? -20 : 120;
-            const tiltRotate = ghostSide === 'left' ? -15 : 15;
+            const tiltRotate = ghostSide === 'left' ? 15 : -15;
             
             return {
                 absent: {

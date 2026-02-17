@@ -60,7 +60,7 @@ var ActorImage = ({
     if (isGhost) {
       const ghostX = ghostSide === "left" ? 10 : 90;
       const offscreenX = ghostSide === "left" ? -20 : 120;
-      const tiltRotate = ghostSide === "left" ? -15 : 15;
+      const tiltRotate = ghostSide === "left" ? 15 : -15;
       return {
         absent: {
           opacity: 0,
@@ -658,7 +658,7 @@ function NovelVisualizer(props) {
         };
         return /* @__PURE__ */ jsx5("span", { style: dialogueStyle, children: formatInlineStyles(part) }, index2);
       }
-      return /* @__PURE__ */ jsx5("span", { style: { textShadow: tokens.baseTextShadow }, children: formatInlineStyles(part) }, index2);
+      return /* @__PURE__ */ jsx5("span", { style: { textShadow: tokens.baseTextShadow, fontFamily: tokens.fallbackFontFamily }, children: formatInlineStyles(part) }, index2);
     }) });
   };
   useEffect3(() => {
@@ -752,17 +752,17 @@ function NovelVisualizer(props) {
     const handleKeyDown = (e) => {
       const target = e.target;
       const isInputFocused = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
-      if (e.key === "ArrowLeft" && (!isInputFocused || inputText.trim() === "")) {
+      if (e.key === "ArrowLeft" && !isEditingMessage && !isInputFocused && inputText.trim() === "") {
         e.preventDefault();
         prev();
-      } else if (e.key === "ArrowRight" && (!isInputFocused || inputText.trim() === "")) {
+      } else if (e.key === "ArrowRight" && !isEditingMessage && !isInputFocused && inputText.trim() === "") {
         e.preventDefault();
         next();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [inputText, index, localScript, finishTyping, loading]);
+  }, [inputText, index, localScript, finishTyping, loading, isEditingMessage]);
   const next = () => {
     if (isEditingMessage) {
       handleConfirmEdit();
@@ -898,6 +898,7 @@ function NovelVisualizer(props) {
       next();
       return;
     }
+    let atIndex = index;
     if (inputText.trim()) {
       localScript.script = localScript.script.slice(0, index + 1);
       localScript.script.push({
@@ -906,16 +907,17 @@ function NovelVisualizer(props) {
         speechUrl: ""
       });
       setIndex(localScript.script.length - 1);
+      atIndex = localScript.script.length - 1;
     }
     if (onSubmitInput) {
       setLoading(true);
-      onSubmitInput?.(inputText, localScript, index).then((newScript) => {
+      onSubmitInput?.(inputText, localScript, atIndex).then((newScript) => {
         setLoading(false);
         if (newScript.id !== localScript.id) {
           console.log("New script detected.");
           setIndex(0);
         } else {
-          setIndex(Math.min(newScript.script.length - 1, index + 1));
+          setIndex(Math.min(newScript.script.length - 1, atIndex + 1));
         }
         setLocalScript({ ...newScript });
       }).catch(() => {
@@ -926,8 +928,10 @@ function NovelVisualizer(props) {
   };
   const handleReroll = (rerollIndex) => {
     const tempScript = { ...localScript, script: localScript.script.slice(0, rerollIndex) };
+    console.log("Reroll clicked");
     if (onSubmitInput) {
       setLoading(true);
+      console.log("Rerolling");
       onSubmitInput?.(inputText, tempScript, rerollIndex).then((newScript) => {
         setLoading(false);
         setIndex(rerollIndex);
@@ -1327,6 +1331,7 @@ function NovelVisualizer(props) {
                           fontWeight: 800,
                           fontSize: isVerticalLayout ? "clamp(0.6rem, 2vw, 0.875rem)" : void 0,
                           padding: isVerticalLayout ? "4px 10px" : void 0,
+                          whiteSpace: "nowrap",
                           "&:hover": {
                             background: (() => {
                               const colorScheme = getSubmitButtonConfig ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : sceneEnded && !inputText.trim() ? "error" : "primary";

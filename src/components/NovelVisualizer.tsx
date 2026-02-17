@@ -224,7 +224,7 @@ export function NovelVisualizer<
                         );
                     }
                     return (
-                        <span key={index} style={{ textShadow: tokens.baseTextShadow }}>
+                        <span key={index} style={{ textShadow: tokens.baseTextShadow, fontFamily: tokens.fallbackFontFamily }}>
                             {formatInlineStyles(part)}
                         </span>
                     );
@@ -346,10 +346,10 @@ export function NovelVisualizer<
             const target = e.target as HTMLElement;
             const isInputFocused = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
 
-            if (e.key === 'ArrowLeft' && (!isInputFocused || inputText.trim() === '')) {
+            if (e.key === 'ArrowLeft' && !isEditingMessage && !isInputFocused && inputText.trim() === '') {
                 e.preventDefault();
                 prev();
-            } else if (e.key === 'ArrowRight' && (!isInputFocused || inputText.trim() === '')) {
+            } else if (e.key === 'ArrowRight' && !isEditingMessage && !isInputFocused && inputText.trim() === '') {
                 e.preventDefault();
                 next();
             }
@@ -357,7 +357,7 @@ export function NovelVisualizer<
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [inputText, index, localScript, finishTyping, loading]);
+    }, [inputText, index, localScript, finishTyping, loading, isEditingMessage]);
 
     const next = () => {
         if (isEditingMessage) {
@@ -510,6 +510,7 @@ export function NovelVisualizer<
             return;
         }
 
+        let atIndex = index;
         // If onSubmitInput exists, call it and then set loading to false when the promise completes
         if (inputText.trim()) {
             // Slice skit to current index + 1 to remove any future entries, then add player's input as a new entry:
@@ -520,16 +521,17 @@ export function NovelVisualizer<
                 speechUrl: '',
             });
             setIndex(localScript.script.length - 1); // Move to this input.
+            atIndex = localScript.script.length - 1;
         }
         if (onSubmitInput) {
             setLoading(true);
-            onSubmitInput?.(inputText, localScript, index).then((newScript) => {
+            onSubmitInput?.(inputText, localScript, atIndex).then((newScript) => {
                 setLoading(false);
                 if (newScript.id !== localScript.id) {
                     console.log('New script detected.');
                     setIndex(0); // Move to first entry, if this is a new script.
                 } else {
-                    setIndex(Math.min(newScript.script.length - 1, index + 1)); // Move to next entry after submission
+                    setIndex(Math.min(newScript.script.length - 1, atIndex + 1)); // Move to next entry after submission
                 }
                 setLocalScript({...newScript});
             }).catch(() => {
@@ -542,8 +544,10 @@ export function NovelVisualizer<
     const handleReroll = (rerollIndex: number) => {
         // Trim script to index before reroll point, then call onSubmitInput with the same input to regenerate from that point
         const tempScript = {...localScript, script: localScript.script.slice(0, rerollIndex)};
+        console.log('Reroll clicked');
         if (onSubmitInput) {
             setLoading(true);
+            console.log('Rerolling');
             onSubmitInput?.(inputText, tempScript, rerollIndex).then((newScript) => {
                 setLoading(false);
                 setIndex(rerollIndex); // Move to reroll point, which will now have new content
@@ -952,6 +956,7 @@ export function NovelVisualizer<
                                     fontWeight: 800,
                                     fontSize: isVerticalLayout ? 'clamp(0.6rem, 2vw, 0.875rem)' : undefined,
                                     padding: isVerticalLayout ? '4px 10px' : undefined,
+                                    whiteSpace: 'nowrap',
                                     '&:hover': {
                                         background: (() => {
                                             const colorScheme = getSubmitButtonConfig 
