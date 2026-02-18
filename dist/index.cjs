@@ -177,33 +177,42 @@ var ActorImage = ({
     const seed = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const random1 = Math.sin(seed) * 1e4 % 1;
     const random2 = Math.sin(seed + 1) * 1e4 % 1;
-    const squish = 0.99 + (random1 * 4e-3 - 2e-3);
-    const stretch = 1.01 + (random2 * 4e-3 - 2e-3);
+    const squish = 0.995 + random1 * 4e-3;
+    const stretch = 1.005 - random2 * 4e-3;
     const duration = 0.2 + random1 * 0.4;
     return { squish, stretch, duration };
   }, [id]);
-  const talkingAnimationProps = isAudioPlaying ? {
-    scaleY: [1, animationParams.squish, animationParams.stretch, 1],
-    transition: {
-      scaleY: {
-        duration: animationParams.duration,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }
-    }
-  } : {};
   const ghostMaskStyle = isGhost ? {
     maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
     WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)"
   } : {};
+  const animateProps = (0, import_react.useMemo)(() => {
+    if (speaker && isAudioPlaying) {
+      const talkingVariant = variants.talking;
+      const baseTransition = isGhost ? { x: { ease: import_framer_motion.easeOut, duration: 0.4 }, bottom: { duration: 0.4 }, opacity: { ease: import_framer_motion.easeOut, duration: 0.4 }, rotate: { duration: 0.4 } } : { x: { ease: import_framer_motion.easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: import_framer_motion.easeOut, duration: 0.3 } };
+      return {
+        ...talkingVariant,
+        scaleY: [1, animationParams.squish, animationParams.stretch, 1],
+        transition: {
+          ...baseTransition,
+          scaleY: {
+            duration: animationParams.duration,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }
+        }
+      };
+    }
+    return speaker ? "talking" : "idle";
+  }, [speaker, isAudioPlaying, variants, isGhost, animationParams]);
   return processedImageUrl ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
     import_framer_motion.motion.div,
     {
       variants,
       initial: "absent",
       exit: "absent",
-      animate: speaker ? { ...variants.talking, ...talkingAnimationProps } : "idle",
-      style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center", ...ghostMaskStyle },
+      animate: animateProps,
+      style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center" },
       children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: prevImageUrl && prevImageUrl !== processedImageUrl && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
           import_framer_motion.motion.img,
@@ -221,7 +230,8 @@ var ActorImage = ({
               filter: "blur(2.5px)",
               zIndex: 3,
               transform: `translateX(-50%)`,
-              pointerEvents: "none"
+              pointerEvents: "none",
+              ...ghostMaskStyle
             }
           },
           `${id}_${prevImageUrl}_prev`
@@ -241,7 +251,8 @@ var ActorImage = ({
               height: "100%",
               zIndex: 4,
               transform: `translateX(-50%)`,
-              pointerEvents: "none"
+              pointerEvents: "none",
+              ...ghostMaskStyle
             }
           },
           `${id}_${imageUrl}_bg`
@@ -260,7 +271,8 @@ var ActorImage = ({
               width: "100%",
               height: "100%",
               zIndex: 5,
-              transform: `translateX(-50%)`
+              transform: `translateX(-50%)`,
+              ...ghostMaskStyle
             },
             onMouseEnter,
             onMouseLeave

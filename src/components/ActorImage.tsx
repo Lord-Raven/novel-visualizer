@@ -167,9 +167,9 @@ const ActorImage: FC<ActorImageProps> = ({
         const random1 = (Math.sin(seed) * 10000) % 1;
         const random2 = (Math.sin(seed + 1) * 10000) % 1;
         
-        // Randomize extremity: base range 0.99-1.01, with ±0.002 variation
-        const squish = 0.99 + (random1 * 0.004 - 0.002);
-        const stretch = 1.01 + (random2 * 0.004 - 0.002);
+        // Randomize extremity: base range 0.995-1.005, with some variance
+        const squish = 0.995 + (random1 * 0.004);
+        const stretch = 1.005 - (random2 * 0.004);
         
         // Randomize duration: 0.2-0.6s
         const duration = 0.2 + (random1 * 0.4);
@@ -177,23 +177,37 @@ const ActorImage: FC<ActorImageProps> = ({
         return { squish, stretch, duration };
     }, [id]);
 
-    // Talking animation: squish and stretch while audio plays
-    const talkingAnimationProps = isAudioPlaying ? {
-        scaleY: [1, animationParams.squish, animationParams.stretch, 1],
-        transition: {
-            scaleY: {
-                duration: animationParams.duration,
-                repeat: Infinity,
-                ease: "easeInOut"
-            }
-        }
-    } : {};
-
     // Apply bottom fade mask for ghost characters
     const ghostMaskStyle = isGhost ? {
         maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)',
         WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'
     } : {};
+
+    // Build animate props based on speaker and audio state
+    // When speaker and audio is playing, we need to add the scaleY animation
+    const animateProps = useMemo(() => {
+        if (speaker && isAudioPlaying) {
+            // Get the talking variant values
+            const talkingVariant = variants.talking;
+            const baseTransition = isGhost 
+                ? { x: { ease: easeOut, duration: 0.4 }, bottom: { duration: 0.4 }, opacity: { ease: easeOut, duration: 0.4 }, rotate: { duration: 0.4 } }
+                : { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } };
+            
+            return {
+                ...talkingVariant,
+                scaleY: [1, animationParams.squish, animationParams.stretch, 1],
+                transition: {
+                    ...baseTransition,
+                    scaleY: {
+                        duration: animationParams.duration,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                    }
+                }
+            };
+        }
+        return speaker ? 'talking' : 'idle';
+    }, [speaker, isAudioPlaying, variants, isGhost, animationParams]);
 
     return processedImageUrl ? (
         <motion.div
@@ -202,8 +216,8 @@ const ActorImage: FC<ActorImageProps> = ({
             // Prevent automatic initial animation on remounts/refreshes; rely on animate to move between states
             initial={'absent'}
             exit='absent'
-            animate={speaker ? { ...variants.talking, ...talkingAnimationProps } : 'idle'}
-            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center', ...ghostMaskStyle}}>
+            animate={animateProps}
+            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center'}}>
             <AnimatePresence>
                 {/* Previous image layer for crossfade */}
                 {prevImageUrl && prevImageUrl !== processedImageUrl && (
@@ -222,7 +236,8 @@ const ActorImage: FC<ActorImageProps> = ({
                             filter: 'blur(2.5px)',
                             zIndex: 3,
                             transform: `translateX(-50%)`,
-                            pointerEvents: 'none'
+                            pointerEvents: 'none',
+                            ...ghostMaskStyle
                         }}
                     />
                 )}
@@ -244,7 +259,8 @@ const ActorImage: FC<ActorImageProps> = ({
                             height: '100%',
                             zIndex: 4,
                             transform: `translateX(-50%)`,
-                            pointerEvents: 'none'
+                            pointerEvents: 'none',
+                            ...ghostMaskStyle
                         }}
                     />
                 )}
@@ -266,6 +282,7 @@ const ActorImage: FC<ActorImageProps> = ({
                             height: '100%',
                             zIndex: 5,
                             transform: `translateX(-50%)`,
+                            ...ghostMaskStyle
                         }}
                         onMouseEnter={onMouseEnter}
                         onMouseLeave={onMouseLeave}
