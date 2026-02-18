@@ -217,7 +217,7 @@ export function NovelVisualizer<
             fontFamily: tokens.fallbackFontFamily,
             textShadow: tokens.baseTextShadow
         };
-        
+
         return (
             <>
                 {dialogueParts.map((part, index) => {
@@ -531,9 +531,10 @@ export function NovelVisualizer<
         }
         if (onSubmitInput) {
             setLoading(true);
-            onSubmitInput?.(inputText, localScript, atIndex).then((newScript) => {
+            const tempScript = {...localScript}; // Create a temp copy to pass to onSubmitInput
+            onSubmitInput?.(inputText, tempScript, atIndex).then((newScript) => {
                 setLoading(false);
-                if (newScript.id !== localScript.id) {
+                if (newScript.id !== tempScript.id) {
                     console.log('New script detected.');
                     setIndex(0); // Move to first entry, if this is a new script.
                 } else {
@@ -547,7 +548,8 @@ export function NovelVisualizer<
         setInputText('');
     };
 
-    const handleReroll = (rerollIndex: number) => {
+    const handleReroll = () => {
+        const rerollIndex = index;
         // Trim script to index before reroll point, then call onSubmitInput with the same input to regenerate from that point
         const tempScript = {...localScript, script: localScript.script.slice(0, rerollIndex)};
         console.log('Reroll clicked');
@@ -555,10 +557,12 @@ export function NovelVisualizer<
             setLoading(true);
             console.log('Rerolling');
             onSubmitInput?.(inputText, tempScript, rerollIndex).then((newScript) => {
+                console.log('Reroll complete');
                 setLoading(false);
                 setIndex(rerollIndex); // Move to reroll point, which will now have new content
                 setLocalScript({...newScript});
             }).catch(() => {
+                console.log('Reroll failed');
                 setLoading(false);
             });
         }
@@ -771,7 +775,7 @@ export function NovelVisualizer<
 
                                 {enableReroll && (
                                     <IconButton
-                                        onClick={() => handleReroll(index)}
+                                        onClick={handleReroll}
                                         disabled={loading}
                                         size="small"
                                         sx={{

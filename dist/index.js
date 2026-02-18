@@ -137,8 +137,8 @@ var ActorImage = ({
     const seed = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const random1 = Math.sin(seed) * 1e4 % 1;
     const random2 = Math.sin(seed + 1) * 1e4 % 1;
-    const squish = 0.985 + (random1 * 6e-3 - 3e-3);
-    const stretch = 1.015 + (random2 * 6e-3 - 3e-3);
+    const squish = 0.99 + (random1 * 4e-3 - 2e-3);
+    const stretch = 1.01 + (random2 * 4e-3 - 2e-3);
     const duration = 0.3 + random1 * 0.1;
     return { squish, stretch, duration };
   }, [id]);
@@ -916,9 +916,10 @@ function NovelVisualizer(props) {
     }
     if (onSubmitInput) {
       setLoading(true);
-      onSubmitInput?.(inputText, localScript, atIndex).then((newScript) => {
+      const tempScript = { ...localScript };
+      onSubmitInput?.(inputText, tempScript, atIndex).then((newScript) => {
         setLoading(false);
-        if (newScript.id !== localScript.id) {
+        if (newScript.id !== tempScript.id) {
           console.log("New script detected.");
           setIndex(0);
         } else {
@@ -931,17 +932,20 @@ function NovelVisualizer(props) {
     }
     setInputText("");
   };
-  const handleReroll = (rerollIndex) => {
+  const handleReroll = () => {
+    const rerollIndex = index;
     const tempScript = { ...localScript, script: localScript.script.slice(0, rerollIndex) };
     console.log("Reroll clicked");
     if (onSubmitInput) {
       setLoading(true);
       console.log("Rerolling");
       onSubmitInput?.(inputText, tempScript, rerollIndex).then((newScript) => {
+        console.log("Reroll complete");
         setLoading(false);
         setIndex(rerollIndex);
         setLocalScript({ ...newScript });
       }).catch(() => {
+        console.log("Reroll failed");
         setLoading(false);
       });
     }
@@ -1149,7 +1153,7 @@ function NovelVisualizer(props) {
                       enableReroll && /* @__PURE__ */ jsx5(
                         IconButton,
                         {
-                          onClick: () => handleReroll(index),
+                          onClick: handleReroll,
                           disabled: loading,
                           size: "small",
                           sx: {
