@@ -2,6 +2,7 @@ import React, { FC, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from '@mui/material';
 import { alpha, darken, lighten, useTheme } from '@mui/material/styles';
 import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, CardGiftcard } from '@mui/icons-material';
+import { AnimatePresence } from 'framer-motion';
 import ActorImage from './ActorImage';
 import { BlurredBackground } from './BlurredBackground';
 import TypeOut from './TypeOut';
@@ -557,10 +558,9 @@ export function NovelVisualizer<
         if (onSubmitInput) {
             setLoading(true);
             console.log('Rerolling');
-            onSubmitInput(inputText, tempScript, rerollIndex).then((newScript) => {
-                console.log('Reroll complete');
+            onSubmitInput(inputText, tempScript, rerollIndex - 1).then((newScript) => {
                 setLoading(false);
-                setIndex(rerollIndex); // Move to reroll point, which will now have new content
+                setIndex(Math.min(newScript.script.length - 1, rerollIndex)); // Move to reroll point, which will now have new content
                 setLocalScript({...newScript});
             }).catch((error) => {
                 console.log('Reroll failed', error);
@@ -592,7 +592,9 @@ export function NovelVisualizer<
                 onMouseLeave={() => setMousePosition(null)}
             >
                 <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
-                    {renderActors()}
+                    <AnimatePresence>
+                        {renderActors()}
+                    </AnimatePresence>
                 </div>
 
                 {hoverInfoNode && (

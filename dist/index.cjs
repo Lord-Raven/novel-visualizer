@@ -42,6 +42,7 @@ var import_react4 = __toESM(require("react"), 1);
 var import_material = require("@mui/material");
 var import_styles = require("@mui/material/styles");
 var import_icons_material = require("@mui/icons-material");
+var import_framer_motion2 = require("framer-motion");
 
 // src/components/ActorImage.tsx
 var import_framer_motion = require("framer-motion");
@@ -111,7 +112,7 @@ var ActorImage = ({
           transition: {
             x: { ease: import_framer_motion.easeIn, duration: 0.4 },
             bottom: { duration: 0.4 },
-            opacity: { ease: import_framer_motion.easeOut, duration: 0.3 },
+            opacity: { duration: 0.5, ease: "easeInOut" },
             rotate: { duration: 0.4 }
           }
         },
@@ -176,9 +177,9 @@ var ActorImage = ({
     const seed = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const random1 = Math.sin(seed) * 1e4 % 1;
     const random2 = Math.sin(seed + 1) * 1e4 % 1;
-    const squish = 0.99 + (random1 * 4e-3 - 2e-3);
-    const stretch = 1.01 + (random2 * 4e-3 - 2e-3);
-    const duration = 0.3 + random1 * 0.1;
+    const squish = 0.995 + (random1 * 4e-3 - 2e-3);
+    const stretch = 1.005 + (random2 * 4e-3 - 2e-3);
+    const duration = 0.2 + random1 * 0.4;
     return { squish, stretch, duration };
   }, [id]);
   const talkingAnimationProps = isAudioPlaying ? {
@@ -979,10 +980,9 @@ function NovelVisualizer(props) {
     if (onSubmitInput) {
       setLoading(true);
       console.log("Rerolling");
-      onSubmitInput(inputText, tempScript, rerollIndex).then((newScript) => {
-        console.log("Reroll complete");
+      onSubmitInput(inputText, tempScript, rerollIndex - 1).then((newScript) => {
         setLoading(false);
-        setIndex(rerollIndex);
+        setIndex(Math.min(newScript.script.length - 1, rerollIndex));
         setLocalScript({ ...newScript });
       }).catch((error) => {
         console.log("Reroll failed", error);
@@ -1012,7 +1012,7 @@ function NovelVisualizer(props) {
           onMouseMove: handleMouseMove,
           onMouseLeave: () => setMousePosition(null),
           children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 1 }, children: renderActors() }),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 1 }, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_framer_motion2.AnimatePresence, { children: renderActors() }) }),
             hoverInfoNode && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
               "div",
               {
