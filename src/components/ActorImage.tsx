@@ -167,9 +167,9 @@ const ActorImage: FC<ActorImageProps> = ({
         const random1 = (Math.sin(seed) * 10000) % 1;
         const random2 = (Math.sin(seed + 1) * 10000) % 1;
         
-        // Randomize extremity: base range 0.995-1.005, with ±0.002 variation
-        const squish = 0.995 + (random1 * 0.004 - 0.002);
-        const stretch = 1.005 + (random2 * 0.004 - 0.002);
+        // Randomize extremity: base range 0.99-1.01, with ±0.002 variation
+        const squish = 0.99 + (random1 * 0.004 - 0.002);
+        const stretch = 1.01 + (random2 * 0.004 - 0.002);
         
         // Randomize duration: 0.2-0.6s
         const duration = 0.2 + (random1 * 0.4);
@@ -189,6 +189,12 @@ const ActorImage: FC<ActorImageProps> = ({
         }
     } : {};
 
+    // Apply bottom fade mask for ghost characters
+    const ghostMaskStyle = isGhost ? {
+        maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)',
+        WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'
+    } : {};
+
     return processedImageUrl ? (
         <motion.div
             key={`actor_motion_div_${id}`}
@@ -197,7 +203,7 @@ const ActorImage: FC<ActorImageProps> = ({
             initial={'absent'}
             exit='absent'
             animate={speaker ? { ...variants.talking, ...talkingAnimationProps } : 'idle'}
-            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center'}}>
+            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center', ...ghostMaskStyle}}>
             <AnimatePresence>
                 {/* Previous image layer for crossfade */}
                 {prevImageUrl && prevImageUrl !== processedImageUrl && (

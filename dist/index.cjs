@@ -177,8 +177,8 @@ var ActorImage = ({
     const seed = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const random1 = Math.sin(seed) * 1e4 % 1;
     const random2 = Math.sin(seed + 1) * 1e4 % 1;
-    const squish = 0.995 + (random1 * 4e-3 - 2e-3);
-    const stretch = 1.005 + (random2 * 4e-3 - 2e-3);
+    const squish = 0.99 + (random1 * 4e-3 - 2e-3);
+    const stretch = 1.01 + (random2 * 4e-3 - 2e-3);
     const duration = 0.2 + random1 * 0.4;
     return { squish, stretch, duration };
   }, [id]);
@@ -192,6 +192,10 @@ var ActorImage = ({
       }
     }
   } : {};
+  const ghostMaskStyle = isGhost ? {
+    maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
+    WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)"
+  } : {};
   return processedImageUrl ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
     import_framer_motion.motion.div,
     {
@@ -199,7 +203,7 @@ var ActorImage = ({
       initial: "absent",
       exit: "absent",
       animate: speaker ? { ...variants.talking, ...talkingAnimationProps } : "idle",
-      style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center" },
+      style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center", ...ghostMaskStyle },
       children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: prevImageUrl && prevImageUrl !== processedImageUrl && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
           import_framer_motion.motion.img,
