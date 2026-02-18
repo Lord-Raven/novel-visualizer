@@ -173,15 +173,33 @@ var ActorImage = ({
       }
     };
   }, [baseX, baseY, yPosition, zIndex, heightMultiplier, isGhost, ghostSide]);
-  const animationParams = (0, import_react.useMemo)(() => {
+  const [animationParams, setAnimationParams] = (0, import_react.useState)(() => {
     const seed = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const random1 = Math.sin(seed) * 1e4 % 1;
-    const random2 = Math.sin(seed + 1) * 1e4 % 1;
+    const random1 = Math.abs(Math.sin(seed) * 1e4 % 1);
+    const random2 = Math.abs(Math.sin(seed + 1) * 1e4 % 1);
     const squish = 0.995 + random1 * 4e-3;
     const stretch = 1.005 - random2 * 4e-3;
     const duration = 0.2 + random1 * 0.4;
     return { squish, stretch, duration };
-  }, [id]);
+  });
+  (0, import_react.useEffect)(() => {
+    if (!isAudioPlaying || !speaker) {
+      return;
+    }
+    const updateInterval = 1e3 + Math.random() * 2e3;
+    const intervalId = setInterval(() => {
+      setAnimationParams((prev) => {
+        const random1 = Math.random();
+        const random2 = Math.random();
+        const random3 = Math.random();
+        const squish = 0.992 + random1 * 6e-3;
+        const stretch = 1.002 + random2 * 6e-3;
+        const duration = 0.15 + random3 * 0.55;
+        return { squish, stretch, duration };
+      });
+    }, updateInterval);
+    return () => clearInterval(intervalId);
+  }, [isAudioPlaying, speaker]);
   const ghostMaskStyle = isGhost ? {
     maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
     WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)"

@@ -161,21 +161,53 @@ const ActorImage: FC<ActorImageProps> = ({
         };
     }, [baseX, baseY, yPosition, zIndex, heightMultiplier, isGhost, ghostSide]);
 
-    // Generate randomized animation parameters based on actor ID for variety
-    const animationParams = useMemo(() => {
+    // Dynamic animation parameters that vary over time
+    const [animationParams, setAnimationParams] = useState(() => {
         const seed = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const random1 = (Math.sin(seed) * 10000) % 1;
-        const random2 = (Math.sin(seed + 1) * 10000) % 1;
+        const random1 = Math.abs((Math.sin(seed) * 10000) % 1);
+        const random2 = Math.abs((Math.sin(seed + 1) * 10000) % 1);
         
-        // Randomize extremity: base range 0.995-1.005, with some variance
+        // Initial randomized extremity: base range 0.995-1.005
         const squish = 0.995 + (random1 * 0.004);
         const stretch = 1.005 - (random2 * 0.004);
         
-        // Randomize duration: 0.2-0.6s
+        // Initial randomized duration: 0.2-0.6s
         const duration = 0.2 + (random1 * 0.4);
         
         return { squish, stretch, duration };
-    }, [id]);
+    });
+
+    // Continuously vary animation parameters when audio is playing
+    useEffect(() => {
+        if (!isAudioPlaying || !speaker) {
+            return;
+        }
+
+        // Update animation parameters every 1-3 seconds for natural variation
+        const updateInterval = 1000 + Math.random() * 2000;
+        
+        const intervalId = setInterval(() => {
+            setAnimationParams(prev => {
+                // Generate new random values with more variation
+                const random1 = Math.random();
+                const random2 = Math.random();
+                const random3 = Math.random();
+                
+                // Wider range for squish: 0.992-0.998 (more compressed)
+                const squish = 0.992 + (random1 * 0.006);
+                
+                // Wider range for stretch: 1.002-1.008 (more extended)
+                const stretch = 1.002 + (random2 * 0.006);
+                
+                // Vary duration: 0.15-0.7s for different pacing
+                const duration = 0.15 + (random3 * 0.55);
+                
+                return { squish, stretch, duration };
+            });
+        }, updateInterval);
+
+        return () => clearInterval(intervalId);
+    }, [isAudioPlaying, speaker]);
 
     // Apply bottom fade mask for ghost characters
     const ghostMaskStyle = isGhost ? {
