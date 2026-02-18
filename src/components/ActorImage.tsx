@@ -167,9 +167,9 @@ const ActorImage: FC<ActorImageProps> = ({
         const random1 = (Math.sin(seed) * 10000) % 1;
         const random2 = (Math.sin(seed + 1) * 10000) % 1;
         
-        // Randomize extremity: base range 0.97-1.03, with ±0.005 variation
-        const squish = 0.97 + (random1 * 0.01 - 0.005);
-        const stretch = 1.03 + (random2 * 0.01 - 0.005);
+        // Randomize extremity: base range 0.985-1.015, with ±0.003 variation
+        const squish = 0.985 + (random1 * 0.006 - 0.003);
+        const stretch = 1.015 + (random2 * 0.006 - 0.003);
         
         // Randomize duration: 0.3-0.4s
         const duration = 0.3 + (random1 * 0.1);

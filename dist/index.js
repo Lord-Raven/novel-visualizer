@@ -137,8 +137,8 @@ var ActorImage = ({
     const seed = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const random1 = Math.sin(seed) * 1e4 % 1;
     const random2 = Math.sin(seed + 1) * 1e4 % 1;
-    const squish = 0.97 + (random1 * 0.01 - 5e-3);
-    const stretch = 1.03 + (random2 * 0.01 - 5e-3);
+    const squish = 0.985 + (random1 * 6e-3 - 3e-3);
+    const stretch = 1.015 + (random2 * 6e-3 - 3e-3);
     const duration = 0.3 + random1 * 0.1;
     return { squish, stretch, duration };
   }, [id]);
@@ -648,17 +648,22 @@ function NovelVisualizer(props) {
     if (!text) return /* @__PURE__ */ jsx5(Fragment3, {});
     text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
     const dialogueParts = text.split(/(\"[^\"]*\")/g);
+    const brightenedColor = speakerActor2?.themeColor ? adjustColor(speakerActor2.themeColor, 0.6) : tokens.defaultDialogueColor;
+    const dialogueStyle = {
+      color: brightenedColor,
+      fontFamily: speakerActor2?.themeFontFamily || tokens.fallbackFontFamily,
+      textShadow: speakerActor2?.themeColor ? `2px 2px 2px ${adjustColor(speakerActor2.themeColor, -0.25)}` : tokens.defaultDialogueShadow
+    };
+    const proseStyle = {
+      color: theme.palette.text.primary,
+      fontFamily: tokens.fallbackFontFamily,
+      textShadow: tokens.baseTextShadow
+    };
     return /* @__PURE__ */ jsx5(Fragment3, { children: dialogueParts.map((part, index2) => {
       if (part.startsWith('"') && part.endsWith('"')) {
-        const brightenedColor = speakerActor2?.themeColor ? adjustColor(speakerActor2.themeColor, 0.6) : tokens.defaultDialogueColor;
-        const dialogueStyle = {
-          color: brightenedColor,
-          fontFamily: speakerActor2?.themeFontFamily || tokens.fallbackFontFamily,
-          textShadow: speakerActor2?.themeColor ? `2px 2px 2px ${adjustColor(speakerActor2.themeColor, -0.25)}` : tokens.defaultDialogueShadow
-        };
         return /* @__PURE__ */ jsx5("span", { style: dialogueStyle, children: formatInlineStyles(part) }, index2);
       }
-      return /* @__PURE__ */ jsx5("span", { style: { textShadow: tokens.baseTextShadow, fontFamily: tokens.fallbackFontFamily }, children: formatInlineStyles(part) }, index2);
+      return /* @__PURE__ */ jsx5("span", { style: proseStyle, children: formatInlineStyles(part) }, index2);
     }) });
   };
   useEffect3(() => {

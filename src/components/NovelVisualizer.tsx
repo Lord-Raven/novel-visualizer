@@ -201,22 +201,28 @@ export function NovelVisualizer<
         text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
 
         const dialogueParts = text.split(/(\"[^\"]*\")/g);
+        const brightenedColor = speakerActor?.themeColor
+            ? adjustColor(speakerActor.themeColor, 0.6)
+            : tokens.defaultDialogueColor;
 
+        const dialogueStyle: React.CSSProperties = {
+            color: brightenedColor,
+            fontFamily: speakerActor?.themeFontFamily || tokens.fallbackFontFamily,
+            textShadow: speakerActor?.themeColor
+                ? `2px 2px 2px ${adjustColor(speakerActor.themeColor, -0.25)}`
+                : tokens.defaultDialogueShadow
+        };
+        const proseStyle: React.CSSProperties = {
+            color: theme.palette.text.primary,
+            fontFamily: tokens.fallbackFontFamily,
+            textShadow: tokens.baseTextShadow
+        };
+        
         return (
             <>
                 {dialogueParts.map((part, index) => {
                     if (part.startsWith('"') && part.endsWith('"')) {
-                        const brightenedColor = speakerActor?.themeColor
-                            ? adjustColor(speakerActor.themeColor, 0.6)
-                            : tokens.defaultDialogueColor;
 
-                        const dialogueStyle: React.CSSProperties = {
-                            color: brightenedColor,
-                            fontFamily: speakerActor?.themeFontFamily || tokens.fallbackFontFamily,
-                            textShadow: speakerActor?.themeColor
-                                ? `2px 2px 2px ${adjustColor(speakerActor.themeColor, -0.25)}`
-                                : tokens.defaultDialogueShadow
-                        };
                         return (
                             <span key={index} style={dialogueStyle}>
                                 {formatInlineStyles(part)}
@@ -224,7 +230,7 @@ export function NovelVisualizer<
                         );
                     }
                     return (
-                        <span key={index} style={{ textShadow: tokens.baseTextShadow, fontFamily: tokens.fallbackFontFamily }}>
+                        <span key={index} style={proseStyle}>
                             {formatInlineStyles(part)}
                         </span>
                     );
