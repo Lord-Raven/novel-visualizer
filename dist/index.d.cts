@@ -78,6 +78,15 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
      * @returns The URL of the image to display
      */
     getActorImageUrl: (actor: TActor, script: TScript, index: number) => string;
+    /**
+     * Additional elements rendered behind actor images and above the blurred background.
+     * Useful for decorative foreground scenery, effects, or custom scene props.
+     */
+    backgroundElements?: React__default.ReactNode | ((context: {
+        script: TScript;
+        index: number;
+        presentActors: TActor[];
+    }) => React__default.ReactNode);
     backgroundOptions?: {
         brightness?: number;
         contrast?: number;

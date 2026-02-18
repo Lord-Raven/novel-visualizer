@@ -636,6 +636,7 @@ function NovelVisualizer(props) {
     renderActorHoverInfo,
     getActorImageUrl,
     getPresentActors,
+    backgroundElements,
     backgroundOptions,
     hideInput = false,
     hideActionButtons = false,
@@ -990,6 +991,11 @@ function NovelVisualizer(props) {
     () => getBackgroundImageUrl(localScript, index),
     [getBackgroundImageUrl, localScript, index]
   );
+  const resolvedBackgroundElements = typeof backgroundElements === "function" ? backgroundElements({
+    script: localScript,
+    index,
+    presentActors: actorsAtIndex
+  }) : backgroundElements;
   return /* @__PURE__ */ jsx5(
     BlurredBackground,
     {
@@ -1007,6 +1013,7 @@ function NovelVisualizer(props) {
           onMouseMove: handleMouseMove,
           onMouseLeave: () => setMousePosition(null),
           children: [
+            resolvedBackgroundElements && /* @__PURE__ */ jsx5("div", { style: { position: "absolute", inset: 0, zIndex: 0 }, children: resolvedBackgroundElements }),
             /* @__PURE__ */ jsx5("div", { style: { position: "absolute", inset: 0, zIndex: 1 }, children: /* @__PURE__ */ jsx5(AnimatePresence2, { children: renderActors() }) }),
             hoverInfoNode && /* @__PURE__ */ jsx5(
               "div",
@@ -1045,7 +1052,7 @@ function NovelVisualizer(props) {
                   justifyContent: "space-between"
                 },
                 children: [
-                  /* @__PURE__ */ jsxs3(Box, { sx: { display: "flex", alignItems: "center", mb: isVerticalLayout ? 1 : 2 }, children: [
+                  /* @__PURE__ */ jsxs3(Box, { sx: { display: "flex", alignItems: "center" }, children: [
                     /* @__PURE__ */ jsxs3(Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "center", flex: 1 }, children: [
                       /* @__PURE__ */ jsx5(
                         IconButton,
@@ -1073,8 +1080,7 @@ function NovelVisualizer(props) {
                             fontSize: isVerticalLayout ? "0.7rem" : void 0,
                             fontWeight: 700,
                             color: theme.palette.primary.light,
-                            background: alpha(theme.palette.action.hover, 0.5),
-                            border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
+                            border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                             transition: "all 0.3s ease",
                             "& .MuiChip-label": {
                               display: "flex",
@@ -1213,6 +1219,7 @@ function NovelVisualizer(props) {
                     Box,
                     {
                       sx: {
+                        my: isVerticalLayout ? 1 : 2,
                         minHeight: "4rem",
                         cursor: isEditingMessage ? "text" : "pointer",
                         borderRadius: 1,
@@ -1362,6 +1369,8 @@ function NovelVisualizer(props) {
                           return inputText.trim() ? /* @__PURE__ */ jsx5(Send, { fontSize: isVerticalLayout ? "small" : void 0 }) : /* @__PURE__ */ jsx5(Forward, { fontSize: isVerticalLayout ? "small" : void 0 });
                         })(),
                         sx: {
+                          height: "40px",
+                          minHeight: "40px",
                           background: (() => {
                             const colorScheme = getSubmitButtonConfig ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : sceneEnded && !inputText.trim() ? "error" : "primary";
                             const baseColor = colorScheme === "error" ? errorMain : accentMain;

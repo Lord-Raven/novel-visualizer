@@ -95,6 +95,15 @@ export interface NovelVisualizerProps<
      * @returns The URL of the image to display
      */
     getActorImageUrl: (actor: TActor, script: TScript, index: number) => string;
+    /**
+     * Additional elements rendered behind actor images and above the blurred background.
+     * Useful for decorative foreground scenery, effects, or custom scene props.
+     */
+    backgroundElements?: React.ReactNode | ((context: {
+        script: TScript;
+        index: number;
+        presentActors: TActor[];
+    }) => React.ReactNode);
     backgroundOptions?: {
         brightness?: number;
         contrast?: number;
@@ -143,6 +152,7 @@ export function NovelVisualizer<
         renderActorHoverInfo,
         getActorImageUrl,
         getPresentActors,
+        backgroundElements,
         backgroundOptions,
         hideInput = false,
         hideActionButtons = false,
@@ -576,6 +586,15 @@ export function NovelVisualizer<
         [getBackgroundImageUrl, localScript, index]
     );
 
+    const resolvedBackgroundElements =
+        typeof backgroundElements === 'function'
+            ? backgroundElements({
+                script: localScript,
+                index,
+                presentActors: actorsAtIndex
+            })
+            : backgroundElements;
+
     return (
         <BlurredBackground
             imageUrl={backgroundImageUrl}
@@ -591,6 +610,12 @@ export function NovelVisualizer<
                 onMouseMove={handleMouseMove}
                 onMouseLeave={() => setMousePosition(null)}
             >
+                {resolvedBackgroundElements && (
+                    <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+                        {resolvedBackgroundElements}
+                    </div>
+                )}
+
                 <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
                     <AnimatePresence>
                         {renderActors()}
@@ -633,7 +658,7 @@ export function NovelVisualizer<
                         justifyContent: 'space-between'
                     }}
                 >
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: isVerticalLayout ? 1 : 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <Box sx={{ display: 'flex', gap: isVerticalLayout ? 0.5 : 1.5, alignItems: 'center', flex: 1 }}>
                             <IconButton
                                 onClick={prev}
@@ -664,8 +689,7 @@ export function NovelVisualizer<
                                     fontSize: isVerticalLayout ? '0.7rem' : undefined,
                                     fontWeight: 700,
                                     color: theme.palette.primary.light,
-                                    background: alpha(theme.palette.action.hover, 0.5),
-                                    border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
+                                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                                     transition: 'all 0.3s ease',
                                     '& .MuiChip-label': {
                                         display: 'flex',
@@ -804,6 +828,7 @@ export function NovelVisualizer<
 
                     <Box
                         sx={{
+                            my: isVerticalLayout ? 1 : 2,
                             minHeight: '4rem',
                             cursor: isEditingMessage ? 'text' : 'pointer',
                             borderRadius: 1,
@@ -952,6 +977,8 @@ export function NovelVisualizer<
                                         : <Forward fontSize={isVerticalLayout ? 'small' : undefined} />;
                                 })()}
                                 sx={{
+                                    height: '40px',
+                                    minHeight: '40px',
                                     background: (() => {
                                         const colorScheme = getSubmitButtonConfig 
                                             ? getSubmitButtonConfig(localScript, index, inputText).colorScheme 

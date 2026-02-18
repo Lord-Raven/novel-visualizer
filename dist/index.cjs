@@ -675,6 +675,7 @@ function NovelVisualizer(props) {
     renderActorHoverInfo,
     getActorImageUrl,
     getPresentActors,
+    backgroundElements,
     backgroundOptions,
     hideInput = false,
     hideActionButtons = false,
@@ -1029,6 +1030,11 @@ function NovelVisualizer(props) {
     () => getBackgroundImageUrl(localScript, index),
     [getBackgroundImageUrl, localScript, index]
   );
+  const resolvedBackgroundElements = typeof backgroundElements === "function" ? backgroundElements({
+    script: localScript,
+    index,
+    presentActors: actorsAtIndex
+  }) : backgroundElements;
   return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
     BlurredBackground,
     {
@@ -1046,6 +1052,7 @@ function NovelVisualizer(props) {
           onMouseMove: handleMouseMove,
           onMouseLeave: () => setMousePosition(null),
           children: [
+            resolvedBackgroundElements && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 0 }, children: resolvedBackgroundElements }),
             /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 1 }, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_framer_motion2.AnimatePresence, { children: renderActors() }) }),
             hoverInfoNode && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
               "div",
@@ -1084,7 +1091,7 @@ function NovelVisualizer(props) {
                   justifyContent: "space-between"
                 },
                 children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_material.Box, { sx: { display: "flex", alignItems: "center", mb: isVerticalLayout ? 1 : 2 }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_material.Box, { sx: { display: "flex", alignItems: "center" }, children: [
                     /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_material.Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "center", flex: 1 }, children: [
                       /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                         import_material.IconButton,
@@ -1112,8 +1119,7 @@ function NovelVisualizer(props) {
                             fontSize: isVerticalLayout ? "0.7rem" : void 0,
                             fontWeight: 700,
                             color: theme.palette.primary.light,
-                            background: (0, import_styles.alpha)(theme.palette.action.hover, 0.5),
-                            border: `1px solid ${(0, import_styles.alpha)(theme.palette.divider, 0.15)}`,
+                            border: `1px solid ${(0, import_styles.alpha)(theme.palette.divider, 0.2)}`,
                             transition: "all 0.3s ease",
                             "& .MuiChip-label": {
                               display: "flex",
@@ -1252,6 +1258,7 @@ function NovelVisualizer(props) {
                     import_material.Box,
                     {
                       sx: {
+                        my: isVerticalLayout ? 1 : 2,
                         minHeight: "4rem",
                         cursor: isEditingMessage ? "text" : "pointer",
                         borderRadius: 1,
@@ -1401,6 +1408,8 @@ function NovelVisualizer(props) {
                           return inputText.trim() ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_icons_material.Send, { fontSize: isVerticalLayout ? "small" : void 0 }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_icons_material.Forward, { fontSize: isVerticalLayout ? "small" : void 0 });
                         })(),
                         sx: {
+                          height: "40px",
+                          minHeight: "40px",
                           background: (() => {
                             const colorScheme = getSubmitButtonConfig ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : sceneEnded && !inputText.trim() ? "error" : "primary";
                             const baseColor = colorScheme === "error" ? errorMain : accentMain;
