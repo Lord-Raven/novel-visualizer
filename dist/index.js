@@ -917,7 +917,7 @@ function NovelVisualizer(props) {
     if (onSubmitInput) {
       setLoading(true);
       const tempScript = { ...localScript };
-      onSubmitInput?.(inputText, tempScript, atIndex).then((newScript) => {
+      onSubmitInput(inputText, tempScript, atIndex).then((newScript) => {
         setLoading(false);
         if (newScript.id !== tempScript.id) {
           console.log("New script detected.");
@@ -926,7 +926,8 @@ function NovelVisualizer(props) {
           setIndex(Math.min(newScript.script.length - 1, atIndex + 1));
         }
         setLocalScript({ ...newScript });
-      }).catch(() => {
+      }).catch((error) => {
+        console.log("Submission failed", error);
         setLoading(false);
       });
     }
@@ -939,13 +940,13 @@ function NovelVisualizer(props) {
     if (onSubmitInput) {
       setLoading(true);
       console.log("Rerolling");
-      onSubmitInput?.(inputText, tempScript, rerollIndex).then((newScript) => {
+      onSubmitInput(inputText, tempScript, rerollIndex).then((newScript) => {
         console.log("Reroll complete");
         setLoading(false);
         setIndex(rerollIndex);
         setLocalScript({ ...newScript });
-      }).catch(() => {
-        console.log("Reroll failed");
+      }).catch((error) => {
+        console.log("Reroll failed", error);
         setLoading(false);
       });
     }
