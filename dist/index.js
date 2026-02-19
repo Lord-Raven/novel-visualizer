@@ -2,7 +2,7 @@
 import React3, { useEffect as useEffect3, useMemo as useMemo2, useRef as useRef2, useState as useState3 } from "react";
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from "@mui/material";
 import { alpha, darken, lighten, useTheme } from "@mui/material/styles";
-import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino } from "@mui/icons-material";
+import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, Computer, Warning } from "@mui/icons-material";
 import { AnimatePresence as AnimatePresence2 } from "framer-motion";
 
 // src/components/ActorImage.tsx
@@ -638,6 +638,7 @@ function NovelVisualizer(props) {
     getPresentActors,
     backgroundElements,
     backgroundOptions,
+    setTooltip,
     hideInput = false,
     hideActionButtons = false,
     enableGhostSpeakers = false,
@@ -863,7 +864,7 @@ function NovelVisualizer(props) {
   }, [inputPlaceholder, index, localScript, sceneEnded, loading]);
   const renderNameplateNode = () => {
     if (renderNameplate)
-      return renderNameplate({ actor: speakerActor });
+      return renderNameplate(speakerActor);
     return /* @__PURE__ */ jsx5(
       Typography,
       {
@@ -1073,7 +1074,32 @@ function NovelVisualizer(props) {
                       /* @__PURE__ */ jsx5(
                         Chip,
                         {
-                          label: loading ? /* @__PURE__ */ jsx5(CircularProgress, { size: isVerticalLayout ? 12 : 16, sx: { color: theme.palette.primary.light } }) : /* @__PURE__ */ jsx5("span", { style: { display: "flex", alignItems: "center", gap: isVerticalLayout ? "2px" : "4px" }, children: progressLabel }),
+                          label: loading ? /* @__PURE__ */ jsx5(
+                            CircularProgress,
+                            {
+                              size: isVerticalLayout ? 12 : 16,
+                              sx: { color: theme.palette.primary.light },
+                              onMouseEnter: () => {
+                                setTooltip?.("Awaiting content from the LLM", Computer);
+                              },
+                              onMouseLeave: () => setTooltip?.(null)
+                            }
+                          ) : /* @__PURE__ */ jsxs3("span", { style: { display: "flex", alignItems: "center", gap: isVerticalLayout ? "2px" : "4px" }, children: [
+                            index + 1 < localScript.script.length && inputText.length > 0 && /* @__PURE__ */ jsx5(
+                              "span",
+                              {
+                                onMouseEnter: () => {
+                                  setTooltip?.("Sending input will replace subsequent messages", Warning);
+                                },
+                                onMouseLeave: () => setTooltip?.(null),
+                                style: {
+                                  color: theme.palette.text.secondary
+                                },
+                                children: "\u26A0"
+                              }
+                            ),
+                            progressLabel
+                          ] }),
                           sx: {
                             minWidth: isVerticalLayout ? 50 : 72,
                             height: isVerticalLayout ? "24px" : void 0,
@@ -1114,6 +1140,10 @@ function NovelVisualizer(props) {
                         IconButton,
                         {
                           onClick: handleEnterEditMode,
+                          onMouseEnter: () => {
+                            setTooltip?.("Edit message", Edit);
+                          },
+                          onMouseLeave: () => setTooltip?.(null),
                           disabled: loading,
                           size: "small",
                           sx: {
@@ -1142,6 +1172,10 @@ function NovelVisualizer(props) {
                           IconButton,
                           {
                             onClick: handleConfirmEdit,
+                            onMouseEnter: () => {
+                              setTooltip?.("Confirm changes", Check);
+                            },
+                            onMouseLeave: () => setTooltip?.(null),
                             size: "small",
                             sx: {
                               color: accentMain,
@@ -1168,6 +1202,10 @@ function NovelVisualizer(props) {
                           IconButton,
                           {
                             onClick: handleCancelEdit,
+                            onMouseEnter: () => {
+                              setTooltip?.("Discard changes", Clear);
+                            },
+                            onMouseLeave: () => setTooltip?.(null),
                             size: "small",
                             sx: {
                               color: errorMain,
@@ -1195,6 +1233,10 @@ function NovelVisualizer(props) {
                         IconButton,
                         {
                           onClick: handleReroll,
+                          onMouseEnter: () => {
+                            setTooltip?.("Regenerate events from this point", Casino);
+                          },
+                          onMouseLeave: () => setTooltip?.(null),
                           disabled: loading,
                           size: "small",
                           sx: {

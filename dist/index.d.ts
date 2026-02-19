@@ -1,5 +1,6 @@
 import * as React from 'react';
 import React__default, { FC } from 'react';
+import { SvgIconComponent } from '@mui/icons-material';
 
 interface NovelActor {
     id: string;
@@ -51,37 +52,11 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
         index: number;
         entry?: TEntry;
     }) => string);
-    /**
-     * Function to determine button label, icon, and color scheme based on script state.
-     * If not provided, defaults to showing "Continue"/"Send"/"End" based on input and scene state.
-     */
     getSubmitButtonConfig?: (script: TScript, index: number, inputText: string) => SubmitButtonConfig;
-    renderNameplate?: (params: {
-        actor: TActor | null;
-    }) => React__default.ReactNode;
+    renderNameplate?: (actor: TActor | null) => React__default.ReactNode;
     renderActorHoverInfo?: (actor: TActor | null) => React__default.ReactNode;
-    /**
-     * Determines which actors should be visible at the given script index.
-     * @param script - The full script object
-     * @param index - The current script entry index
-     * @param actors - All available actors
-     * @returns Array of actors that should be visible
-     */
     getPresentActors: (script: TScript, index: number) => TActor[];
-    /**
-     * Resolves the image URL for an actor based on their emotion and script index.
-     * This is where you implement your own logic to determine which image to display.
-     * @param actor - The actor to get image for
-     * @param emotion - The emotion returned by getActorEmotion
-     * @param script - The full script object
-     * @param index - The current script entry index
-     * @returns The URL of the image to display
-     */
     getActorImageUrl: (actor: TActor, script: TScript, index: number) => string;
-    /**
-     * Additional elements rendered behind actor images and above the blurred background.
-     * Useful for decorative foreground scenery, effects, or custom scene props.
-     */
     backgroundElements?: React__default.ReactNode | ((context: {
         script: TScript;
         index: number;
@@ -95,6 +70,7 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
         overlay?: string;
         transitionDuration?: number;
     };
+    setTooltip?: (newMessage: string | null, newIcon?: SvgIconComponent) => void;
     hideInput?: boolean;
     hideActionButtons?: boolean;
     /**

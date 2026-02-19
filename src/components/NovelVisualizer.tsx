@@ -1,7 +1,7 @@
 import React, { FC, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from '@mui/material';
 import { alpha, darken, lighten, useTheme } from '@mui/material/styles';
-import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, CardGiftcard } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, CardGiftcard, SvgIconComponent, Computer, Warning } from '@mui/icons-material';
 import { AnimatePresence } from 'framer-motion';
 import ActorImage from './ActorImage';
 import { BlurredBackground } from './BlurredBackground';
@@ -70,35 +70,11 @@ export interface NovelVisualizerProps<
     onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<TScript>;
     onUpdateMessage?: (index: number, message: string) => void;
     inputPlaceholder?: string | ((context: { index: number; entry?: TEntry }) => string);
-    /**
-     * Function to determine button label, icon, and color scheme based on script state.
-     * If not provided, defaults to showing "Continue"/"Send"/"End" based on input and scene state.
-     */
     getSubmitButtonConfig?: (script: TScript, index: number, inputText: string) => SubmitButtonConfig;
-    renderNameplate?: (params: { actor: TActor | null}) => React.ReactNode;
+    renderNameplate?: (actor: TActor | null) => React.ReactNode;
     renderActorHoverInfo?: (actor: TActor | null) => React.ReactNode;
-    /**
-     * Determines which actors should be visible at the given script index.
-     * @param script - The full script object
-     * @param index - The current script entry index
-     * @param actors - All available actors
-     * @returns Array of actors that should be visible
-     */
     getPresentActors: (script: TScript, index: number) => TActor[];
-    /**
-     * Resolves the image URL for an actor based on their emotion and script index.
-     * This is where you implement your own logic to determine which image to display.
-     * @param actor - The actor to get image for
-     * @param emotion - The emotion returned by getActorEmotion
-     * @param script - The full script object
-     * @param index - The current script entry index
-     * @returns The URL of the image to display
-     */
     getActorImageUrl: (actor: TActor, script: TScript, index: number) => string;
-    /**
-     * Additional elements rendered behind actor images and above the blurred background.
-     * Useful for decorative foreground scenery, effects, or custom scene props.
-     */
     backgroundElements?: React.ReactNode | ((context: {
         script: TScript;
         index: number;
@@ -112,6 +88,7 @@ export interface NovelVisualizerProps<
         overlay?: string;
         transitionDuration?: number;
     };
+    setTooltip?: (newMessage: string | null, newIcon?: SvgIconComponent) => void;
     hideInput?: boolean;
     hideActionButtons?: boolean;
     /**
@@ -154,6 +131,7 @@ export function NovelVisualizer<
         getPresentActors,
         backgroundElements,
         backgroundOptions,
+        setTooltip,
         hideInput = false,
         hideActionButtons = false,
         enableGhostSpeakers = false,
@@ -445,7 +423,7 @@ export function NovelVisualizer<
 
     const renderNameplateNode = () => {
         if (renderNameplate)
-            return renderNameplate({ actor: speakerActor });
+            return renderNameplate(speakerActor);
         return (
             <Typography
                 sx={{
@@ -677,9 +655,23 @@ export function NovelVisualizer<
 
                             <Chip
                                 label={loading ? (
-                                    <CircularProgress size={isVerticalLayout ? 12 : 16} sx={{ color: theme.palette.primary.light }} />
+                                    <CircularProgress size={isVerticalLayout ? 12 : 16} sx={{ color: theme.palette.primary.light }} 
+                                        onMouseEnter={() => {setTooltip?.('Awaiting content from the LLM', Computer)}}
+                                        onMouseLeave={() => setTooltip?.(null)}
+                                    />
                                 ) : (
                                     <span style={{ display: 'flex', alignItems: 'center', gap: isVerticalLayout ? '2px' : '4px' }}>
+                                        {index + 1 < localScript.script.length && inputText.length > 0 && (
+                                            <span 
+                                                onMouseEnter={() => {setTooltip?.('Sending input will replace subsequent messages', Warning)}}
+                                                onMouseLeave={() => setTooltip?.(null)}
+                                                style={{ 
+                                                    color: theme.palette.text.secondary,
+                                                }}
+                                            >
+                                                ⚠
+                                            </span>
+                                        )}
                                         {progressLabel}
                                     </span>
                                 )}
@@ -723,6 +715,8 @@ export function NovelVisualizer<
                                 {!isEditingMessage ? (
                                     <IconButton
                                         onClick={handleEnterEditMode}
+                                        onMouseEnter={() => {setTooltip?.('Edit message', Edit)}}
+                                        onMouseLeave={() => setTooltip?.(null)}
                                         disabled={loading}
                                         size="small"
                                         sx={{
@@ -751,6 +745,8 @@ export function NovelVisualizer<
                                     <>
                                         <IconButton
                                             onClick={handleConfirmEdit}
+                                            onMouseEnter={() => {setTooltip?.('Confirm changes', Check)}}
+                                            onMouseLeave={() => setTooltip?.(null)}
                                             size="small"
                                             sx={{
                                                 color: accentMain,
@@ -775,6 +771,8 @@ export function NovelVisualizer<
                                         </IconButton>
                                         <IconButton
                                             onClick={handleCancelEdit}
+                                            onMouseEnter={() => {setTooltip?.('Discard changes', Clear)}}
+                                            onMouseLeave={() => setTooltip?.(null)}
                                             size="small"
                                             sx={{
                                                 color: errorMain,
@@ -803,6 +801,8 @@ export function NovelVisualizer<
                                 {enableReroll && (
                                     <IconButton
                                         onClick={handleReroll}
+                                        onMouseEnter={() => {setTooltip?.('Regenerate events from this point', Casino)}}
+                                        onMouseLeave={() => setTooltip?.(null)}
                                         disabled={loading}
                                         size="small"
                                         sx={{

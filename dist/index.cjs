@@ -677,6 +677,7 @@ function NovelVisualizer(props) {
     getPresentActors,
     backgroundElements,
     backgroundOptions,
+    setTooltip,
     hideInput = false,
     hideActionButtons = false,
     enableGhostSpeakers = false,
@@ -902,7 +903,7 @@ function NovelVisualizer(props) {
   }, [inputPlaceholder, index, localScript, sceneEnded, loading]);
   const renderNameplateNode = () => {
     if (renderNameplate)
-      return renderNameplate({ actor: speakerActor });
+      return renderNameplate(speakerActor);
     return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
       import_material.Typography,
       {
@@ -1112,7 +1113,32 @@ function NovelVisualizer(props) {
                       /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                         import_material.Chip,
                         {
-                          label: loading ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_material.CircularProgress, { size: isVerticalLayout ? 12 : 16, sx: { color: theme.palette.primary.light } }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { style: { display: "flex", alignItems: "center", gap: isVerticalLayout ? "2px" : "4px" }, children: progressLabel }),
+                          label: loading ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                            import_material.CircularProgress,
+                            {
+                              size: isVerticalLayout ? 12 : 16,
+                              sx: { color: theme.palette.primary.light },
+                              onMouseEnter: () => {
+                                setTooltip?.("Awaiting content from the LLM", import_icons_material.Computer);
+                              },
+                              onMouseLeave: () => setTooltip?.(null)
+                            }
+                          ) : /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { style: { display: "flex", alignItems: "center", gap: isVerticalLayout ? "2px" : "4px" }, children: [
+                            index + 1 < localScript.script.length && inputText.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                              "span",
+                              {
+                                onMouseEnter: () => {
+                                  setTooltip?.("Sending input will replace subsequent messages", import_icons_material.Warning);
+                                },
+                                onMouseLeave: () => setTooltip?.(null),
+                                style: {
+                                  color: theme.palette.text.secondary
+                                },
+                                children: "\u26A0"
+                              }
+                            ),
+                            progressLabel
+                          ] }),
                           sx: {
                             minWidth: isVerticalLayout ? 50 : 72,
                             height: isVerticalLayout ? "24px" : void 0,
@@ -1153,6 +1179,10 @@ function NovelVisualizer(props) {
                         import_material.IconButton,
                         {
                           onClick: handleEnterEditMode,
+                          onMouseEnter: () => {
+                            setTooltip?.("Edit message", import_icons_material.Edit);
+                          },
+                          onMouseLeave: () => setTooltip?.(null),
                           disabled: loading,
                           size: "small",
                           sx: {
@@ -1181,6 +1211,10 @@ function NovelVisualizer(props) {
                           import_material.IconButton,
                           {
                             onClick: handleConfirmEdit,
+                            onMouseEnter: () => {
+                              setTooltip?.("Confirm changes", import_icons_material.Check);
+                            },
+                            onMouseLeave: () => setTooltip?.(null),
                             size: "small",
                             sx: {
                               color: accentMain,
@@ -1207,6 +1241,10 @@ function NovelVisualizer(props) {
                           import_material.IconButton,
                           {
                             onClick: handleCancelEdit,
+                            onMouseEnter: () => {
+                              setTooltip?.("Discard changes", import_icons_material.Clear);
+                            },
+                            onMouseLeave: () => setTooltip?.(null),
                             size: "small",
                             sx: {
                               color: errorMain,
@@ -1234,6 +1272,10 @@ function NovelVisualizer(props) {
                         import_material.IconButton,
                         {
                           onClick: handleReroll,
+                          onMouseEnter: () => {
+                            setTooltip?.("Regenerate events from this point", import_icons_material.Casino);
+                          },
+                          onMouseLeave: () => setTooltip?.(null),
                           disabled: loading,
                           size: "small",
                           sx: {
