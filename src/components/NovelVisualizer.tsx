@@ -439,11 +439,13 @@ export function NovelVisualizer<
     };
 
     const renderActors = () => {
+        const scalePerActor = isVerticalLayout ? 0.1 : 0.05;
+        const sceneActorScale = Math.max(0.7, 1 - Math.max(0, actorsAtIndex.length - 1) * scalePerActor);
+
         const actorElements = actorsAtIndex.map((actor, i) => {
             const xPosition = calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
             const isSpeaking = actor === speakerActor;
             const isHovered = actor === hoveredActor;
-            const imageUrl = getActorImageUrl(actor, localScript, index);
             const yPosition = isVerticalLayout ? 20 : 0;
             const zIndex = 50 - Math.abs(xPosition - 50);
 
@@ -457,7 +459,7 @@ export function NovelVisualizer<
                     xPosition={xPosition}
                     yPosition={yPosition}
                     zIndex={zIndex}
-                    heightMultiplier={isVerticalLayout ? (isSpeaking ? 0.9 : 0.7) : 1.0}
+                    heightMultiplier={isSpeaking ? 0.9 : (0.85 * sceneActorScale)}
                     speaker={isSpeaking}
                     highlightColor={isHovered ? 'rgba(255,255,255,1)' : 'rgba(225,225,225,1)'}
                     isAudioPlaying={isSpeaking && isAudioPlaying && enableTalkingAnimation}
@@ -482,7 +484,7 @@ export function NovelVisualizer<
                     xPosition={ghostSide === 'left' ? 10 : 90}
                     yPosition={yPosition}
                     zIndex={45}
-                    heightMultiplier={isVerticalLayout ? 0.65 : 0.85}
+                    heightMultiplier={(isVerticalLayout ? 0.65 : 0.85) * sceneActorScale}
                     speaker={true}
                     highlightColor={isHovered ? 'rgba(255,255,255,1)' : 'rgba(200,200,200,0.9)'}
                     isGhost={true}

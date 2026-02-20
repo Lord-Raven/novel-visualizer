@@ -241,6 +241,10 @@ const ActorImage: FC<ActorImageProps> = ({
         return speaker ? 'talking' : 'idle';
     }, [speaker, isAudioPlaying, variants, isGhost, animationParams]);
 
+    const transformOrigin = isGhost
+        ? (ghostSide === 'left' ? 'bottom left' : 'bottom right')
+        : 'bottom center';
+
     return processedImageUrl ? (
         <motion.div
             key={`actor_motion_div_${id}`}
@@ -249,7 +253,7 @@ const ActorImage: FC<ActorImageProps> = ({
             initial={'absent'}
             exit='absent'
             animate={animateProps}
-            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center'}}>
+            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin}}>
             <AnimatePresence>
                 {/* Previous image layer for crossfade */}
                 {prevImageUrl && prevImageUrl !== processedImageUrl && (

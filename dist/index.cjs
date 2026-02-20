@@ -223,6 +223,7 @@ var ActorImage = ({
     }
     return speaker ? "talking" : "idle";
   }, [speaker, isAudioPlaying, variants, isGhost, animationParams]);
+  const transformOrigin = isGhost ? ghostSide === "left" ? "bottom left" : "bottom right" : "bottom center";
   return processedImageUrl ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
     import_framer_motion.motion.div,
     {
@@ -230,7 +231,7 @@ var ActorImage = ({
       initial: "absent",
       exit: "absent",
       animate: animateProps,
-      style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center" },
+      style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin },
       children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: prevImageUrl && prevImageUrl !== processedImageUrl && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
           import_framer_motion.motion.img,
@@ -918,11 +919,12 @@ function NovelVisualizer(props) {
     );
   };
   const renderActors = () => {
+    const scalePerActor = isVerticalLayout ? 0.1 : 0.05;
+    const sceneActorScale = Math.max(0.7, 1 - Math.max(0, actorsAtIndex.length - 1) * scalePerActor);
     const actorElements = actorsAtIndex.map((actor, i) => {
       const xPosition = calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
       const isSpeaking = actor === speakerActor;
       const isHovered = actor === hoveredActor;
-      const imageUrl = getActorImageUrl(actor, localScript, index);
       const yPosition = isVerticalLayout ? 20 : 0;
       const zIndex = 50 - Math.abs(xPosition - 50);
       return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
@@ -935,7 +937,7 @@ function NovelVisualizer(props) {
           xPosition,
           yPosition,
           zIndex,
-          heightMultiplier: isVerticalLayout ? isSpeaking ? 0.9 : 0.7 : 1,
+          heightMultiplier: isSpeaking ? 0.9 : 0.85 * sceneActorScale,
           speaker: isSpeaking,
           highlightColor: isHovered ? "rgba(255,255,255,1)" : "rgba(225,225,225,1)",
           isAudioPlaying: isSpeaking && isAudioPlaying && enableTalkingAnimation
@@ -958,7 +960,7 @@ function NovelVisualizer(props) {
             xPosition: ghostSide === "left" ? 10 : 90,
             yPosition,
             zIndex: 45,
-            heightMultiplier: isVerticalLayout ? 0.65 : 0.85,
+            heightMultiplier: (isVerticalLayout ? 0.65 : 0.85) * sceneActorScale,
             speaker: true,
             highlightColor: isHovered ? "rgba(255,255,255,1)" : "rgba(200,200,200,0.9)",
             isGhost: true,
