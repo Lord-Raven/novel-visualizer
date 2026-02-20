@@ -880,7 +880,7 @@ function NovelVisualizer(props) {
     );
   };
   const renderActors = () => {
-    const scalePerActor = isVerticalLayout ? 0.1 : 0.05;
+    const scalePerActor = isVerticalLayout ? 0.05 : 0.03;
     const sceneActorScale = Math.max(0.7, 1 - Math.max(0, actorsAtIndex.length - 1) * scalePerActor);
     const actorElements = actorsAtIndex.map((actor, i) => {
       const xPosition = calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
