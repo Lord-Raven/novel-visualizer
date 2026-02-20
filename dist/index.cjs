@@ -925,7 +925,7 @@ function NovelVisualizer(props) {
       const xPosition = calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
       const isSpeaking = actor === speakerActor;
       const isHovered = actor === hoveredActor;
-      const yPosition = isVerticalLayout ? 20 : 0;
+      const yPosition = isVerticalLayout ? 15 : 0;
       const zIndex = 50 - Math.abs(xPosition - 50);
       return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
         ActorImage_default,
@@ -937,7 +937,7 @@ function NovelVisualizer(props) {
           xPosition,
           yPosition,
           zIndex,
-          heightMultiplier: isSpeaking ? 0.9 : 0.85 * sceneActorScale,
+          heightMultiplier: isSpeaking ? 1 : 0.95 * sceneActorScale,
           speaker: isSpeaking,
           highlightColor: isHovered ? "rgba(255,255,255,1)" : "rgba(225,225,225,1)",
           isAudioPlaying: isSpeaking && isAudioPlaying && enableTalkingAnimation
@@ -960,7 +960,7 @@ function NovelVisualizer(props) {
             xPosition: ghostSide === "left" ? 10 : 90,
             yPosition,
             zIndex: 45,
-            heightMultiplier: (isVerticalLayout ? 0.65 : 0.85) * sceneActorScale,
+            heightMultiplier: isVerticalLayout ? 0.7 : 0.9,
             speaker: true,
             highlightColor: isHovered ? "rgba(255,255,255,1)" : "rgba(200,200,200,0.9)",
             isGhost: true,
