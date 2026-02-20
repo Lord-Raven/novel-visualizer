@@ -223,7 +223,6 @@ var ActorImage = ({
     }
     return speaker ? "talking" : "idle";
   }, [speaker, isAudioPlaying, variants, isGhost, animationParams]);
-  const transformOrigin = isGhost ? ghostSide === "left" ? "bottom left" : "bottom right" : "bottom center";
   return processedImageUrl ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
     import_framer_motion.motion.div,
     {
@@ -231,7 +230,11 @@ var ActorImage = ({
       initial: "absent",
       exit: "absent",
       animate: animateProps,
-      style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin },
+      transformTemplate: (_, generatedTransform) => {
+        const baseTransform = generatedTransform?.trim() || "";
+        return baseTransform ? `${baseTransform} translateX(-50%)` : "translateX(-50%)";
+      },
+      style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center" },
       children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: prevImageUrl && prevImageUrl !== processedImageUrl && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
           import_framer_motion.motion.img,
@@ -248,7 +251,6 @@ var ActorImage = ({
               height: "100%",
               filter: "blur(2.5px)",
               zIndex: 3,
-              transform: `translateX(-50%)`,
               pointerEvents: "none",
               ...ghostMaskStyle
             }
@@ -269,7 +271,6 @@ var ActorImage = ({
               width: "100%",
               height: "100%",
               zIndex: 4,
-              transform: `translateX(-50%)`,
               pointerEvents: "none",
               ...ghostMaskStyle
             }
@@ -290,7 +291,6 @@ var ActorImage = ({
               width: "100%",
               height: "100%",
               zIndex: 5,
-              transform: `translateX(-50%)`,
               ...ghostMaskStyle
             },
             onMouseEnter,
