@@ -290,6 +290,7 @@ export function NovelVisualizer<
             // Restart TypeOut when external loading toggles so newly provided
             // content at the current index reliably re-renders and re-types.
             prevIndexRef.current = -1;
+            setLocalScript(prev => ({ ...prev }));
             setIndex(index => Math.min(index, localScript.script.length - 1)); // Ensure index is in bounds after script changes
             setFinishTyping(false);
             setMessageKey((prev) => prev + 1);
