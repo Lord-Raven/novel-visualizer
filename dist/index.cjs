@@ -333,21 +333,30 @@ var BlurredBackground = ({
   children
 }) => {
   const [currentImage, setCurrentImage] = (0, import_react2.useState)(imageUrl);
-  const [previousImage, setPreviousImage] = (0, import_react2.useState)(null);
+  const [previousImage, setPreviousImage] = (0, import_react2.useState)();
+  const [incomingImage, setIncomingImage] = (0, import_react2.useState)();
   const [isTransitioning, setIsTransitioning] = (0, import_react2.useState)(false);
+  const [isFadeActive, setIsFadeActive] = (0, import_react2.useState)(false);
   (0, import_react2.useEffect)(() => {
     if (imageUrl !== currentImage) {
       setPreviousImage(currentImage);
+      setIncomingImage(imageUrl);
       setIsTransitioning(true);
+      setIsFadeActive(false);
+      const rafId = requestAnimationFrame(() => {
+        setIsFadeActive(true);
+      });
       const timer = setTimeout(() => {
         setCurrentImage(imageUrl);
         setIsTransitioning(false);
-        const cleanupTimer = setTimeout(() => {
-          setPreviousImage(null);
-        }, transitionDuration);
-        return () => clearTimeout(cleanupTimer);
-      }, 50);
-      return () => clearTimeout(timer);
+        setIsFadeActive(false);
+        setPreviousImage(void 0);
+        setIncomingImage(void 0);
+      }, transitionDuration);
+      return () => {
+        cancelAnimationFrame(rafId);
+        clearTimeout(timer);
+      };
     }
   }, [imageUrl, currentImage, transitionDuration]);
   const imageStyle = {
@@ -369,17 +378,22 @@ var BlurredBackground = ({
     height: "100%",
     overflow: "hidden"
   }, children: [
-    previousImage && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: {
+    isTransitioning && previousImage && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: {
       ...imageStyle,
       backgroundImage: `url(${previousImage})`,
-      opacity: isTransitioning ? 0 : 1,
+      opacity: isFadeActive ? 0 : 1,
       zIndex: 0
     } }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: {
+    isTransitioning ? incomingImage && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: {
+      ...imageStyle,
+      backgroundImage: `url(${incomingImage})`,
+      opacity: isFadeActive ? 1 : 0,
+      zIndex: 1
+    } }) : currentImage && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: {
       ...imageStyle,
       backgroundImage: `url(${currentImage})`,
       opacity: 1,
-      zIndex: previousImage ? 1 : 0
+      zIndex: 0
     } }),
     overlay && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: {
       position: "absolute",
@@ -636,16 +650,6 @@ var formatInlineStyles = (text) => {
 
 // src/components/NovelVisualizer.tsx
 var import_jsx_runtime5 = require("react/jsx-runtime");
-var adjustColor = (color, amount = 0.6) => {
-  const hex = color.replace("#", "");
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  const newR = Math.min(255, Math.round(r + (255 - r) * amount));
-  const newG = Math.min(255, Math.round(g + (255 - g) * amount));
-  const newB = Math.min(255, Math.round(b + (255 - b) * amount));
-  return `#${newR.toString(16).padStart(2, "0")}${newG.toString(16).padStart(2, "0")}${newB.toString(16).padStart(2, "0")}`;
-};
 var calculateActorXPosition = (actorIndex, totalActors, anySpeaker) => {
   const leftRange = Math.min(40, Math.ceil((totalActors - 2) / 2) * 20);
   const rightRange = Math.min(40, Math.floor((totalActors - 2) / 2) * 20);
@@ -678,6 +682,7 @@ function NovelVisualizer(props) {
     getPresentActors,
     backgroundElements,
     backgroundOptions,
+    loading: externalLoading = false,
     setTooltip,
     hideInput = false,
     hideActionButtons = false,
@@ -697,6 +702,7 @@ function NovelVisualizer(props) {
   const [mousePosition, setMousePosition] = (0, import_react4.useState)(null);
   const [messageBoxTopVh, setMessageBoxTopVh] = (0, import_react4.useState)(isVerticalLayout ? 50 : 60);
   const [loading, setLoading] = (0, import_react4.useState)(false);
+  const isLoading = loading || externalLoading;
   const messageBoxRef = (0, import_react4.useRef)(null);
   const [isEditingMessage, setIsEditingMessage] = (0, import_react4.useState)(false);
   const [editedMessage, setEditedMessage] = (0, import_react4.useState)("");
@@ -725,11 +731,11 @@ function NovelVisualizer(props) {
     if (!text) return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_jsx_runtime5.Fragment, {});
     text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
     const dialogueParts = text.split(/(\"[^\"]*\")/g);
-    const brightenedColor = speakerActor2?.themeColor ? adjustColor(speakerActor2.themeColor, 0.6) : tokens.defaultDialogueColor;
+    const brightenedColor = speakerActor2?.themeColor ? (0, import_styles.lighten)(speakerActor2.themeColor, 0.5) : tokens.defaultDialogueColor;
     const dialogueStyle = {
       color: brightenedColor,
       fontFamily: speakerActor2?.themeFontFamily || tokens.fallbackFontFamily,
-      textShadow: speakerActor2?.themeColor ? `2px 2px 2px ${adjustColor(speakerActor2.themeColor, -0.25)}` : tokens.defaultDialogueShadow
+      textShadow: speakerActor2?.themeColor ? `2px 2px 2px ${(0, import_styles.darken)(speakerActor2.themeColor, 0.3)}` : tokens.defaultDialogueShadow
     };
     const proseStyle = {
       color: theme.palette.text.primary,
@@ -844,7 +850,7 @@ function NovelVisualizer(props) {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [inputText, index, localScript, finishTyping, loading, isEditingMessage]);
+  }, [inputText, index, localScript, finishTyping, isLoading, isEditingMessage]);
   const next = () => {
     if (isEditingMessage) {
       handleConfirmEdit();
@@ -899,9 +905,9 @@ function NovelVisualizer(props) {
     }
     if (inputPlaceholder) return inputPlaceholder;
     if (sceneEnded) return "Scene concluded";
-    if (loading) return "Loading...";
+    if (isLoading) return "Loading...";
     return "Type your next action...";
-  }, [inputPlaceholder, index, localScript, sceneEnded, loading]);
+  }, [inputPlaceholder, index, localScript, sceneEnded, isLoading]);
   const renderNameplateNode = () => {
     if (renderNameplate)
       return renderNameplate(speakerActor);
@@ -1030,7 +1036,7 @@ function NovelVisualizer(props) {
   };
   const hoverInfoNode = renderActorHoverInfo ? renderActorHoverInfo(hoveredActor) : null;
   const backgroundImageUrl = (0, import_react4.useMemo)(
-    () => getBackgroundImageUrl(localScript, index),
+    () => getBackgroundImageUrl ? getBackgroundImageUrl(localScript, index) : void 0,
     [getBackgroundImageUrl, localScript, index]
   );
   const resolvedBackgroundElements = typeof backgroundElements === "function" ? backgroundElements({
@@ -1100,7 +1106,7 @@ function NovelVisualizer(props) {
                         import_material.IconButton,
                         {
                           onClick: prev,
-                          disabled: index === 0 || loading,
+                          disabled: index === 0 || isLoading,
                           size: "small",
                           sx: {
                             color: theme.palette.text.secondary,
@@ -1115,7 +1121,7 @@ function NovelVisualizer(props) {
                       /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                         import_material.Chip,
                         {
-                          label: loading ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                          label: isLoading ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                             import_material.CircularProgress,
                             {
                               size: isVerticalLayout ? 12 : 16,
@@ -1162,7 +1168,7 @@ function NovelVisualizer(props) {
                         import_material.IconButton,
                         {
                           onClick: next,
-                          disabled: index >= localScript.script.length - 1 || loading,
+                          disabled: index >= localScript.script.length - 1 || isLoading,
                           size: "small",
                           sx: {
                             color: theme.palette.text.secondary,
@@ -1185,7 +1191,7 @@ function NovelVisualizer(props) {
                             setTooltip?.("Edit message", import_icons_material.Edit);
                           },
                           onMouseLeave: () => setTooltip?.(null),
-                          disabled: loading,
+                          disabled: isLoading,
                           size: "small",
                           sx: {
                             color: accentMain,
@@ -1278,7 +1284,7 @@ function NovelVisualizer(props) {
                             setTooltip?.("Regenerate events from this point", import_icons_material.Casino);
                           },
                           onMouseLeave: () => setTooltip?.(null),
-                          disabled: loading,
+                          disabled: isLoading,
                           size: "small",
                           sx: {
                             color: accentMain,
@@ -1312,7 +1318,7 @@ function NovelVisualizer(props) {
                         }
                       },
                       onClick: () => {
-                        if (!isEditingMessage && !loading) {
+                        if (!isEditingMessage && !isLoading) {
                           if (!finishTyping) {
                             setFinishTyping(true);
                           } else if (allowTypingSkip) {
@@ -1386,13 +1392,13 @@ function NovelVisualizer(props) {
                         onKeyDown: (e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
-                            if (!loading) {
+                            if (!isLoading) {
                               handleSubmit();
                             }
                           }
                         },
                         placeholder: placeholderText,
-                        disabled: loading,
+                        disabled: isLoading,
                         variant: "outlined",
                         size: "small",
                         sx: {
@@ -1439,7 +1445,7 @@ function NovelVisualizer(props) {
                       import_material.Button,
                       {
                         onClick: handleSubmit,
-                        disabled: loading,
+                        disabled: isLoading,
                         variant: "contained",
                         startIcon: (() => {
                           if (getSubmitButtonConfig) {

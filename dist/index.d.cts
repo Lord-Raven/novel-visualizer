@@ -42,7 +42,7 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
     script: TScript;
     actors: Record<string, TActor>;
     playerActorId: string;
-    getBackgroundImageUrl: (script: TScript, index: number) => string;
+    getBackgroundImageUrl?: (script: TScript, index: number) => string;
     isVerticalLayout?: boolean;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
@@ -70,6 +70,11 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
         overlay?: string;
         transitionDuration?: number;
     };
+    /**
+     * Optional external loading signal. When true, the component behaves as loading
+     * in addition to its internal async loading state.
+     */
+    loading?: boolean;
     setTooltip?: (newMessage: string | null, newIcon?: SvgIconComponent) => void;
     hideInput?: boolean;
     hideActionButtons?: boolean;
@@ -107,7 +112,7 @@ interface ActorImageProps {
 declare const _default: React.NamedExoticComponent<ActorImageProps>;
 
 interface BlurredBackgroundProps {
-    imageUrl: string;
+    imageUrl?: string;
     brightness?: number;
     contrast?: number;
     blur?: number;

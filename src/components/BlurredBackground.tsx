@@ -1,7 +1,7 @@
 import React, { FC, useEffect, useState } from 'react';
 
 interface BlurredBackgroundProps {
-    imageUrl: string;
+    imageUrl?: string;
     brightness?: number;
     contrast?: number;
     blur?: number;
@@ -26,30 +26,36 @@ export const BlurredBackground: FC<BlurredBackgroundProps> = ({
     transitionDuration = 600,
     children
 }) => {
-    const [currentImage, setCurrentImage] = useState(imageUrl);
-    const [previousImage, setPreviousImage] = useState<string | null>(null);
+    const [currentImage, setCurrentImage] = useState<string | undefined>(imageUrl);
+    const [previousImage, setPreviousImage] = useState<string | undefined>();
+    const [incomingImage, setIncomingImage] = useState<string | undefined>();
     const [isTransitioning, setIsTransitioning] = useState(false);
+    const [isFadeActive, setIsFadeActive] = useState(false);
 
     useEffect(() => {
         if (imageUrl !== currentImage) {
-            // Start transition
+            // Start transition by keeping the previous image visible while the next image fades in.
             setPreviousImage(currentImage);
+            setIncomingImage(imageUrl);
             setIsTransitioning(true);
-            
-            // After a short delay, update to the new image
+            setIsFadeActive(false);
+
+            const rafId = requestAnimationFrame(() => {
+                setIsFadeActive(true);
+            });
+
             const timer = setTimeout(() => {
                 setCurrentImage(imageUrl);
                 setIsTransitioning(false);
-                
-                // Clear the previous image after transition completes
-                const cleanupTimer = setTimeout(() => {
-                    setPreviousImage(null);
-                }, transitionDuration);
-                
-                return () => clearTimeout(cleanupTimer);
-            }, 50); // Small delay to ensure transition is visible
-            
-            return () => clearTimeout(timer);
+                setIsFadeActive(false);
+                setPreviousImage(undefined);
+                setIncomingImage(undefined);
+            }, transitionDuration);
+
+            return () => {
+                cancelAnimationFrame(rafId);
+                clearTimeout(timer);
+            };
         }
     }, [imageUrl, currentImage, transitionDuration]);
 
@@ -74,23 +80,36 @@ export const BlurredBackground: FC<BlurredBackgroundProps> = ({
             height: '100%',
             overflow: 'hidden'
         }}>
-            {/* Previous background image (fading out) */}
-            {previousImage && (
+            {/* Previous background image (fading out). */}
+            {isTransitioning && previousImage && (
                 <div style={{
                     ...imageStyle,
                     backgroundImage: `url(${previousImage})`,
-                    opacity: isTransitioning ? 0 : 1,
+                    opacity: isFadeActive ? 0 : 1,
                     zIndex: 0
                 }} />
             )}
 
-            {/* Current background image (fading in) */}
-            <div style={{
-                ...imageStyle,
-                backgroundImage: `url(${currentImage})`,
-                opacity: 1,
-                zIndex: previousImage ? 1 : 0
-            }} />
+            {/* Incoming or current background image. */}
+            {isTransitioning ? (
+                incomingImage && (
+                    <div style={{
+                        ...imageStyle,
+                        backgroundImage: `url(${incomingImage})`,
+                        opacity: isFadeActive ? 1 : 0,
+                        zIndex: 1
+                    }} />
+                )
+            ) : (
+                currentImage && (
+                    <div style={{
+                        ...imageStyle,
+                        backgroundImage: `url(${currentImage})`,
+                        opacity: 1,
+                        zIndex: 0
+                    }} />
+                )
+            )}
 
             {/* Optional overlay */}
             {overlay && (

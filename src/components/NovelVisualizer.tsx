@@ -16,20 +16,6 @@ interface MessageFormatTokens {
     fallbackFontFamily: string;
 }
 
-// Helper function to brighten a color for better visibility
-const adjustColor = (color: string, amount: number = 0.6): string => {
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-
-    const newR = Math.min(255, Math.round(r + (255 - r) * amount));
-    const newG = Math.min(255, Math.round(g + (255 - g) * amount));
-    const newB = Math.min(255, Math.round(b + (255 - b) * amount));
-
-    return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
-};
-
 export interface SubmitButtonConfig {
     label: string;
     icon?: React.ReactElement;
@@ -63,7 +49,7 @@ export interface NovelVisualizerProps<
     script: TScript;
     actors: Record<string, TActor>;
     playerActorId: string;
-    getBackgroundImageUrl: (script: TScript, index: number) => string;
+    getBackgroundImageUrl?: (script: TScript, index: number) => string;
     isVerticalLayout?: boolean;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
@@ -88,6 +74,11 @@ export interface NovelVisualizerProps<
         overlay?: string;
         transitionDuration?: number;
     };
+    /**
+     * Optional external loading signal. When true, the component behaves as loading
+     * in addition to its internal async loading state.
+     */
+    loading?: boolean;
     setTooltip?: (newMessage: string | null, newIcon?: SvgIconComponent) => void;
     hideInput?: boolean;
     hideActionButtons?: boolean;
@@ -131,6 +122,7 @@ export function NovelVisualizer<
         getPresentActors,
         backgroundElements,
         backgroundOptions,
+        loading: externalLoading = false,
         setTooltip,
         hideInput = false,
         hideActionButtons = false,
@@ -150,6 +142,7 @@ export function NovelVisualizer<
     const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
     const [messageBoxTopVh, setMessageBoxTopVh] = useState<number>(isVerticalLayout ? 50 : 60);
     const [loading, setLoading] = useState<boolean>(false);
+    const isLoading = loading || externalLoading;
     const messageBoxRef = useRef<HTMLDivElement>(null);
 
     const [isEditingMessage, setIsEditingMessage] = useState<boolean>(false);
@@ -191,14 +184,14 @@ export function NovelVisualizer<
 
         const dialogueParts = text.split(/(\"[^\"]*\")/g);
         const brightenedColor = speakerActor?.themeColor
-            ? adjustColor(speakerActor.themeColor, 0.6)
+            ? lighten(speakerActor.themeColor, 0.5)
             : tokens.defaultDialogueColor;
 
         const dialogueStyle: React.CSSProperties = {
             color: brightenedColor,
             fontFamily: speakerActor?.themeFontFamily || tokens.fallbackFontFamily,
             textShadow: speakerActor?.themeColor
-                ? `2px 2px 2px ${adjustColor(speakerActor.themeColor, -0.25)}`
+                ? `2px 2px 2px ${darken(speakerActor.themeColor, 0.3)}`
                 : tokens.defaultDialogueShadow
         };
         const proseStyle: React.CSSProperties = {
@@ -352,7 +345,7 @@ export function NovelVisualizer<
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [inputText, index, localScript, finishTyping, loading, isEditingMessage]);
+    }, [inputText, index, localScript, finishTyping, isLoading, isEditingMessage]);
 
     const next = () => {
         if (isEditingMessage) {
@@ -417,9 +410,9 @@ export function NovelVisualizer<
         }
         if (inputPlaceholder) return inputPlaceholder;
         if (sceneEnded) return 'Scene concluded';
-        if (loading) return 'Loading...';
+        if (isLoading) return 'Loading...';
         return 'Type your next action...';
-    }, [inputPlaceholder, index, localScript, sceneEnded, loading]);
+    }, [inputPlaceholder, index, localScript, sceneEnded, isLoading]);
 
     const renderNameplateNode = () => {
         if (renderNameplate)
@@ -562,7 +555,7 @@ export function NovelVisualizer<
     const hoverInfoNode = renderActorHoverInfo ? renderActorHoverInfo(hoveredActor) : null;
 
     const backgroundImageUrl = useMemo(
-        () => getBackgroundImageUrl(localScript, index),
+        () => getBackgroundImageUrl ? getBackgroundImageUrl(localScript, index) : undefined,
         [getBackgroundImageUrl, localScript, index]
     );
 
@@ -642,7 +635,7 @@ export function NovelVisualizer<
                         <Box sx={{ display: 'flex', gap: isVerticalLayout ? 0.5 : 1.5, alignItems: 'center', flex: 1 }}>
                             <IconButton
                                 onClick={prev}
-                                disabled={index === 0 || loading}
+                                disabled={index === 0 || isLoading}
                                 size="small"
                                 sx={{
                                     color: theme.palette.text.secondary,
@@ -656,7 +649,7 @@ export function NovelVisualizer<
                             </IconButton>
 
                             <Chip
-                                label={loading ? (
+                                label={isLoading ? (
                                     <CircularProgress size={isVerticalLayout ? 12 : 16} sx={{ color: theme.palette.primary.light }} 
                                         onMouseEnter={() => {setTooltip?.('Awaiting content from the LLM', Computer)}}
                                         onMouseLeave={() => setTooltip?.(null)}
@@ -696,7 +689,7 @@ export function NovelVisualizer<
 
                             <IconButton
                                 onClick={next}
-                                disabled={index >= localScript.script.length - 1 || loading}
+                                disabled={index >= localScript.script.length - 1 || isLoading}
                                 size="small"
                                 sx={{
                                     color: theme.palette.text.secondary,
@@ -719,7 +712,7 @@ export function NovelVisualizer<
                                         onClick={handleEnterEditMode}
                                         onMouseEnter={() => {setTooltip?.('Edit message', Edit)}}
                                         onMouseLeave={() => setTooltip?.(null)}
-                                        disabled={loading}
+                                        disabled={isLoading}
                                         size="small"
                                         sx={{
                                             color: accentMain,
@@ -805,7 +798,7 @@ export function NovelVisualizer<
                                         onClick={handleReroll}
                                         onMouseEnter={() => {setTooltip?.('Regenerate events from this point', Casino)}}
                                         onMouseLeave={() => setTooltip?.(null)}
-                                        disabled={loading}
+                                        disabled={isLoading}
                                         size="small"
                                         sx={{
                                             color: accentMain,
@@ -840,7 +833,7 @@ export function NovelVisualizer<
                             }
                         }}
                         onClick={() => {
-                            if (!isEditingMessage && !loading) {
+                            if (!isEditingMessage && !isLoading) {
                                 if (!finishTyping) {
                                     setFinishTyping(true);
                                 } else if (allowTypingSkip) {
@@ -913,13 +906,13 @@ export function NovelVisualizer<
                                 onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                                     if (e.key === 'Enter') {
                                         e.preventDefault();
-                                        if (!loading) {
+                                        if (!isLoading) {
                                             handleSubmit();
                                         }
                                     }
                                 }}
                                 placeholder={placeholderText}
-                                disabled={loading}
+                                disabled={isLoading}
                                 variant="outlined"
                                 size="small"
                                 sx={{
@@ -963,7 +956,7 @@ export function NovelVisualizer<
                             />
                             <Button
                                 onClick={handleSubmit}
-                                disabled={loading}
+                                disabled={isLoading}
                                 variant="contained"
                                 startIcon={(() => {
                                     if (getSubmitButtonConfig) {
