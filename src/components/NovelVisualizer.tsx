@@ -151,7 +151,7 @@ export function NovelVisualizer<
 
     const [localScript, setLocalScript] = useState<TScript>(script);
 
-    const [index, setIndex] = useState<number>(0);
+    const [index, setIndex] = useState<number>(-1);
     const prevIndexRef = useRef<number>(index);
     const prevExternalLoadingRef = useRef<boolean>(externalLoading);
 
@@ -292,7 +292,7 @@ export function NovelVisualizer<
             // Restart TypeOut when external loading toggles so newly provided
             // content at the current index reliably re-renders and re-types.
             prevIndexRef.current = -1;
-            setIndex(index => Math.min(index, localScript.script.length - 1)); // Ensure index is in bounds after script changes
+            setIndex(index => Math.min(Math.max(0, index), localScript.script.length - 1)); // Ensure index is in bounds after script changes
             prevExternalLoadingRef.current = externalLoading;
         }
     }, [externalLoading]);

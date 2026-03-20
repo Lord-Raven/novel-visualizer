@@ -701,7 +701,7 @@ function NovelVisualizer(props) {
   const [editedMessage, setEditedMessage] = (0, import_react4.useState)("");
   const [originalMessage, setOriginalMessage] = (0, import_react4.useState)("");
   const [localScript, setLocalScript] = (0, import_react4.useState)(script);
-  const [index, setIndex] = (0, import_react4.useState)(0);
+  const [index, setIndex] = (0, import_react4.useState)(-1);
   const prevIndexRef = (0, import_react4.useRef)(index);
   const prevExternalLoadingRef = (0, import_react4.useRef)(externalLoading);
   const accentMain = theme.palette.primary.main;
@@ -799,7 +799,7 @@ function NovelVisualizer(props) {
     if (prevExternalLoadingRef.current !== externalLoading) {
       console.log(`External loading changed: ${externalLoading}`);
       prevIndexRef.current = -1;
-      setIndex((index2) => Math.min(index2, localScript.script.length - 1));
+      setIndex((index2) => Math.min(Math.max(0, index2), localScript.script.length - 1));
       prevExternalLoadingRef.current = externalLoading;
     }
   }, [externalLoading]);
