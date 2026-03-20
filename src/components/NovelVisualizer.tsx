@@ -292,7 +292,7 @@ export function NovelVisualizer<
             // Restart TypeOut when external loading toggles so newly provided
             // content at the current index reliably re-renders and re-types.
             prevIndexRef.current = -1;
-            setIndex(index => Math.min(Math.max(index, 1), localScript.script.length - 1)); // Ensure index is in bounds after script changes
+            setIndex(index => Math.min(index, localScript.script.length - 1)); // Ensure index is in bounds after script changes
             prevExternalLoadingRef.current = externalLoading;
         }
     }, [externalLoading]);
