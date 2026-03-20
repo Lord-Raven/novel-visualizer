@@ -153,6 +153,7 @@ export function NovelVisualizer<
 
     const [index, setIndex] = useState<number>(0);
     const prevIndexRef = useRef<number>(index);
+    const prevExternalLoadingRef = useRef<boolean>(externalLoading);
 
     const accentMain = theme.palette.primary.main;
     const accentLight = theme.palette.primary.light;
@@ -280,8 +281,18 @@ export function NovelVisualizer<
             }
             prevIndexRef.current = index;
         }
-        setMessageKey(messageKey + 1);
+        setMessageKey((prev) => prev + 1);
     }, [index]);
+
+    useEffect(() => {
+        if (prevExternalLoadingRef.current !== externalLoading) {
+            // Restart TypeOut when external loading toggles so newly provided
+            // content at the current index reliably re-renders and re-types.
+            setFinishTyping(false);
+            setMessageKey((prev) => prev + 1);
+            prevExternalLoadingRef.current = externalLoading;
+        }
+    }, [externalLoading]);
 
     useEffect(() => {
         if (!mousePosition) {

@@ -703,6 +703,7 @@ function NovelVisualizer(props) {
   const [localScript, setLocalScript] = (0, import_react4.useState)(script);
   const [index, setIndex] = (0, import_react4.useState)(0);
   const prevIndexRef = (0, import_react4.useRef)(index);
+  const prevExternalLoadingRef = (0, import_react4.useRef)(externalLoading);
   const accentMain = theme.palette.primary.main;
   const accentLight = theme.palette.primary.light;
   const errorMain = theme.palette.error.main;
@@ -790,8 +791,15 @@ function NovelVisualizer(props) {
       }
       prevIndexRef.current = index;
     }
-    setMessageKey(messageKey + 1);
+    setMessageKey((prev2) => prev2 + 1);
   }, [index]);
+  (0, import_react4.useEffect)(() => {
+    if (prevExternalLoadingRef.current !== externalLoading) {
+      setFinishTyping(false);
+      setMessageKey((prev2) => prev2 + 1);
+      prevExternalLoadingRef.current = externalLoading;
+    }
+  }, [externalLoading]);
   (0, import_react4.useEffect)(() => {
     if (!mousePosition) {
       setHoveredActor(null);

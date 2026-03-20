@@ -664,6 +664,7 @@ function NovelVisualizer(props) {
   const [localScript, setLocalScript] = useState3(script);
   const [index, setIndex] = useState3(0);
   const prevIndexRef = useRef2(index);
+  const prevExternalLoadingRef = useRef2(externalLoading);
   const accentMain = theme.palette.primary.main;
   const accentLight = theme.palette.primary.light;
   const errorMain = theme.palette.error.main;
@@ -751,8 +752,15 @@ function NovelVisualizer(props) {
       }
       prevIndexRef.current = index;
     }
-    setMessageKey(messageKey + 1);
+    setMessageKey((prev2) => prev2 + 1);
   }, [index]);
+  useEffect3(() => {
+    if (prevExternalLoadingRef.current !== externalLoading) {
+      setFinishTyping(false);
+      setMessageKey((prev2) => prev2 + 1);
+      prevExternalLoadingRef.current = externalLoading;
+    }
+  }, [externalLoading]);
   useEffect3(() => {
     if (!mousePosition) {
       setHoveredActor(null);
