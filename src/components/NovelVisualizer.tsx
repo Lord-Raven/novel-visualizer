@@ -286,8 +286,11 @@ export function NovelVisualizer<
 
     useEffect(() => {
         if (prevExternalLoadingRef.current !== externalLoading) {
+            console.log(`External loading changed: ${externalLoading}`);
             // Restart TypeOut when external loading toggles so newly provided
             // content at the current index reliably re-renders and re-types.
+            prevIndexRef.current = -1;
+            setIndex(index => Math.min(index, localScript.script.length - 1)); // Ensure index is in bounds after script changes
             setFinishTyping(false);
             setMessageKey((prev) => prev + 1);
             prevExternalLoadingRef.current = externalLoading;

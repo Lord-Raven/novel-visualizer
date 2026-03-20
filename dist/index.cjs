@@ -795,6 +795,9 @@ function NovelVisualizer(props) {
   }, [index]);
   (0, import_react4.useEffect)(() => {
     if (prevExternalLoadingRef.current !== externalLoading) {
+      console.log(`External loading changed: ${externalLoading}`);
+      prevIndexRef.current = -1;
+      setIndex((index2) => Math.min(index2, localScript.script.length - 1));
       setFinishTyping(false);
       setMessageKey((prev2) => prev2 + 1);
       prevExternalLoadingRef.current = externalLoading;
