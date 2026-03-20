@@ -253,7 +253,9 @@ export function NovelVisualizer<
     }, [localScript, index, speakerActor, messageTokens]);
 
     useEffect(() => {
+        console.log('New index');
         if (prevIndexRef.current !== index) {
+            console.log('Do some stuff.');
             setFinishTyping(false);
             if (isEditingMessage) {
                 setIsEditingMessage(false);
@@ -290,10 +292,7 @@ export function NovelVisualizer<
             // Restart TypeOut when external loading toggles so newly provided
             // content at the current index reliably re-renders and re-types.
             prevIndexRef.current = -1;
-            setLocalScript(prev => ({ ...prev }));
-            setIndex(index => Math.min(index, localScript.script.length - 1)); // Ensure index is in bounds after script changes
-            setFinishTyping(false);
-            setMessageKey((prev) => prev + 1);
+            setIndex(index => Math.min(Math.max(index, 1), localScript.script.length - 1)); // Ensure index is in bounds after script changes
             prevExternalLoadingRef.current = externalLoading;
         }
     }, [externalLoading]);

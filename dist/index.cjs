@@ -767,7 +767,9 @@ function NovelVisualizer(props) {
     return formatMessage(message, speakerActor, messageTokens);
   }, [localScript, index, speakerActor, messageTokens]);
   (0, import_react4.useEffect)(() => {
+    console.log("New index");
     if (prevIndexRef.current !== index) {
+      console.log("Do some stuff.");
       setFinishTyping(false);
       if (isEditingMessage) {
         setIsEditingMessage(false);
@@ -797,10 +799,7 @@ function NovelVisualizer(props) {
     if (prevExternalLoadingRef.current !== externalLoading) {
       console.log(`External loading changed: ${externalLoading}`);
       prevIndexRef.current = -1;
-      setLocalScript((prev2) => ({ ...prev2 }));
-      setIndex((index2) => Math.min(index2, localScript.script.length - 1));
-      setFinishTyping(false);
-      setMessageKey((prev2) => prev2 + 1);
+      setIndex((index2) => Math.min(Math.max(index2, 1), localScript.script.length - 1));
       prevExternalLoadingRef.current = externalLoading;
     }
   }, [externalLoading]);
