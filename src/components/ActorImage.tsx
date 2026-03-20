@@ -39,41 +39,36 @@ const ActorImage: FC<ActorImageProps> = ({
     ghostSide = 'left',
     isAudioPlaying = false
 }) => {
-    const [processedImageUrl, setProcessedImageUrl] = useState<string>('');
+    const [isLoaded, setIsLoaded] = useState<boolean>(false);
     const [prevImageUrl, setPrevImageUrl] = useState<string>('');
     const [aspectRatio, setAspectRatio] = useState<string>('9 / 16');
     const imageUrl = resolveImageUrl();
     const prevRawImageUrl = useRef<string>(imageUrl);
 
-    // Process image with color multiplication
+    // Load image to read aspect ratio; no canvas processing needed
     useEffect(() => {
         if (!imageUrl) {
-            setProcessedImageUrl(imageUrl);
+            setIsLoaded(false);
             return;
         }
-
+        setIsLoaded(false);
         const img = new Image();
-        img.crossOrigin = 'anonymous';
         img.onload = () => {
-                // Set aspect ratio based on image dimensions
-                if (img.naturalWidth && img.naturalHeight) {
-                    setAspectRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
-                }
-            const result = multiplyImageByColor(img, highlightColor);
-            if (result) {
-                setProcessedImageUrl(result);
+            if (img.naturalWidth && img.naturalHeight) {
+                setAspectRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
             }
+            setIsLoaded(true);
         };
         img.src = imageUrl;
-    }, [imageUrl, highlightColor]);
+    }, [imageUrl]);
 
-    // Track previous processed image for fade transition
+    // Track previous raw image URL for crossfade transition
     useEffect(() => {
         if (prevRawImageUrl.current !== imageUrl) {
-            setPrevImageUrl(processedImageUrl);
+            setPrevImageUrl(prevRawImageUrl.current);
             prevRawImageUrl.current = imageUrl;
         }
-    }, [imageUrl, processedImageUrl]);
+    }, [imageUrl]);
 
     // Calculate final parallax position
     const baseX = speaker ? 50 : xPosition;
@@ -241,7 +236,20 @@ const ActorImage: FC<ActorImageProps> = ({
         return speaker ? 'talking' : 'idle';
     }, [speaker, isAudioPlaying, variants, isGhost, animationParams]);
 
-    return processedImageUrl ? (
+    const filterId = `tint-${id}`;
+
+    return isLoaded ? (
+        <>
+            {/* SVG filter: multiply image by highlightColor, preserving transparency */}
+            <svg style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
+                <defs>
+                    <filter id={filterId} x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
+                        <feFlood floodColor={highlightColor} result="flood" />
+                        <feComposite in="flood" in2="SourceGraphic" operator="in" result="masked" />
+                        <feBlend in="SourceGraphic" in2="masked" mode="multiply" />
+                    </filter>
+                </defs>
+            </svg>
         <motion.div
             key={`actor_motion_div_${id}`}
             variants={variants}
@@ -258,7 +266,7 @@ const ActorImage: FC<ActorImageProps> = ({
             style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center'}}>
             <AnimatePresence>
                 {/* Previous image layer for crossfade */}
-                {prevImageUrl && prevImageUrl !== processedImageUrl && (
+                {prevImageUrl && prevImageUrl !== imageUrl && (
                     <motion.img
                         key={`${id}_${prevImageUrl}_prev`}
                         src={prevImageUrl}
@@ -271,7 +279,7 @@ const ActorImage: FC<ActorImageProps> = ({
                             top: 0,
                             width: '100%',
                             height: '100%',
-                            filter: 'blur(2.5px)',
+                            filter: `url(#${filterId}) blur(2.5px)`,
                             zIndex: 3,
                             pointerEvents: 'none',
                             ...ghostMaskStyle
@@ -281,12 +289,12 @@ const ActorImage: FC<ActorImageProps> = ({
             </AnimatePresence>
             <AnimatePresence>
                 {/* Backing image layer - solid but blurry. */}
-                {processedImageUrl && (
+                {imageUrl && (
                     <motion.img
                         key={`${id}_${imageUrl}_bg`}
-                        src={processedImageUrl}
+                        src={imageUrl}
                         initial={{ opacity: 0 }}
-                        animate={{ opacity: 1, filter: 'blur(2.5px)' }}
+                        animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.5 }}
                         style={{
@@ -294,6 +302,7 @@ const ActorImage: FC<ActorImageProps> = ({
                             top: 0,
                             width: '100%',
                             height: '100%',
+                            filter: `url(#${filterId}) blur(2.5px)`,
                             zIndex: 4,
                             pointerEvents: 'none',
                             ...ghostMaskStyle
@@ -303,10 +312,10 @@ const ActorImage: FC<ActorImageProps> = ({
             </AnimatePresence>
             <AnimatePresence>
                 {/* Main image layer - semi transparent, but crisp. */}
-                {processedImageUrl && (
+                {imageUrl && (
                     <motion.img
                         key={`${id}_${imageUrl}_main`}
-                        src={processedImageUrl}
+                        src={imageUrl}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 0.75 }}
                         exit={{ opacity: 0 }}
@@ -316,6 +325,7 @@ const ActorImage: FC<ActorImageProps> = ({
                             top: 0,
                             width: '100%',
                             height: '100%',
+                            filter: `url(#${filterId})`,
                             zIndex: 5,
                             ...ghostMaskStyle
                         }}
@@ -325,30 +335,8 @@ const ActorImage: FC<ActorImageProps> = ({
                 )}
             </AnimatePresence>
         </motion.div>
+        </>
     ) : <></>;
-};
-
-const multiplyImageByColor = (img: HTMLImageElement, hex: string): string | null => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-
-    canvas.width = img.width;
-    canvas.height = img.height;
-    
-    // Draw original image
-    ctx.drawImage(img, 0, 0);
-
-    // Apply color multiplication
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.fillStyle = hex.toUpperCase();
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Preserve original alpha channel
-    ctx.globalCompositeOperation = 'destination-in';
-    ctx.drawImage(img, 0, 0);
-
-    return canvas.toDataURL();
 };
 
 export default memo(ActorImage);

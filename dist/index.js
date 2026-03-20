@@ -26,35 +26,32 @@ var ActorImage = ({
   ghostSide = "left",
   isAudioPlaying = false
 }) => {
-  const [processedImageUrl, setProcessedImageUrl] = useState("");
+  const [isLoaded, setIsLoaded] = useState(false);
   const [prevImageUrl, setPrevImageUrl] = useState("");
   const [aspectRatio, setAspectRatio] = useState("9 / 16");
   const imageUrl = resolveImageUrl();
   const prevRawImageUrl = useRef(imageUrl);
   useEffect(() => {
     if (!imageUrl) {
-      setProcessedImageUrl(imageUrl);
+      setIsLoaded(false);
       return;
     }
+    setIsLoaded(false);
     const img = new Image();
-    img.crossOrigin = "anonymous";
     img.onload = () => {
       if (img.naturalWidth && img.naturalHeight) {
         setAspectRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
       }
-      const result = multiplyImageByColor(img, highlightColor);
-      if (result) {
-        setProcessedImageUrl(result);
-      }
+      setIsLoaded(true);
     };
     img.src = imageUrl;
-  }, [imageUrl, highlightColor]);
+  }, [imageUrl]);
   useEffect(() => {
     if (prevRawImageUrl.current !== imageUrl) {
-      setPrevImageUrl(processedImageUrl);
+      setPrevImageUrl(prevRawImageUrl.current);
       prevRawImageUrl.current = imageUrl;
     }
-  }, [imageUrl, processedImageUrl]);
+  }, [imageUrl]);
   const baseX = speaker ? 50 : xPosition;
   const baseY = yPosition;
   const variants = useMemo(() => {
@@ -184,99 +181,95 @@ var ActorImage = ({
     }
     return speaker ? "talking" : "idle";
   }, [speaker, isAudioPlaying, variants, isGhost, animationParams]);
-  return processedImageUrl ? /* @__PURE__ */ jsxs(
-    motion.div,
-    {
-      variants,
-      initial: "absent",
-      exit: "absent",
-      animate: animateProps,
-      transformTemplate: (_, generatedTransform) => {
-        const baseTransform = generatedTransform?.trim() || "";
-        return baseTransform ? `${baseTransform} translateX(-50%)` : "translateX(-50%)";
-      },
-      style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center" },
-      children: [
-        /* @__PURE__ */ jsx(AnimatePresence, { children: prevImageUrl && prevImageUrl !== processedImageUrl && /* @__PURE__ */ jsx(
-          motion.img,
-          {
-            src: prevImageUrl,
-            initial: { opacity: 1 },
-            animate: { opacity: 0 },
-            exit: { opacity: 0 },
-            transition: { duration: 0.5 },
-            style: {
-              position: "absolute",
-              top: 0,
-              width: "100%",
-              height: "100%",
-              filter: "blur(2.5px)",
-              zIndex: 3,
-              pointerEvents: "none",
-              ...ghostMaskStyle
-            }
-          },
-          `${id}_${prevImageUrl}_prev`
-        ) }),
-        /* @__PURE__ */ jsx(AnimatePresence, { children: processedImageUrl && /* @__PURE__ */ jsx(
-          motion.img,
-          {
-            src: processedImageUrl,
-            initial: { opacity: 0 },
-            animate: { opacity: 1, filter: "blur(2.5px)" },
-            exit: { opacity: 0 },
-            transition: { duration: 0.5 },
-            style: {
-              position: "absolute",
-              top: 0,
-              width: "100%",
-              height: "100%",
-              zIndex: 4,
-              pointerEvents: "none",
-              ...ghostMaskStyle
-            }
-          },
-          `${id}_${imageUrl}_bg`
-        ) }),
-        /* @__PURE__ */ jsx(AnimatePresence, { children: processedImageUrl && /* @__PURE__ */ jsx(
-          motion.img,
-          {
-            src: processedImageUrl,
-            initial: { opacity: 0 },
-            animate: { opacity: 0.75 },
-            exit: { opacity: 0 },
-            transition: { duration: 0.5 },
-            style: {
-              position: "absolute",
-              top: 0,
-              width: "100%",
-              height: "100%",
-              zIndex: 5,
-              ...ghostMaskStyle
+  const filterId = `tint-${id}`;
+  return isLoaded ? /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsx("svg", { style: { position: "absolute", width: 0, height: 0, overflow: "hidden" }, children: /* @__PURE__ */ jsx("defs", { children: /* @__PURE__ */ jsxs("filter", { id: filterId, x: "0%", y: "0%", width: "100%", height: "100%", colorInterpolationFilters: "sRGB", children: [
+      /* @__PURE__ */ jsx("feFlood", { floodColor: highlightColor, result: "flood" }),
+      /* @__PURE__ */ jsx("feComposite", { in: "flood", in2: "SourceGraphic", operator: "in", result: "masked" }),
+      /* @__PURE__ */ jsx("feBlend", { in: "SourceGraphic", in2: "masked", mode: "multiply" })
+    ] }) }) }),
+    /* @__PURE__ */ jsxs(
+      motion.div,
+      {
+        variants,
+        initial: "absent",
+        exit: "absent",
+        animate: animateProps,
+        transformTemplate: (_, generatedTransform) => {
+          const baseTransform = generatedTransform?.trim() || "";
+          return baseTransform ? `${baseTransform} translateX(-50%)` : "translateX(-50%)";
+        },
+        style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center" },
+        children: [
+          /* @__PURE__ */ jsx(AnimatePresence, { children: prevImageUrl && prevImageUrl !== imageUrl && /* @__PURE__ */ jsx(
+            motion.img,
+            {
+              src: prevImageUrl,
+              initial: { opacity: 1 },
+              animate: { opacity: 0 },
+              exit: { opacity: 0 },
+              transition: { duration: 0.5 },
+              style: {
+                position: "absolute",
+                top: 0,
+                width: "100%",
+                height: "100%",
+                filter: `url(#${filterId}) blur(2.5px)`,
+                zIndex: 3,
+                pointerEvents: "none",
+                ...ghostMaskStyle
+              }
             },
-            onMouseEnter,
-            onMouseLeave
-          },
-          `${id}_${imageUrl}_main`
-        ) })
-      ]
-    },
-    `actor_motion_div_${id}`
-  ) : /* @__PURE__ */ jsx(Fragment, {});
-};
-var multiplyImageByColor = (img, hex) => {
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-  canvas.width = img.width;
-  canvas.height = img.height;
-  ctx.drawImage(img, 0, 0);
-  ctx.globalCompositeOperation = "multiply";
-  ctx.fillStyle = hex.toUpperCase();
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.globalCompositeOperation = "destination-in";
-  ctx.drawImage(img, 0, 0);
-  return canvas.toDataURL();
+            `${id}_${prevImageUrl}_prev`
+          ) }),
+          /* @__PURE__ */ jsx(AnimatePresence, { children: imageUrl && /* @__PURE__ */ jsx(
+            motion.img,
+            {
+              src: imageUrl,
+              initial: { opacity: 0 },
+              animate: { opacity: 1 },
+              exit: { opacity: 0 },
+              transition: { duration: 0.5 },
+              style: {
+                position: "absolute",
+                top: 0,
+                width: "100%",
+                height: "100%",
+                filter: `url(#${filterId}) blur(2.5px)`,
+                zIndex: 4,
+                pointerEvents: "none",
+                ...ghostMaskStyle
+              }
+            },
+            `${id}_${imageUrl}_bg`
+          ) }),
+          /* @__PURE__ */ jsx(AnimatePresence, { children: imageUrl && /* @__PURE__ */ jsx(
+            motion.img,
+            {
+              src: imageUrl,
+              initial: { opacity: 0 },
+              animate: { opacity: 0.75 },
+              exit: { opacity: 0 },
+              transition: { duration: 0.5 },
+              style: {
+                position: "absolute",
+                top: 0,
+                width: "100%",
+                height: "100%",
+                filter: `url(#${filterId})`,
+                zIndex: 5,
+                ...ghostMaskStyle
+              },
+              onMouseEnter,
+              onMouseLeave
+            },
+            `${id}_${imageUrl}_main`
+          ) })
+        ]
+      },
+      `actor_motion_div_${id}`
+    )
+  ] }) : /* @__PURE__ */ jsx(Fragment, {});
 };
 var ActorImage_default = memo(ActorImage);
 
@@ -712,7 +705,7 @@ function NovelVisualizer(props) {
   };
   useEffect3(() => {
     setLocalScript(script);
-  }, [script]);
+  }, [script, externalLoading]);
   useEffect3(() => {
     if (messageBoxRef.current) {
       const rect = messageBoxRef.current.getBoundingClientRect();

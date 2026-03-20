@@ -224,7 +224,7 @@ export function NovelVisualizer<
 
     useEffect(() => {
         setLocalScript(script);
-    }, [script]);
+    }, [script, externalLoading]);
 
     useEffect(() => {
         if (messageBoxRef.current) {
