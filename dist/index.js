@@ -728,9 +728,7 @@ function NovelVisualizer(props) {
     return formatMessage(message, speakerActor, messageTokens);
   }, [localScript, index, speakerActor, messageTokens]);
   useEffect3(() => {
-    console.log("New index");
     if (prevIndexRef.current !== index) {
-      console.log("Do some stuff.");
       setFinishTyping(false);
       if (isEditingMessage) {
         setIsEditingMessage(false);
@@ -758,7 +756,6 @@ function NovelVisualizer(props) {
   }, [index]);
   useEffect3(() => {
     if (prevExternalLoadingRef.current !== externalLoading) {
-      console.log(`External loading changed: ${externalLoading}`);
       prevIndexRef.current = -1;
       setIndex((index2) => Math.min(Math.max(0, index2), localScript.script.length - 1));
       prevExternalLoadingRef.current = externalLoading;
