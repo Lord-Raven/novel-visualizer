@@ -57,6 +57,7 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
     renderActorHoverInfo?: (actor: TActor | null) => React__default.ReactNode;
     getPresentActors: (script: TScript, index: number) => TActor[];
     getActorImageUrl: (actor: TActor, script: TScript, index: number) => string;
+    getActorImageColorMultiplier?: (actor: TActor, script: TScript, index: number) => string;
     backgroundElements?: React__default.ReactNode | ((context: {
         script: TScript;
         index: number;

@@ -672,6 +672,7 @@ function NovelVisualizer(props) {
     renderNameplate,
     renderActorHoverInfo,
     getActorImageUrl,
+    getActorImageColorMultiplier,
     getPresentActors,
     backgroundElements,
     backgroundOptions,
@@ -934,6 +935,7 @@ function NovelVisualizer(props) {
       const isHovered = actor === hoveredActor;
       const yPosition = isVerticalLayout ? 15 : 0;
       const zIndex = 50 - Math.abs(xPosition - 50);
+      const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(actor, localScript, index) : "#ffffff";
       return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
         ActorImage_default,
         {
@@ -946,7 +948,7 @@ function NovelVisualizer(props) {
           zIndex,
           heightMultiplier: isSpeaking ? 1 : 0.95 * sceneActorScale,
           speaker: isSpeaking,
-          highlightColor: isHovered ? "rgba(255,255,255,1)" : "rgba(225,225,225,1)",
+          highlightColor: isHovered ? (0, import_styles.lighten)(baseHighlightColor, 0.2) : baseHighlightColor,
           isAudioPlaying: isSpeaking && isAudioPlaying && enableTalkingAnimation
         },
         actor.id
@@ -956,6 +958,7 @@ function NovelVisualizer(props) {
       const yPosition = isVerticalLayout ? 20 : 0;
       const isHovered = speakerActor === hoveredActor;
       const ghostSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? "left" : "right";
+      const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(speakerActor, localScript, index) : "#ffffff";
       actorElements.push(
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
           ActorImage_default,
@@ -969,7 +972,7 @@ function NovelVisualizer(props) {
             zIndex: 45,
             heightMultiplier: isVerticalLayout ? 0.7 : 0.9,
             speaker: true,
-            highlightColor: isHovered ? "rgba(255,255,255,1)" : "rgba(200,200,200,0.9)",
+            highlightColor: isHovered ? (0, import_styles.lighten)(baseHighlightColor, 0.2) : baseHighlightColor,
             isGhost: true,
             ghostSide,
             isAudioPlaying: isAudioPlaying && enableTalkingAnimation

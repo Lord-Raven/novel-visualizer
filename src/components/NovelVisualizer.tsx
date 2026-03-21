@@ -61,6 +61,7 @@ export interface NovelVisualizerProps<
     renderActorHoverInfo?: (actor: TActor | null) => React.ReactNode;
     getPresentActors: (script: TScript, index: number) => TActor[];
     getActorImageUrl: (actor: TActor, script: TScript, index: number) => string;
+    getActorImageColorMultiplier?: (actor: TActor, script: TScript, index: number) => string;
     backgroundElements?: React.ReactNode | ((context: {
         script: TScript;
         index: number;
@@ -119,6 +120,7 @@ export function NovelVisualizer<
         renderNameplate,
         renderActorHoverInfo,
         getActorImageUrl,
+        getActorImageColorMultiplier,
         getPresentActors,
         backgroundElements,
         backgroundOptions,
@@ -450,6 +452,7 @@ export function NovelVisualizer<
             const isHovered = actor === hoveredActor;
             const yPosition = isVerticalLayout ? 15 : 0;
             const zIndex = 50 - Math.abs(xPosition - 50);
+            const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(actor, localScript, index) : "#ffffff";
 
             return (
                 <ActorImage
@@ -463,7 +466,7 @@ export function NovelVisualizer<
                     zIndex={zIndex}
                     heightMultiplier={isSpeaking ? 1 : (0.95 * sceneActorScale)}
                     speaker={isSpeaking}
-                    highlightColor={isHovered ? 'rgba(255,255,255,1)' : 'rgba(225,225,225,1)'}
+                    highlightColor={isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor}
                     isAudioPlaying={isSpeaking && isAudioPlaying && enableTalkingAnimation}
                 />
             );
@@ -475,6 +478,7 @@ export function NovelVisualizer<
             const isHovered = speakerActor === hoveredActor;
             // Alternate sides based on actor ID for consistency
             const ghostSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? 'left' : 'right';
+            const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(speakerActor, localScript, index) : "#ffffff";
             
             actorElements.push(
                 <ActorImage
@@ -488,7 +492,7 @@ export function NovelVisualizer<
                     zIndex={45}
                     heightMultiplier={(isVerticalLayout ? 0.7 : 0.9)}
                     speaker={true}
-                    highlightColor={isHovered ? 'rgba(255,255,255,1)' : 'rgba(200,200,200,0.9)'}
+                    highlightColor={isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor}
                     isGhost={true}
                     ghostSide={ghostSide}
                     isAudioPlaying={isAudioPlaying && enableTalkingAnimation}
