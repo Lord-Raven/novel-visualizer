@@ -968,11 +968,14 @@ function NovelVisualizer(props) {
       const tempScript = { ...localScript };
       onSubmitInput(inputText, tempScript, atIndex).then((newScript) => {
         setLoading(false);
-        if (newScript.id !== tempScript.id) {
-          console.log("New script detected.");
-          setIndex(0);
+        if (newScript) {
+          if (newScript.id !== tempScript.id) {
+            setIndex(0);
+          } else {
+            setIndex(Math.min(newScript.script.length - 1, atIndex + 1));
+          }
         } else {
-          setIndex(Math.min(newScript.script.length - 1, atIndex + 1));
+          setIndex(-1);
         }
         setLocalScript({ ...newScript });
       }).catch((error) => {

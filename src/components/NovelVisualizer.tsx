@@ -531,11 +531,14 @@ export function NovelVisualizer<
             const tempScript = {...localScript}; // Create a temp copy to pass to onSubmitInput
             onSubmitInput(inputText, tempScript, atIndex).then((newScript) => {
                 setLoading(false);
-                if (newScript.id !== tempScript.id) {
-                    console.log('New script detected.');
-                    setIndex(0); // Move to first entry, if this is a new script.
+                if (newScript) {
+                    if (newScript.id !== tempScript.id) {
+                        setIndex(0); // Move to first entry, if this is a new script.
+                    } else {
+                        setIndex(Math.min(newScript.script.length - 1, atIndex + 1)); // Move to next entry after submission
+                    }
                 } else {
-                    setIndex(Math.min(newScript.script.length - 1, atIndex + 1)); // Move to next entry after submission
+                    setIndex(-1); // Set to -1 to indicate end of script if no new script is returned
                 }
                 setLocalScript({...newScript});
             }).catch((error) => {
