@@ -761,10 +761,10 @@ function NovelVisualizer(props) {
   };
   const actorsAtIndex = (0, import_react4.useMemo)(() => getPresentActors(localScript, index), [localScript, index, actors, getPresentActors]);
   const speakerActor = (0, import_react4.useMemo)(() => {
-    return localScript.script[index] && localScript.script[index].speakerId ? actors[localScript.script[index].speakerId] : null;
+    return index >= 0 && index < localScript.script.length && localScript.script[index].speakerId ? actors[localScript.script[index].speakerId] : null;
   }, [localScript, index, actors]);
   const displayMessage = (0, import_react4.useMemo)(() => {
-    const message = localScript.script[index]?.message || "";
+    const message = index >= 0 && index < localScript.script.length ? localScript.script[index].message ?? "" : "";
     return formatMessage(message, speakerActor, messageTokens);
   }, [localScript, index, speakerActor, messageTokens]);
   (0, import_react4.useEffect)(() => {
@@ -779,7 +779,7 @@ function NovelVisualizer(props) {
         currentAudioRef.current.currentTime = 0;
         setIsAudioPlaying(false);
       }
-      if (audioEnabled && localScript.script[index]?.speechUrl) {
+      if (audioEnabled && index >= 0 && index < localScript.script.length && localScript.script[index].speechUrl) {
         const audio = new Audio(localScript.script[index].speechUrl);
         currentAudioRef.current = audio;
         audio.addEventListener("play", () => setIsAudioPlaying(true));
@@ -870,13 +870,13 @@ function NovelVisualizer(props) {
     setIndex(Math.max(0, index - 1));
   };
   const handleEnterEditMode = () => {
-    const currentMessage = localScript.script[index]?.message || "";
+    const currentMessage = index >= 0 && index < localScript.script.length ? localScript.script[index]?.message ?? "" : "";
     setOriginalMessage(currentMessage);
     setEditedMessage(currentMessage);
     setIsEditingMessage(true);
   };
   const handleConfirmEdit = () => {
-    const currentMessage = localScript.script[index]?.message || "";
+    const currentMessage = index >= 0 && index < localScript.script.length ? localScript.script[index]?.message ?? "" : "";
     if (editedMessage === currentMessage) {
       setIsEditingMessage(false);
       setOriginalMessage("");
@@ -886,7 +886,7 @@ function NovelVisualizer(props) {
       onUpdateMessage(index, editedMessage);
     } else {
       const updated = { ...localScript };
-      if (updated.script[index]) {
+      if (index >= 0 && index < updated.script.length && updated.script[index]) {
         updated.script[index] = { ...updated.script[index], message: editedMessage };
       }
       setLocalScript(updated);
@@ -899,11 +899,11 @@ function NovelVisualizer(props) {
     setIsEditingMessage(false);
     setOriginalMessage("");
   };
-  const sceneEnded = Boolean(localScript.script[index]?.endScene);
+  const sceneEnded = Boolean(index >= 0 && index < localScript.script.length && localScript.script[index]?.endScene);
   const progressLabel = `${localScript.script.length === 0 ? 0 : index + 1} / ${localScript.script.length}`;
   const placeholderText = (0, import_react4.useMemo)(() => {
     if (typeof inputPlaceholder === "function") {
-      return inputPlaceholder({ index, entry: localScript.script[index] });
+      return inputPlaceholder({ index, entry: index >= 0 && index < localScript.script.length ? localScript.script[index] : void 0 });
     }
     if (inputPlaceholder) return inputPlaceholder;
     if (sceneEnded) return "Scene concluded";
