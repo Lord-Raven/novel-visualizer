@@ -39,7 +39,7 @@ interface SubmitButtonConfig {
  * @template TEntry - The script entry type
  */
 interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelScript, TEntry extends NovelScriptEntry> {
-    script: TScript;
+    script: TScript | null;
     actors: Record<string, TActor>;
     playerActorId: string;
     getBackgroundImageUrl?: (script: TScript, index: number) => string;

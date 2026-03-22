@@ -702,6 +702,7 @@ function NovelVisualizer(props) {
   const [editedMessage, setEditedMessage] = (0, import_react4.useState)("");
   const [originalMessage, setOriginalMessage] = (0, import_react4.useState)("");
   const [localScript, setLocalScript] = (0, import_react4.useState)(script);
+  const scriptEntries = (0, import_react4.useMemo)(() => localScript?.script ?? [], [localScript]);
   const [index, setIndex] = (0, import_react4.useState)(-1);
   const prevIndexRef = (0, import_react4.useRef)(index);
   const prevExternalLoadingRef = (0, import_react4.useRef)(externalLoading);
@@ -759,14 +760,19 @@ function NovelVisualizer(props) {
     const y = e.clientY / window.innerHeight * 100;
     setMousePosition({ x, y });
   };
-  const actorsAtIndex = (0, import_react4.useMemo)(() => getPresentActors(localScript, index), [localScript, index, actors, getPresentActors]);
+  const actorsAtIndex = (0, import_react4.useMemo)(() => {
+    if (!localScript || !Array.isArray(localScript.script)) {
+      return [];
+    }
+    return getPresentActors(localScript, index);
+  }, [localScript, index, actors, getPresentActors]);
   const speakerActor = (0, import_react4.useMemo)(() => {
-    return index >= 0 && index < localScript.script.length && localScript.script[index].speakerId ? actors[localScript.script[index].speakerId] : null;
-  }, [localScript, index, actors]);
+    return index >= 0 && index < scriptEntries.length && scriptEntries[index].speakerId ? actors[scriptEntries[index].speakerId] : null;
+  }, [scriptEntries, index, actors]);
   const displayMessage = (0, import_react4.useMemo)(() => {
-    const message = index >= 0 && index < localScript.script.length ? localScript.script[index].message ?? "" : "";
+    const message = index >= 0 && index < scriptEntries.length ? scriptEntries[index].message ?? "" : "";
     return formatMessage(message, speakerActor, messageTokens);
-  }, [localScript, index, speakerActor, messageTokens]);
+  }, [scriptEntries, index, speakerActor, messageTokens]);
   (0, import_react4.useEffect)(() => {
     if (prevIndexRef.current !== index) {
       setFinishTyping(false);
@@ -779,8 +785,8 @@ function NovelVisualizer(props) {
         currentAudioRef.current.currentTime = 0;
         setIsAudioPlaying(false);
       }
-      if (audioEnabled && index >= 0 && index < localScript.script.length && localScript.script[index].speechUrl) {
-        const audio = new Audio(localScript.script[index].speechUrl);
+      if (audioEnabled && index >= 0 && index < scriptEntries.length && scriptEntries[index].speechUrl) {
+        const audio = new Audio(scriptEntries[index].speechUrl);
         currentAudioRef.current = audio;
         audio.addEventListener("play", () => setIsAudioPlaying(true));
         audio.addEventListener("pause", () => setIsAudioPlaying(false));
@@ -793,14 +799,14 @@ function NovelVisualizer(props) {
       prevIndexRef.current = index;
     }
     setMessageKey((prev2) => prev2 + 1);
-  }, [index]);
+  }, [index, audioEnabled, scriptEntries]);
   (0, import_react4.useEffect)(() => {
     if (prevExternalLoadingRef.current !== externalLoading) {
       prevIndexRef.current = -1;
-      setIndex((index2) => Math.min(Math.max(0, index2), localScript.script.length - 1));
+      setIndex((index2) => Math.min(Math.max(0, index2), scriptEntries.length - 1));
       prevExternalLoadingRef.current = externalLoading;
     }
-  }, [externalLoading]);
+  }, [externalLoading, scriptEntries.length]);
   (0, import_react4.useEffect)(() => {
     if (!mousePosition) {
       setHoveredActor(null);
@@ -854,33 +860,33 @@ function NovelVisualizer(props) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [inputText, index, localScript, finishTyping, isLoading, isEditingMessage]);
   const next = () => {
-    if (!localScript || !localScript.script) return;
+    if (!localScript || !Array.isArray(localScript.script)) return;
     if (isEditingMessage) {
       handleConfirmEdit();
     }
     if (finishTyping) {
-      setIndex(Math.min(localScript.script.length - 1, index + 1));
+      setIndex(Math.min(scriptEntries.length - 1, index + 1));
     } else if (allowTypingSkip) {
       setFinishTyping(true);
     }
   };
   const prev = () => {
-    if (!localScript || !localScript.script) return;
+    if (!localScript || !Array.isArray(localScript.script)) return;
     if (isEditingMessage) {
       handleConfirmEdit();
     }
     setIndex(Math.max(0, index - 1));
   };
   const handleEnterEditMode = () => {
-    if (!localScript || !localScript.script) return;
-    const currentMessage = index >= 0 && index < localScript.script.length ? localScript.script[index]?.message ?? "" : "";
+    if (!localScript || !Array.isArray(localScript.script)) return;
+    const currentMessage = index >= 0 && index < scriptEntries.length ? scriptEntries[index]?.message ?? "" : "";
     setOriginalMessage(currentMessage);
     setEditedMessage(currentMessage);
     setIsEditingMessage(true);
   };
   const handleConfirmEdit = () => {
-    if (!localScript || !localScript.script) return;
-    const currentMessage = index >= 0 && index < localScript.script.length ? localScript.script[index]?.message ?? "" : "";
+    if (!localScript || !Array.isArray(localScript.script)) return;
+    const currentMessage = index >= 0 && index < scriptEntries.length ? scriptEntries[index]?.message ?? "" : "";
     if (editedMessage === currentMessage) {
       setIsEditingMessage(false);
       setOriginalMessage("");
@@ -899,23 +905,23 @@ function NovelVisualizer(props) {
     setOriginalMessage("");
   };
   const handleCancelEdit = () => {
-    if (!localScript || !localScript.script) return;
+    if (!localScript || !Array.isArray(localScript.script)) return;
     setEditedMessage(originalMessage);
     setIsEditingMessage(false);
     setOriginalMessage("");
   };
-  const sceneEnded = Boolean(index >= 0 && index < localScript.script.length && localScript.script[index]?.endScene);
-  const progressLabel = `${!localScript || !localScript.script || localScript.script.length === 0 ? 0 : index + 1} / ${!localScript || !localScript.script ? 0 : localScript.script.length}`;
+  const sceneEnded = Boolean(index >= 0 && index < scriptEntries.length && scriptEntries[index]?.endScene);
+  const progressLabel = `${scriptEntries.length === 0 ? 0 : index + 1} / ${scriptEntries.length}`;
   const placeholderText = (0, import_react4.useMemo)(() => {
-    if (!localScript || !localScript.script) return "Type your next action...";
+    if (!localScript || !Array.isArray(localScript.script)) return "Type your next action...";
     if (typeof inputPlaceholder === "function") {
-      return inputPlaceholder({ index, entry: index >= 0 && index < localScript.script.length ? localScript.script[index] : void 0 });
+      return inputPlaceholder({ index, entry: index >= 0 && index < scriptEntries.length ? scriptEntries[index] : void 0 });
     }
     if (inputPlaceholder) return inputPlaceholder;
     if (sceneEnded) return "Scene concluded";
     if (isLoading) return "Loading...";
     return "Type your next action...";
-  }, [inputPlaceholder, index, localScript, sceneEnded, isLoading]);
+  }, [inputPlaceholder, index, localScript, scriptEntries, sceneEnded, isLoading]);
   const renderNameplateNode = () => {
     if (renderNameplate)
       return renderNameplate(speakerActor);
@@ -933,6 +939,10 @@ function NovelVisualizer(props) {
     );
   };
   const renderActors = () => {
+    if (!localScript || !Array.isArray(localScript.script)) {
+      return [];
+    }
+    const activeScript = localScript;
     const scalePerActor = isVerticalLayout ? 0.05 : 0.03;
     const sceneActorScale = Math.max(0.7, 1 - Math.max(0, actorsAtIndex.length - 1) * scalePerActor);
     const actorElements = actorsAtIndex.map((actor, i) => {
@@ -941,13 +951,13 @@ function NovelVisualizer(props) {
       const isHovered = actor === hoveredActor;
       const yPosition = isVerticalLayout ? 15 : 0;
       const zIndex = 50 - Math.abs(xPosition - 50);
-      const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(actor, localScript, index) : "#ffffff";
+      const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(actor, activeScript, index) : "#ffffff";
       return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
         ActorImage_default,
         {
           id: actor.id,
           resolveImageUrl: () => {
-            return getActorImageUrl(actor, localScript, index);
+            return getActorImageUrl(actor, activeScript, index);
           },
           xPosition,
           yPosition,
@@ -964,14 +974,14 @@ function NovelVisualizer(props) {
       const yPosition = isVerticalLayout ? 20 : 0;
       const isHovered = speakerActor === hoveredActor;
       const ghostSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? "left" : "right";
-      const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(speakerActor, localScript, index) : "#ffffff";
+      const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(speakerActor, activeScript, index) : "#ffffff";
       actorElements.push(
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
           ActorImage_default,
           {
             id: `ghost-${speakerActor.id}`,
             resolveImageUrl: () => {
-              return getActorImageUrl(speakerActor, localScript, index);
+              return getActorImageUrl(speakerActor, activeScript, index);
             },
             xPosition: ghostSide === "left" ? 10 : 90,
             yPosition,
@@ -990,11 +1000,11 @@ function NovelVisualizer(props) {
     return actorElements;
   };
   const handleSubmit = () => {
-    if (!localScript || !localScript.script) return;
+    if (!localScript || !Array.isArray(localScript.script)) return;
     if (isEditingMessage) {
       handleConfirmEdit();
     }
-    if (!inputText.trim() && index < localScript.script.length - 1) {
+    if (!inputText.trim() && index < scriptEntries.length - 1) {
       next();
       return;
     }
@@ -1018,12 +1028,12 @@ function NovelVisualizer(props) {
           if (newScript.id !== tempScript.id) {
             setIndex(0);
           } else {
-            setIndex(Math.min(newScript.script.length - 1, atIndex + 1));
+            setIndex(Math.min((newScript?.script?.length ?? 0) - 1, atIndex + 1));
           }
         } else {
           setIndex(-1);
         }
-        setLocalScript({ ...newScript });
+        setLocalScript(newScript ? { ...newScript } : null);
       }).catch((error) => {
         console.log("Submission failed", error);
         setLoading(false);
@@ -1032,7 +1042,7 @@ function NovelVisualizer(props) {
     setInputText("");
   };
   const handleReroll = () => {
-    if (!localScript || !localScript.script) return;
+    if (!localScript || !Array.isArray(localScript.script)) return;
     const rerollIndex = index;
     const tempScript = { ...localScript, script: localScript.script.slice(0, rerollIndex) };
     console.log("Reroll clicked");
@@ -1041,8 +1051,8 @@ function NovelVisualizer(props) {
       console.log("Rerolling");
       onSubmitInput(inputText, tempScript, rerollIndex - 1).then((newScript) => {
         setLoading(false);
-        setIndex(Math.min(newScript.script.length - 1, rerollIndex));
-        setLocalScript({ ...newScript });
+        setIndex(Math.min((newScript?.script?.length ?? 0) - 1, rerollIndex));
+        setLocalScript(newScript ? { ...newScript } : null);
       }).catch((error) => {
         console.log("Reroll failed", error);
         setLoading(false);
@@ -1051,14 +1061,22 @@ function NovelVisualizer(props) {
   };
   const hoverInfoNode = renderActorHoverInfo ? renderActorHoverInfo(hoveredActor) : null;
   const backgroundImageUrl = (0, import_react4.useMemo)(
-    () => getBackgroundImageUrl ? getBackgroundImageUrl(localScript, index) : void 0,
+    () => getBackgroundImageUrl && localScript ? getBackgroundImageUrl(localScript, index) : void 0,
     [getBackgroundImageUrl, localScript, index]
   );
-  const resolvedBackgroundElements = typeof backgroundElements === "function" ? backgroundElements({
-    script: localScript,
-    index,
-    presentActors: actorsAtIndex
-  }) : backgroundElements;
+  const resolvedBackgroundElements = (0, import_react4.useMemo)(() => {
+    if (typeof backgroundElements === "function") {
+      if (!localScript) {
+        return null;
+      }
+      return backgroundElements({
+        script: localScript,
+        index,
+        presentActors: actorsAtIndex
+      });
+    }
+    return backgroundElements ?? null;
+  }, [backgroundElements, localScript, index, actorsAtIndex]);
   return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
     BlurredBackground,
     {
@@ -1147,7 +1165,7 @@ function NovelVisualizer(props) {
                               onMouseLeave: () => setTooltip?.(null)
                             }
                           ) : /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { style: { display: "flex", alignItems: "center", gap: isVerticalLayout ? "2px" : "4px" }, children: [
-                            index + 1 < localScript.script.length && inputText.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                            index + 1 < scriptEntries.length && inputText.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                               "span",
                               {
                                 onMouseEnter: () => {
@@ -1183,7 +1201,7 @@ function NovelVisualizer(props) {
                         import_material.IconButton,
                         {
                           onClick: next,
-                          disabled: index >= localScript.script.length - 1 || isLoading,
+                          disabled: index >= scriptEntries.length - 1 || isLoading,
                           size: "small",
                           sx: {
                             color: theme.palette.text.secondary,
@@ -1383,7 +1401,7 @@ function NovelVisualizer(props) {
                             color: theme.palette.text.primary,
                             textShadow: baseTextShadow
                           },
-                          children: localScript.script.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                          children: scriptEntries.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                             TypeOut_default,
                             {
                               speed: typingSpeed,
@@ -1463,9 +1481,8 @@ function NovelVisualizer(props) {
                         disabled: isLoading,
                         variant: "contained",
                         startIcon: (() => {
-                          if (getSubmitButtonConfig) {
-                            const config = getSubmitButtonConfig(localScript, index, inputText);
-                            return config.icon;
+                          if (getSubmitButtonConfig && localScript) {
+                            return getSubmitButtonConfig(localScript, index, inputText).icon;
                           }
                           if (sceneEnded && !inputText.trim()) {
                             return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_icons_material.Close, { fontSize: isVerticalLayout ? "small" : void 0 });
@@ -1476,12 +1493,12 @@ function NovelVisualizer(props) {
                           height: "40px",
                           minHeight: "40px",
                           background: (() => {
-                            const colorScheme = getSubmitButtonConfig ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : sceneEnded && !inputText.trim() ? "error" : "primary";
+                            const colorScheme = getSubmitButtonConfig ? localScript ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : "primary" : sceneEnded && !inputText.trim() ? "error" : "primary";
                             const baseColor = colorScheme === "error" ? errorMain : accentMain;
                             return `linear-gradient(90deg, ${(0, import_styles.lighten)(baseColor, 0.12)}, ${(0, import_styles.darken)(baseColor, 0.2)})`;
                           })(),
                           color: (() => {
-                            const colorScheme = getSubmitButtonConfig ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : sceneEnded && !inputText.trim() ? "error" : "primary";
+                            const colorScheme = getSubmitButtonConfig ? localScript ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : "primary" : sceneEnded && !inputText.trim() ? "error" : "primary";
                             const baseColor = colorScheme === "error" ? errorMain : accentMain;
                             return theme.palette.getContrastText(baseColor);
                           })(),
@@ -1491,7 +1508,7 @@ function NovelVisualizer(props) {
                           whiteSpace: "nowrap",
                           "&:hover": {
                             background: (() => {
-                              const colorScheme = getSubmitButtonConfig ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : sceneEnded && !inputText.trim() ? "error" : "primary";
+                              const colorScheme = getSubmitButtonConfig ? localScript ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : "primary" : sceneEnded && !inputText.trim() ? "error" : "primary";
                               const baseColor = colorScheme === "error" ? errorMain : accentMain;
                               return `linear-gradient(90deg, ${(0, import_styles.lighten)(baseColor, 0.2)}, ${(0, import_styles.darken)(baseColor, 0.28)})`;
                             })()
@@ -1503,7 +1520,7 @@ function NovelVisualizer(props) {
                         },
                         children: (() => {
                           if (getSubmitButtonConfig) {
-                            return getSubmitButtonConfig(localScript, index, inputText).label;
+                            return localScript ? getSubmitButtonConfig(localScript, index, inputText).label : "Continue";
                           }
                           if (sceneEnded && !inputText.trim()) {
                             return "End";
