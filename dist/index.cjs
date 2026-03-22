@@ -854,6 +854,7 @@ function NovelVisualizer(props) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [inputText, index, localScript, finishTyping, isLoading, isEditingMessage]);
   const next = () => {
+    if (!localScript || !localScript.script) return;
     if (isEditingMessage) {
       handleConfirmEdit();
     }
@@ -864,18 +865,21 @@ function NovelVisualizer(props) {
     }
   };
   const prev = () => {
+    if (!localScript || !localScript.script) return;
     if (isEditingMessage) {
       handleConfirmEdit();
     }
     setIndex(Math.max(0, index - 1));
   };
   const handleEnterEditMode = () => {
+    if (!localScript || !localScript.script) return;
     const currentMessage = index >= 0 && index < localScript.script.length ? localScript.script[index]?.message ?? "" : "";
     setOriginalMessage(currentMessage);
     setEditedMessage(currentMessage);
     setIsEditingMessage(true);
   };
   const handleConfirmEdit = () => {
+    if (!localScript || !localScript.script) return;
     const currentMessage = index >= 0 && index < localScript.script.length ? localScript.script[index]?.message ?? "" : "";
     if (editedMessage === currentMessage) {
       setIsEditingMessage(false);
@@ -895,13 +899,15 @@ function NovelVisualizer(props) {
     setOriginalMessage("");
   };
   const handleCancelEdit = () => {
+    if (!localScript || !localScript.script) return;
     setEditedMessage(originalMessage);
     setIsEditingMessage(false);
     setOriginalMessage("");
   };
   const sceneEnded = Boolean(index >= 0 && index < localScript.script.length && localScript.script[index]?.endScene);
-  const progressLabel = `${localScript.script.length === 0 ? 0 : index + 1} / ${localScript.script.length}`;
+  const progressLabel = `${!localScript || localScript.script.length === 0 ? 0 : index + 1} / ${localScript ? localScript.script.length : 0}`;
   const placeholderText = (0, import_react4.useMemo)(() => {
+    if (!localScript || !localScript.script) return "Type your next action...";
     if (typeof inputPlaceholder === "function") {
       return inputPlaceholder({ index, entry: index >= 0 && index < localScript.script.length ? localScript.script[index] : void 0 });
     }
@@ -984,6 +990,7 @@ function NovelVisualizer(props) {
     return actorElements;
   };
   const handleSubmit = () => {
+    if (!localScript || !localScript.script) return;
     if (isEditingMessage) {
       handleConfirmEdit();
     }
@@ -1025,6 +1032,7 @@ function NovelVisualizer(props) {
     setInputText("");
   };
   const handleReroll = () => {
+    if (!localScript || !localScript.script) return;
     const rerollIndex = index;
     const tempScript = { ...localScript, script: localScript.script.slice(0, rerollIndex) };
     console.log("Reroll clicked");
