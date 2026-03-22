@@ -49,7 +49,7 @@ var import_framer_motion = require("framer-motion");
 var import_react = require("react");
 var import_jsx_runtime = require("react/jsx-runtime");
 var IDLE_HEIGHT = 80;
-var SPEAKING_HEIGHT = 90;
+var SPEAKING_HEIGHT = 85;
 var ActorImage = ({
   id,
   resolveImageUrl,
@@ -962,7 +962,7 @@ function NovelVisualizer(props) {
           xPosition,
           yPosition,
           zIndex,
-          heightMultiplier: isSpeaking ? 1 : 0.95 * sceneActorScale,
+          heightMultiplier: isSpeaking ? 1 : sceneActorScale,
           speaker: isSpeaking,
           highlightColor: isHovered ? (0, import_styles.lighten)(baseHighlightColor, 0.2) : baseHighlightColor,
           isAudioPlaying: isSpeaking && isAudioPlaying && enableTalkingAnimation
@@ -1130,11 +1130,12 @@ function NovelVisualizer(props) {
                   minHeight: isVerticalLayout ? "20vh" : void 0,
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "space-between"
+                  justifyContent: "space-between",
+                  overflow: "visible"
                 },
                 children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_material.Box, { sx: { display: "flex", alignItems: "center" }, children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_material.Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "center", flex: 1 }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_material.Box, { sx: { display: "flex", alignItems: "flex-end", overflow: "visible" }, children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_material.Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "flex-end", flex: 1, overflow: "visible" }, children: [
                       /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                         import_material.IconButton,
                         {
@@ -1213,7 +1214,19 @@ function NovelVisualizer(props) {
                           children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_icons_material.ChevronRight, { fontSize: isVerticalLayout ? "inherit" : "small", sx: { fontSize: isVerticalLayout ? "14px" : void 0 } })
                         }
                       ),
-                      renderNameplateNode()
+                      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                        import_material.Box,
+                        {
+                          sx: {
+                            height: 0,
+                            overflow: "visible",
+                            display: "flex",
+                            alignItems: "flex-end",
+                            alignSelf: "flex-end"
+                          },
+                          children: renderNameplateNode()
+                        }
+                      )
                     ] }),
                     !hideActionButtons && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_material.Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "center" }, children: [
                       !isEditingMessage ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(

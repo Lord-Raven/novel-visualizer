@@ -483,7 +483,7 @@ export function NovelVisualizer<
                     xPosition={xPosition}
                     yPosition={yPosition}
                     zIndex={zIndex}
-                    heightMultiplier={isSpeaking ? 1 : (0.95 * sceneActorScale)}
+                    heightMultiplier={isSpeaking ? 1 : sceneActorScale}
                     speaker={isSpeaking}
                     highlightColor={isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor}
                     isAudioPlaying={isSpeaking && isAudioPlaying && enableTalkingAnimation}
@@ -672,11 +672,12 @@ export function NovelVisualizer<
                         minHeight: isVerticalLayout ? '20vh' : undefined,
                         display: 'flex',
                         flexDirection: 'column',
-                        justifyContent: 'space-between'
+                        justifyContent: 'space-between',
+                        overflow: 'visible'
                     }}
                 >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Box sx={{ display: 'flex', gap: isVerticalLayout ? 0.5 : 1.5, alignItems: 'center', flex: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-end', overflow: 'visible' }}>
+                        <Box sx={{ display: 'flex', gap: isVerticalLayout ? 0.5 : 1.5, alignItems: 'flex-end', flex: 1, overflow: 'visible' }}>
                             <IconButton
                                 onClick={prev}
                                 disabled={index === 0 || isLoading}
@@ -746,7 +747,17 @@ export function NovelVisualizer<
                                 <ChevronRight fontSize={isVerticalLayout ? 'inherit' : 'small'} sx={{ fontSize: isVerticalLayout ? '14px' : undefined }} />
                             </IconButton>
 
-                            {renderNameplateNode()}
+                            <Box
+                                sx={{
+                                    height: 0,
+                                    overflow: 'visible',
+                                    display: 'flex',
+                                    alignItems: 'flex-end',
+                                    alignSelf: 'flex-end'
+                                }}
+                            >
+                                {renderNameplateNode()}
+                            </Box>
                         </Box>
 
                         {!hideActionButtons && (

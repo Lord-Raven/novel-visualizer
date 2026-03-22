@@ -10,7 +10,7 @@ import { motion, easeOut, easeIn, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useRef, useMemo, memo } from "react";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 var IDLE_HEIGHT = 80;
-var SPEAKING_HEIGHT = 90;
+var SPEAKING_HEIGHT = 85;
 var ActorImage = ({
   id,
   resolveImageUrl,
@@ -923,7 +923,7 @@ function NovelVisualizer(props) {
           xPosition,
           yPosition,
           zIndex,
-          heightMultiplier: isSpeaking ? 1 : 0.95 * sceneActorScale,
+          heightMultiplier: isSpeaking ? 1 : sceneActorScale,
           speaker: isSpeaking,
           highlightColor: isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor,
           isAudioPlaying: isSpeaking && isAudioPlaying && enableTalkingAnimation
@@ -1091,11 +1091,12 @@ function NovelVisualizer(props) {
                   minHeight: isVerticalLayout ? "20vh" : void 0,
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "space-between"
+                  justifyContent: "space-between",
+                  overflow: "visible"
                 },
                 children: [
-                  /* @__PURE__ */ jsxs3(Box, { sx: { display: "flex", alignItems: "center" }, children: [
-                    /* @__PURE__ */ jsxs3(Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "center", flex: 1 }, children: [
+                  /* @__PURE__ */ jsxs3(Box, { sx: { display: "flex", alignItems: "flex-end", overflow: "visible" }, children: [
+                    /* @__PURE__ */ jsxs3(Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "flex-end", flex: 1, overflow: "visible" }, children: [
                       /* @__PURE__ */ jsx5(
                         IconButton,
                         {
@@ -1174,7 +1175,19 @@ function NovelVisualizer(props) {
                           children: /* @__PURE__ */ jsx5(ChevronRight, { fontSize: isVerticalLayout ? "inherit" : "small", sx: { fontSize: isVerticalLayout ? "14px" : void 0 } })
                         }
                       ),
-                      renderNameplateNode()
+                      /* @__PURE__ */ jsx5(
+                        Box,
+                        {
+                          sx: {
+                            height: 0,
+                            overflow: "visible",
+                            display: "flex",
+                            alignItems: "flex-end",
+                            alignSelf: "flex-end"
+                          },
+                          children: renderNameplateNode()
+                        }
+                      )
                     ] }),
                     !hideActionButtons && /* @__PURE__ */ jsxs3(Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "center" }, children: [
                       !isEditingMessage ? /* @__PURE__ */ jsx5(

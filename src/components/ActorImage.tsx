@@ -2,7 +2,7 @@ import {motion, Variants, easeOut, easeIn, AnimatePresence} from "framer-motion"
 import {FC, useState, useEffect, useRef, useMemo, memo} from "react";
 
 const IDLE_HEIGHT: number = 80;
-const SPEAKING_HEIGHT: number = 90;
+const SPEAKING_HEIGHT: number = 85;
 
 interface ActorImageProps {
     id: string;
