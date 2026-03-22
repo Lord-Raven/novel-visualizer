@@ -866,7 +866,7 @@ function NovelVisualizer(props) {
     setOriginalMessage("");
   };
   const sceneEnded = Boolean(index >= 0 && index < localScript.script.length && localScript.script[index]?.endScene);
-  const progressLabel = `${!localScript || localScript.script.length === 0 ? 0 : index + 1} / ${localScript ? localScript.script.length : 0}`;
+  const progressLabel = `${!localScript || !localScript.script || localScript.script.length === 0 ? 0 : index + 1} / ${!localScript || !localScript.script ? 0 : localScript.script.length}`;
   const placeholderText = useMemo2(() => {
     if (!localScript || !localScript.script) return "Type your next action...";
     if (typeof inputPlaceholder === "function") {
