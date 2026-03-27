@@ -1,5 +1,5 @@
 // src/components/NovelVisualizer.tsx
-import React3, { useEffect as useEffect3, useMemo as useMemo2, useRef as useRef2, useState as useState3 } from "react";
+import React3, { useEffect as useEffect3, useMemo as useMemo2, useRef, useState as useState3 } from "react";
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from "@mui/material";
 import { alpha, darken, lighten, useTheme } from "@mui/material/styles";
 import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, Computer, Warning } from "@mui/icons-material";
@@ -7,7 +7,7 @@ import { AnimatePresence as AnimatePresence2 } from "framer-motion";
 
 // src/components/ActorImage.tsx
 import { motion, easeOut, easeIn, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useRef, useMemo, memo } from "react";
+import { useState, useEffect, useMemo, memo } from "react";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 var IDLE_HEIGHT = 80;
 var SPEAKING_HEIGHT = 85;
@@ -27,31 +27,35 @@ var ActorImage = ({
   isAudioPlaying = false
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
-  const [prevImageUrl, setPrevImageUrl] = useState("");
+  const [displayedImageUrl, setDisplayedImageUrl] = useState("");
   const [aspectRatio, setAspectRatio] = useState("9 / 16");
   const imageUrl = resolveImageUrl();
-  const prevRawImageUrl = useRef(imageUrl);
   useEffect(() => {
     if (!imageUrl) {
       setIsLoaded(false);
+      setDisplayedImageUrl("");
       return;
     }
-    setIsLoaded(false);
+    if (imageUrl === displayedImageUrl && isLoaded) {
+      return;
+    }
+    let isCancelled = false;
     const img = new Image();
     img.onload = () => {
+      if (isCancelled) {
+        return;
+      }
       if (img.naturalWidth && img.naturalHeight) {
         setAspectRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
       }
+      setDisplayedImageUrl(imageUrl);
       setIsLoaded(true);
     };
     img.src = imageUrl;
-  }, [imageUrl]);
-  useEffect(() => {
-    if (prevRawImageUrl.current !== imageUrl) {
-      setPrevImageUrl(prevRawImageUrl.current);
-      prevRawImageUrl.current = imageUrl;
-    }
-  }, [imageUrl]);
+    return () => {
+      isCancelled = true;
+    };
+  }, [displayedImageUrl, imageUrl, isLoaded]);
   const baseX = speaker ? 50 : xPosition;
   const baseY = yPosition;
   const variants = useMemo(() => {
@@ -182,7 +186,7 @@ var ActorImage = ({
     return speaker ? "talking" : "idle";
   }, [speaker, isAudioPlaying, variants, isGhost, animationParams]);
   const filterId = `tint-${id}`;
-  return isLoaded ? /* @__PURE__ */ jsxs(Fragment, { children: [
+  return displayedImageUrl ? /* @__PURE__ */ jsxs(Fragment, { children: [
     /* @__PURE__ */ jsx("svg", { style: { position: "absolute", width: 0, height: 0, overflow: "hidden" }, children: /* @__PURE__ */ jsx("defs", { children: /* @__PURE__ */ jsxs("filter", { id: filterId, x: "0%", y: "0%", width: "100%", height: "100%", colorInterpolationFilters: "sRGB", children: [
       /* @__PURE__ */ jsx("feFlood", { floodColor: highlightColor, result: "flood" }),
       /* @__PURE__ */ jsx("feComposite", { in: "flood", in2: "SourceGraphic", operator: "in", result: "masked" }),
@@ -201,31 +205,10 @@ var ActorImage = ({
         },
         style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center" },
         children: [
-          /* @__PURE__ */ jsx(AnimatePresence, { children: prevImageUrl && prevImageUrl !== imageUrl && /* @__PURE__ */ jsx(
+          /* @__PURE__ */ jsx(AnimatePresence, { children: displayedImageUrl && /* @__PURE__ */ jsx(
             motion.img,
             {
-              src: prevImageUrl,
-              initial: { opacity: 1 },
-              animate: { opacity: 0 },
-              exit: { opacity: 0 },
-              transition: { duration: 0.5 },
-              style: {
-                position: "absolute",
-                top: 0,
-                width: "100%",
-                height: "100%",
-                filter: `url(#${filterId}) blur(2.5px)`,
-                zIndex: 3,
-                pointerEvents: "none",
-                ...ghostMaskStyle
-              }
-            },
-            `${id}_${prevImageUrl}_prev`
-          ) }),
-          /* @__PURE__ */ jsx(AnimatePresence, { children: imageUrl && /* @__PURE__ */ jsx(
-            motion.img,
-            {
-              src: imageUrl,
+              src: displayedImageUrl,
               initial: { opacity: 0 },
               animate: { opacity: 1 },
               exit: { opacity: 0 },
@@ -241,12 +224,12 @@ var ActorImage = ({
                 ...ghostMaskStyle
               }
             },
-            `${id}_${imageUrl}_bg`
+            `${id}_${displayedImageUrl}_bg`
           ) }),
-          /* @__PURE__ */ jsx(AnimatePresence, { children: imageUrl && /* @__PURE__ */ jsx(
+          /* @__PURE__ */ jsx(AnimatePresence, { children: displayedImageUrl && /* @__PURE__ */ jsx(
             motion.img,
             {
-              src: imageUrl,
+              src: displayedImageUrl,
               initial: { opacity: 0 },
               animate: { opacity: 0.75 },
               exit: { opacity: 0 },
@@ -263,7 +246,7 @@ var ActorImage = ({
               onMouseEnter,
               onMouseLeave
             },
-            `${id}_${imageUrl}_main`
+            `${id}_${displayedImageUrl}_main`
           ) })
         ]
       },
@@ -658,15 +641,15 @@ function NovelVisualizer(props) {
   const [messageBoxTopVh, setMessageBoxTopVh] = useState3(isVerticalLayout ? 50 : 60);
   const [loading, setLoading] = useState3(false);
   const isLoading = loading || externalLoading;
-  const messageBoxRef = useRef2(null);
+  const messageBoxRef = useRef(null);
   const [isEditingMessage, setIsEditingMessage] = useState3(false);
   const [editedMessage, setEditedMessage] = useState3("");
   const [originalMessage, setOriginalMessage] = useState3("");
   const [localScript, setLocalScript] = useState3(script);
   const scriptEntries = useMemo2(() => localScript?.script ?? [], [localScript]);
   const [index, setIndex] = useState3(-1);
-  const prevIndexRef = useRef2(index);
-  const prevExternalLoadingRef = useRef2(externalLoading);
+  const prevIndexRef = useRef(index);
+  const prevExternalLoadingRef = useRef(externalLoading);
   const accentMain = theme.palette.primary.main;
   const accentLight = theme.palette.primary.light;
   const errorMain = theme.palette.error.main;

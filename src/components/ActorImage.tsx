@@ -1,5 +1,5 @@
 import {motion, Variants, easeOut, easeIn, AnimatePresence} from "framer-motion";
-import {FC, useState, useEffect, useRef, useMemo, memo} from "react";
+import {FC, useState, useEffect, useMemo, memo} from "react";
 
 const IDLE_HEIGHT: number = 80;
 const SPEAKING_HEIGHT: number = 85;
@@ -40,35 +40,40 @@ const ActorImage: FC<ActorImageProps> = ({
     isAudioPlaying = false
 }) => {
     const [isLoaded, setIsLoaded] = useState<boolean>(false);
-    const [prevImageUrl, setPrevImageUrl] = useState<string>('');
+    const [displayedImageUrl, setDisplayedImageUrl] = useState<string>('');
     const [aspectRatio, setAspectRatio] = useState<string>('9 / 16');
     const imageUrl = resolveImageUrl();
-    const prevRawImageUrl = useRef<string>(imageUrl);
 
-    // Load image to read aspect ratio; no canvas processing needed
+    // Preload the next image and only swap once it is ready.
     useEffect(() => {
         if (!imageUrl) {
             setIsLoaded(false);
+            setDisplayedImageUrl('');
             return;
         }
-        setIsLoaded(false);
+
+        if (imageUrl === displayedImageUrl && isLoaded) {
+            return;
+        }
+
+        let isCancelled = false;
         const img = new Image();
         img.onload = () => {
+            if (isCancelled) {
+                return;
+            }
             if (img.naturalWidth && img.naturalHeight) {
                 setAspectRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
             }
+            setDisplayedImageUrl(imageUrl);
             setIsLoaded(true);
         };
         img.src = imageUrl;
-    }, [imageUrl]);
 
-    // Track previous raw image URL for crossfade transition
-    useEffect(() => {
-        if (prevRawImageUrl.current !== imageUrl) {
-            setPrevImageUrl(prevRawImageUrl.current);
-            prevRawImageUrl.current = imageUrl;
-        }
-    }, [imageUrl]);
+        return () => {
+            isCancelled = true;
+        };
+    }, [displayedImageUrl, imageUrl, isLoaded]);
 
     // Calculate final parallax position
     const baseX = speaker ? 50 : xPosition;
@@ -238,7 +243,7 @@ const ActorImage: FC<ActorImageProps> = ({
 
     const filterId = `tint-${id}`;
 
-    return isLoaded ? (
+    return displayedImageUrl ? (
         <>
             {/* SVG filter: multiply image by highlightColor, preserving transparency */}
             <svg style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
@@ -265,34 +270,11 @@ const ActorImage: FC<ActorImageProps> = ({
             }}
             style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center'}}>
             <AnimatePresence>
-                {/* Previous image layer for crossfade */}
-                {prevImageUrl && prevImageUrl !== imageUrl && (
-                    <motion.img
-                        key={`${id}_${prevImageUrl}_prev`}
-                        src={prevImageUrl}
-                        initial={{ opacity: 1 }}
-                        animate={{ opacity: 0 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.5 }}
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            width: '100%',
-                            height: '100%',
-                            filter: `url(#${filterId}) blur(2.5px)`,
-                            zIndex: 3,
-                            pointerEvents: 'none',
-                            ...ghostMaskStyle
-                        }}
-                    />
-                )}
-            </AnimatePresence>
-            <AnimatePresence>
                 {/* Backing image layer - solid but blurry. */}
-                {imageUrl && (
+                {displayedImageUrl && (
                     <motion.img
-                        key={`${id}_${imageUrl}_bg`}
-                        src={imageUrl}
+                        key={`${id}_${displayedImageUrl}_bg`}
+                        src={displayedImageUrl}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -312,10 +294,10 @@ const ActorImage: FC<ActorImageProps> = ({
             </AnimatePresence>
             <AnimatePresence>
                 {/* Main image layer - semi transparent, but crisp. */}
-                {imageUrl && (
+                {displayedImageUrl && (
                     <motion.img
-                        key={`${id}_${imageUrl}_main`}
-                        src={imageUrl}
+                        key={`${id}_${displayedImageUrl}_main`}
+                        src={displayedImageUrl}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 0.75 }}
                         exit={{ opacity: 0 }}

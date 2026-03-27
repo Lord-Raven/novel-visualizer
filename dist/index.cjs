@@ -66,31 +66,35 @@ var ActorImage = ({
   isAudioPlaying = false
 }) => {
   const [isLoaded, setIsLoaded] = (0, import_react.useState)(false);
-  const [prevImageUrl, setPrevImageUrl] = (0, import_react.useState)("");
+  const [displayedImageUrl, setDisplayedImageUrl] = (0, import_react.useState)("");
   const [aspectRatio, setAspectRatio] = (0, import_react.useState)("9 / 16");
   const imageUrl = resolveImageUrl();
-  const prevRawImageUrl = (0, import_react.useRef)(imageUrl);
   (0, import_react.useEffect)(() => {
     if (!imageUrl) {
       setIsLoaded(false);
+      setDisplayedImageUrl("");
       return;
     }
-    setIsLoaded(false);
+    if (imageUrl === displayedImageUrl && isLoaded) {
+      return;
+    }
+    let isCancelled = false;
     const img = new Image();
     img.onload = () => {
+      if (isCancelled) {
+        return;
+      }
       if (img.naturalWidth && img.naturalHeight) {
         setAspectRatio(`${img.naturalWidth} / ${img.naturalHeight}`);
       }
+      setDisplayedImageUrl(imageUrl);
       setIsLoaded(true);
     };
     img.src = imageUrl;
-  }, [imageUrl]);
-  (0, import_react.useEffect)(() => {
-    if (prevRawImageUrl.current !== imageUrl) {
-      setPrevImageUrl(prevRawImageUrl.current);
-      prevRawImageUrl.current = imageUrl;
-    }
-  }, [imageUrl]);
+    return () => {
+      isCancelled = true;
+    };
+  }, [displayedImageUrl, imageUrl, isLoaded]);
   const baseX = speaker ? 50 : xPosition;
   const baseY = yPosition;
   const variants = (0, import_react.useMemo)(() => {
@@ -221,7 +225,7 @@ var ActorImage = ({
     return speaker ? "talking" : "idle";
   }, [speaker, isAudioPlaying, variants, isGhost, animationParams]);
   const filterId = `tint-${id}`;
-  return isLoaded ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+  return displayedImageUrl ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", { style: { position: "absolute", width: 0, height: 0, overflow: "hidden" }, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("defs", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("filter", { id: filterId, x: "0%", y: "0%", width: "100%", height: "100%", colorInterpolationFilters: "sRGB", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("feFlood", { floodColor: highlightColor, result: "flood" }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("feComposite", { in: "flood", in2: "SourceGraphic", operator: "in", result: "masked" }),
@@ -240,31 +244,10 @@ var ActorImage = ({
         },
         style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center" },
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: prevImageUrl && prevImageUrl !== imageUrl && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: displayedImageUrl && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
             import_framer_motion.motion.img,
             {
-              src: prevImageUrl,
-              initial: { opacity: 1 },
-              animate: { opacity: 0 },
-              exit: { opacity: 0 },
-              transition: { duration: 0.5 },
-              style: {
-                position: "absolute",
-                top: 0,
-                width: "100%",
-                height: "100%",
-                filter: `url(#${filterId}) blur(2.5px)`,
-                zIndex: 3,
-                pointerEvents: "none",
-                ...ghostMaskStyle
-              }
-            },
-            `${id}_${prevImageUrl}_prev`
-          ) }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: imageUrl && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-            import_framer_motion.motion.img,
-            {
-              src: imageUrl,
+              src: displayedImageUrl,
               initial: { opacity: 0 },
               animate: { opacity: 1 },
               exit: { opacity: 0 },
@@ -280,12 +263,12 @@ var ActorImage = ({
                 ...ghostMaskStyle
               }
             },
-            `${id}_${imageUrl}_bg`
+            `${id}_${displayedImageUrl}_bg`
           ) }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: imageUrl && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: displayedImageUrl && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
             import_framer_motion.motion.img,
             {
-              src: imageUrl,
+              src: displayedImageUrl,
               initial: { opacity: 0 },
               animate: { opacity: 0.75 },
               exit: { opacity: 0 },
@@ -302,7 +285,7 @@ var ActorImage = ({
               onMouseEnter,
               onMouseLeave
             },
-            `${id}_${imageUrl}_main`
+            `${id}_${displayedImageUrl}_main`
           ) })
         ]
       },
