@@ -999,6 +999,7 @@ function NovelVisualizer(props) {
         message: inputText,
         speechUrl: ""
       });
+      setLocalScript({ ...localScript });
       setIndex(localScript.script.length - 1);
       atIndex = localScript.script.length - 1;
     }

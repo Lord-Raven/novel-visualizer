@@ -543,6 +543,7 @@ export function NovelVisualizer<
                 message: inputText,
                 speechUrl: '',
             });
+            setLocalScript({...localScript}); // Trigger re-render with updated script
             setIndex(localScript.script.length - 1); // Move to this input.
             atIndex = localScript.script.length - 1;
         }
