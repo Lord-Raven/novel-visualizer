@@ -351,6 +351,7 @@ export function NovelVisualizer<
                 ? -1
                 : Math.min(Math.max(nextIndex, 0), maxIndex);
 
+            console.log(`Updating current index to ${boundedIndex} (requested: ${nextIndex}, max: ${maxIndex})`, { currentScript });
             if (currentScript.currentIndex === boundedIndex) {
                 return currentScript;
             }

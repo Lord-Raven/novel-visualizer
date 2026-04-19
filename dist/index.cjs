@@ -822,6 +822,7 @@ function NovelVisualizer(props) {
       }
       const maxIndex = currentScript.script.length - 1;
       const boundedIndex = maxIndex < 0 ? -1 : Math.min(Math.max(nextIndex, 0), maxIndex);
+      console.log(`Updating current index to ${boundedIndex} (requested: ${nextIndex}, max: ${maxIndex})`, { currentScript });
       if (currentScript.currentIndex === boundedIndex) {
         return currentScript;
       }
