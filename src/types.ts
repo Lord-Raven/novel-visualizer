@@ -5,6 +5,7 @@ export interface NovelActor {
     themeColor?: string;
     themeFontFamily?: string;
     defaultImageUrl?: string;
+    heightMultiplier?: number;
 }
 
 /**
@@ -24,6 +25,7 @@ export interface NovelScriptEntry {
  */
 export interface NovelScript<TEntry extends NovelScriptEntry = NovelScriptEntry> {
     id: string;
+    currentIndex: number;
     script: TEntry[];
 }
 

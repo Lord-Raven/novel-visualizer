@@ -8,6 +8,7 @@ interface NovelActor {
     themeColor?: string;
     themeFontFamily?: string;
     defaultImageUrl?: string;
+    heightMultiplier?: number;
 }
 /**
  * Base interface for script entries that the library requires.
@@ -25,6 +26,7 @@ interface NovelScriptEntry {
  */
 interface NovelScript<TEntry extends NovelScriptEntry = NovelScriptEntry> {
     id: string;
+    currentIndex: number;
     script: TEntry[];
 }
 

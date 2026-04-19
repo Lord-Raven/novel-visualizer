@@ -22,6 +22,30 @@ export interface SubmitButtonConfig {
     colorScheme?: 'primary' | 'error';
 }
 
+const normalizeScriptState = <TScript extends NovelScript>(
+    script: TScript | null,
+    fallbackIndex?: number
+): TScript | null => {
+    if (!script) {
+        return null;
+    }
+
+    const scriptEntries = Array.isArray(script.script) ? [...script.script] : [];
+    const maxIndex = scriptEntries.length - 1;
+    const requestedIndex = Number.isInteger(script.currentIndex)
+        ? script.currentIndex
+        : fallbackIndex ?? -1;
+    const boundedIndex = maxIndex < 0
+        ? -1
+        : Math.min(Math.max(requestedIndex, 0), maxIndex);
+
+    return {
+        ...script,
+        currentIndex: boundedIndex,
+        script: scriptEntries
+    };
+};
+
 const calculateActorXPosition = (actorIndex: number, totalActors: number, anySpeaker: boolean): number => {
     const leftRange = Math.min(40, Math.ceil((totalActors - 2) / 2) * 20);
     const rightRange = Math.min(40, Math.floor((totalActors - 2) / 2) * 20);
@@ -151,10 +175,10 @@ export function NovelVisualizer<
     const [editedMessage, setEditedMessage] = useState<string>('');
     const [originalMessage, setOriginalMessage] = useState<string>('');
 
-    const [localScript, setLocalScript] = useState<TScript | null>(script);
+    const [localScript, setLocalScript] = useState<TScript | null>(() => normalizeScriptState(script));
     const scriptEntries = useMemo(() => localScript?.script ?? [], [localScript]);
 
-    const [index, setIndex] = useState<number>(-1);
+    const index = localScript?.currentIndex ?? -1;
     const prevIndexRef = useRef<number>(index);
     const prevExternalLoadingRef = useRef<boolean>(externalLoading);
 
@@ -227,8 +251,8 @@ export function NovelVisualizer<
 
 
     useEffect(() => {
-        setLocalScript(script);
-    }, [script, externalLoading]);
+        setLocalScript(normalizeScriptState(script));
+    }, [script]);
 
     useEffect(() => {
         if (messageBoxRef.current) {
@@ -251,6 +275,17 @@ export function NovelVisualizer<
 
         return getPresentActors(localScript, index);
     }, [localScript, index, actors, getPresentActors]);
+
+    const focusActor = useMemo(() => {
+        // start at index and work back to last speaker Id that is in actors:
+        for (let i = Math.min(index, scriptEntries.length - 1); i >= 0; i--) {
+            const speakerId = scriptEntries[i].speakerId;
+            if (speakerId && actors[speakerId]) {
+                return actors[speakerId];
+            }
+        }
+        return null;
+    }, [scriptEntries, index, actors]);
 
     const speakerActor = useMemo(() => {
         return index >= 0 && index < scriptEntries.length && scriptEntries[index].speakerId ? actors[scriptEntries[index].speakerId] : null;
@@ -296,10 +331,32 @@ export function NovelVisualizer<
     useEffect(() => {
         if (prevExternalLoadingRef.current !== externalLoading) {
             prevIndexRef.current = -1;
-            setIndex(index => Math.min(Math.max(0, index), scriptEntries.length - 1)); // Ensure index is in bounds after script changes
+            setLocalScript((currentScript) => normalizeScriptState(currentScript));
             prevExternalLoadingRef.current = externalLoading;
         }
-    }, [externalLoading, scriptEntries.length]);
+    }, [externalLoading]);
+
+    const updateCurrentIndex = (nextIndex: number) => {
+        setLocalScript((currentScript) => {
+            if (!currentScript || !Array.isArray(currentScript.script)) {
+                return currentScript;
+            }
+
+            const maxIndex = currentScript.script.length - 1;
+            const boundedIndex = maxIndex < 0
+                ? -1
+                : Math.min(Math.max(nextIndex, 0), maxIndex);
+
+            if (currentScript.currentIndex === boundedIndex) {
+                return currentScript;
+            }
+
+            return {
+                ...currentScript,
+                currentIndex: boundedIndex
+            };
+        });
+    };
 
     useEffect(() => {
         if (!mousePosition) {
@@ -371,7 +428,7 @@ export function NovelVisualizer<
             handleConfirmEdit();
         }
         if (finishTyping) {
-            setIndex(Math.min(scriptEntries.length - 1, index + 1));
+            updateCurrentIndex(index + 1);
         } else if (allowTypingSkip) {
             setFinishTyping(true);
         }
@@ -382,7 +439,7 @@ export function NovelVisualizer<
         if (isEditingMessage) {
             handleConfirmEdit();
         }
-        setIndex(Math.max(0, index - 1));
+        updateCurrentIndex(index - 1);
     };
 
     const handleEnterEditMode = () => {
@@ -405,11 +462,11 @@ export function NovelVisualizer<
         if (onUpdateMessage) {
             onUpdateMessage(index, editedMessage);
         } else {
-            const updated = { ...localScript };
+            const updated = { ...localScript, script: [...localScript.script] };
             if (index >= 0 && index < updated.script.length && updated.script[index]) {
                 updated.script[index] = { ...updated.script[index], message: editedMessage };
             }
-            setLocalScript(updated);
+            setLocalScript(normalizeScriptState(updated, index));
         }
 
         setIsEditingMessage(false);
@@ -433,7 +490,7 @@ export function NovelVisualizer<
             return inputPlaceholder({ index, entry: index >= 0 && index < scriptEntries.length ? scriptEntries[index] as TEntry : undefined });
         }
         if (inputPlaceholder) return inputPlaceholder;
-        if (sceneEnded) return 'Scene concluded';
+        if (sceneEnded) return 'End scene or type to continue...';
         if (isLoading) return 'Loading...';
         return 'Type your next action...';
     }, [inputPlaceholder, index, localScript, scriptEntries, sceneEnded, isLoading]);
@@ -466,7 +523,7 @@ export function NovelVisualizer<
         const sceneActorScale = Math.max(0.7, 1 - Math.max(0, actorsAtIndex.length - 1) * scalePerActor);
 
         const actorElements = actorsAtIndex.map((actor, i) => {
-            const xPosition = calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
+            const xPosition = actor === focusActor ? 50 : calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
             const isSpeaking = actor === speakerActor;
             const isHovered = actor === hoveredActor;
             const yPosition = isVerticalLayout ? 15 : 0;
@@ -483,7 +540,7 @@ export function NovelVisualizer<
                     xPosition={xPosition}
                     yPosition={yPosition}
                     zIndex={zIndex}
-                    heightMultiplier={isSpeaking ? 1 : sceneActorScale}
+                    heightMultiplier={(isSpeaking ? 1 : sceneActorScale) * (actor.heightMultiplier ?? 1)}
                     speaker={isSpeaking}
                     highlightColor={isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor}
                     isAudioPlaying={isSpeaking && isAudioPlaying && enableTalkingAnimation}
@@ -509,7 +566,7 @@ export function NovelVisualizer<
                     xPosition={ghostSide === 'left' ? 10 : 90}
                     yPosition={yPosition}
                     zIndex={45}
-                    heightMultiplier={(isVerticalLayout ? 0.7 : 0.9)}
+                    heightMultiplier={(isVerticalLayout ? 0.7 : 0.9) * (speakerActor.heightMultiplier ?? 1)}
                     speaker={true}
                     highlightColor={isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor}
                     isGhost={true}
@@ -528,6 +585,8 @@ export function NovelVisualizer<
             handleConfirmEdit();
         }
 
+        let workingScript = localScript;
+
         if (!inputText.trim() && index < scriptEntries.length - 1) {
             next();
             return;
@@ -537,31 +596,42 @@ export function NovelVisualizer<
         // If onSubmitInput exists, call it and then set loading to false when the promise completes
         if (inputText.trim()) {
             // Slice skit to current index + 1 to remove any future entries, then add player's input as a new entry:
-            localScript.script = localScript.script.slice(0, index + 1);
-            localScript.script.push({
-                speakerId: playerActorId,
-                message: inputText,
-                speechUrl: '',
-            });
-            setLocalScript({...localScript}); // Trigger re-render with updated script
-            setIndex(localScript.script.length - 1); // Move to this input.
-            atIndex = localScript.script.length - 1;
+            const nextScript = normalizeScriptState({
+                ...workingScript,
+                script: [
+                    ...workingScript.script.slice(0, index + 1),
+                    {
+                        speakerId: playerActorId,
+                        message: inputText,
+                        speechUrl: '',
+                    }
+                ],
+                currentIndex: index + 1
+            } as TScript, index + 1);
+
+            if (!nextScript) {
+                return;
+            }
+
+            setLocalScript(nextScript);
+            atIndex = nextScript.currentIndex;
+            workingScript = nextScript;
         }
         if (onSubmitInput) {
             setLoading(true);
-            const tempScript = {...localScript}; // Create a temp copy to pass to onSubmitInput
+            const tempScript = normalizeScriptState(workingScript, atIndex);
+            if (!tempScript) {
+                setLoading(false);
+                return;
+            }
             onSubmitInput(inputText, tempScript, atIndex).then((newScript) => {
                 setLoading(false);
                 if (newScript) {
-                    if (newScript.id !== tempScript.id) {
-                        setIndex(0); // Move to first entry, if this is a new script.
-                    } else {
-                        setIndex(Math.min((newScript?.script?.length ?? 0) - 1, atIndex + 1)); // Move to next entry after submission
-                    }
+                    const nextIndex = newScript.id !== tempScript.id ? 0 : atIndex + 1;
+                    setLocalScript(normalizeScriptState(newScript, nextIndex));
                 } else {
-                    setIndex(-1); // Set to -1 to indicate end of script if no new script is returned
+                    setLocalScript(null);
                 }
-                setLocalScript(newScript ? { ...newScript } : null);
             }).catch((error) => {
                 console.log('Submission failed', error);
                 setLoading(false);
@@ -574,15 +644,18 @@ export function NovelVisualizer<
         if (!localScript || !Array.isArray(localScript.script)) return;
         const rerollIndex = index;
         // Trim script to index before reroll point, then call onSubmitInput with the same input to regenerate from that point
-        const tempScript = {...localScript, script: localScript.script.slice(0, rerollIndex)};
+        const tempScript = normalizeScriptState({
+            ...localScript,
+            script: localScript.script.slice(0, rerollIndex),
+            currentIndex: rerollIndex - 1
+        } as TScript, rerollIndex - 1);
         console.log('Reroll clicked');
-        if (onSubmitInput) {
+        if (onSubmitInput && tempScript) {
             setLoading(true);
             console.log('Rerolling');
             onSubmitInput(inputText, tempScript, rerollIndex - 1).then((newScript) => {
                 setLoading(false);
-                setIndex(Math.min((newScript?.script?.length ?? 0) - 1, rerollIndex)); // Move to reroll point, which will now have new content
-                setLocalScript(newScript ? { ...newScript } : null);
+                setLocalScript(normalizeScriptState(newScript, rerollIndex));
             }).catch((error) => {
                 console.log('Reroll failed', error);
                 setLoading(false);
