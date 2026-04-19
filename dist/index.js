@@ -591,10 +591,12 @@ var normalizeScriptState = (script, fallbackIndex) => {
   if (!script) {
     return null;
   }
+  console.log("Normalizing script state", { script, fallbackIndex });
   const scriptEntries = Array.isArray(script.script) ? [...script.script] : [];
   const maxIndex = scriptEntries.length - 1;
   const requestedIndex = Number.isInteger(script.currentIndex) ? script.currentIndex : fallbackIndex ?? -1;
   const boundedIndex = maxIndex < 0 ? -1 : Math.min(Math.max(requestedIndex, 0), maxIndex);
+  console.log("Normalized script state", { boundedIndex, scriptEntries });
   return {
     ...script,
     currentIndex: boundedIndex,
@@ -727,19 +729,19 @@ function NovelVisualizer(props) {
   const focusActor = useMemo2(() => {
     for (let i = Math.min(index, scriptEntries.length - 1); i >= 0; i--) {
       const speakerId = scriptEntries[i].speakerId;
-      if (speakerId && actors[speakerId]) {
+      if (speakerId && actorsAtIndex.includes(actors[speakerId])) {
         return actors[speakerId];
       }
     }
     return null;
-  }, [scriptEntries, index, actors]);
+  }, [scriptEntries, index, actors, actorsAtIndex]);
   const speakerActor = useMemo2(() => {
     return index >= 0 && index < scriptEntries.length && scriptEntries[index].speakerId ? actors[scriptEntries[index].speakerId] : null;
   }, [scriptEntries, index, actors]);
   const displayMessage = useMemo2(() => {
     const message = index >= 0 && index < scriptEntries.length ? scriptEntries[index].message ?? "" : "";
     return formatMessage(message, speakerActor, messageTokens);
-  }, [scriptEntries, index, speakerActor, messageTokens]);
+  }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage]);
   useEffect3(() => {
     if (prevIndexRef.current !== index) {
       setFinishTyping(false);
