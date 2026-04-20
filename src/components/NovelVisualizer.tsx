@@ -154,7 +154,7 @@ export function NovelVisualizer<
     const [localScript, setLocalScript] = useState<TScript | null>(script);
     const scriptEntries = useMemo(() => localScript?.script ?? [], [localScript]);
 
-    const [index, setIndex] = useState<number>(-1);
+    const [index, setIndex] = useState<number>(script?.currentIndex ?? -1);
     const prevIndexRef = useRef<number>(index);
     const prevExternalLoadingRef = useRef<boolean>(externalLoading);
 
@@ -175,6 +175,14 @@ export function NovelVisualizer<
         }),
         [baseTextShadow, theme]
     );
+
+    const setCurrentIndex = (currentIndex: number): void => {
+        setLocalScript((prev) => {
+            if (!prev) return prev;
+            return { ...prev, currentIndex };
+        });
+        setIndex(currentIndex);
+    }
 
 
     const formatMessage = (
@@ -307,7 +315,7 @@ export function NovelVisualizer<
     useEffect(() => {
         if (prevExternalLoadingRef.current !== externalLoading) {
             prevIndexRef.current = -1;
-            setIndex(index => Math.min(Math.max(0, index), scriptEntries.length - 1)); // Ensure index is in bounds after script changes
+            setCurrentIndex(Math.min(Math.max(0, index), scriptEntries.length - 1)); // Ensure index is in bounds after script changes
             prevExternalLoadingRef.current = externalLoading;
         }
     }, [externalLoading, scriptEntries.length]);
@@ -382,7 +390,7 @@ export function NovelVisualizer<
             handleConfirmEdit();
         }
         if (finishTyping) {
-            setIndex(Math.min(scriptEntries.length - 1, index + 1));
+            setCurrentIndex(Math.min(scriptEntries.length - 1, index + 1));
         } else if (allowTypingSkip) {
             setFinishTyping(true);
         }
@@ -393,7 +401,7 @@ export function NovelVisualizer<
         if (isEditingMessage) {
             handleConfirmEdit();
         }
-        setIndex(Math.max(0, index - 1));
+        setCurrentIndex(Math.max(0, index - 1));
     };
 
     const handleEnterEditMode = () => {
@@ -555,7 +563,7 @@ export function NovelVisualizer<
                 speechUrl: '',
             });
             setLocalScript({...localScript}); // Trigger re-render with updated script
-            setIndex(localScript.script.length - 1); // Move to this input.
+            setCurrentIndex(localScript.script.length - 1); // Move to this input.
             atIndex = localScript.script.length - 1;
         }
         if (onSubmitInput) {
@@ -565,12 +573,12 @@ export function NovelVisualizer<
                 setLoading(false);
                 if (newScript) {
                     if (newScript.id !== tempScript.id) {
-                        setIndex(0); // Move to first entry, if this is a new script.
+                        setCurrentIndex(0); // Move to first entry, if this is a new script.
                     } else {
-                        setIndex(Math.min((newScript?.script?.length ?? 0) - 1, atIndex + 1)); // Move to next entry after submission
+                        setCurrentIndex(Math.min((newScript?.script?.length ?? 0) - 1, atIndex + 1)); // Move to next entry after submission
                     }
                 } else {
-                    setIndex(-1); // Set to -1 to indicate end of script if no new script is returned
+                    setCurrentIndex(-1); // Set to -1 to indicate end of script if no new script is returned
                 }
                 setLocalScript(newScript ? { ...newScript } : null);
             }).catch((error) => {
@@ -592,7 +600,7 @@ export function NovelVisualizer<
             console.log('Rerolling');
             onSubmitInput(inputText, tempScript, rerollIndex - 1).then((newScript) => {
                 setLoading(false);
-                setIndex(Math.min((newScript?.script?.length ?? 0) - 1, rerollIndex)); // Move to reroll point, which will now have new content
+                setCurrentIndex(Math.min((newScript?.script?.length ?? 0) - 1, rerollIndex)); // Move to reroll point, which will now have new content
                 setLocalScript(newScript ? { ...newScript } : null);
             }).catch((error) => {
                 console.log('Reroll failed', error);
