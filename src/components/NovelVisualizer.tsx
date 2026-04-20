@@ -176,10 +176,9 @@ export function NovelVisualizer<
         [baseTextShadow, theme]
     );
 
-    const setCurrentIndex = (currentIndex: number): void => {
+    const setCurrentIndex = (currentIndex: number) => {
         if (localScript) {
-            const updated = { ...localScript, currentIndex: currentIndex };
-            setLocalScript(updated);
+            localScript.currentIndex = currentIndex;
         }
         setIndex(currentIndex);
     }

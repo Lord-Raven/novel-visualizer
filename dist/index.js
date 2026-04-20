@@ -669,8 +669,7 @@ function NovelVisualizer(props) {
   );
   const setCurrentIndex = (currentIndex) => {
     if (localScript) {
-      const updated = { ...localScript, currentIndex };
-      setLocalScript(updated);
+      localScript.currentIndex = currentIndex;
     }
     setIndex(currentIndex);
   };
