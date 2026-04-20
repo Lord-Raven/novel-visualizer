@@ -177,10 +177,10 @@ export function NovelVisualizer<
     );
 
     const setCurrentIndex = (currentIndex: number): void => {
-        setLocalScript((prev) => {
-            if (!prev) return prev;
-            return { ...prev, currentIndex };
-        });
+        if (localScript) {
+            const updated = { ...localScript, currentIndex: currentIndex };
+            setLocalScript(updated);
+        }
         setIndex(currentIndex);
     }
 
@@ -278,7 +278,7 @@ export function NovelVisualizer<
     const displayMessage = useMemo(() => {
         const message = index >= 0 && index < scriptEntries.length ? scriptEntries[index].message ?? '' : '';
         return formatMessage(message, speakerActor, messageTokens);
-    }, [scriptEntries, index, speakerActor, messageTokens]);
+    }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage]);
 
     useEffect(() => {
         if (prevIndexRef.current !== index) {

@@ -668,10 +668,10 @@ function NovelVisualizer(props) {
     [baseTextShadow, theme]
   );
   const setCurrentIndex = (currentIndex) => {
-    setLocalScript((prev2) => {
-      if (!prev2) return prev2;
-      return { ...prev2, currentIndex };
-    });
+    if (localScript) {
+      const updated = { ...localScript, currentIndex };
+      setLocalScript(updated);
+    }
     setIndex(currentIndex);
   };
   const formatMessage = (text, speakerActor2, tokens) => {
@@ -732,7 +732,7 @@ function NovelVisualizer(props) {
   const displayMessage = useMemo2(() => {
     const message = index >= 0 && index < scriptEntries.length ? scriptEntries[index].message ?? "" : "";
     return formatMessage(message, speakerActor, messageTokens);
-  }, [scriptEntries, index, speakerActor, messageTokens]);
+  }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage]);
   useEffect3(() => {
     if (prevIndexRef.current !== index) {
       setFinishTyping(false);
