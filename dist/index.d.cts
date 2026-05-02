@@ -39,8 +39,8 @@ interface NovelScriptEntry {
  * Consumers can extend this with their own custom properties.
  */
 interface NovelScript<TEntry extends NovelScriptEntry = NovelScriptEntry> {
-    id: string;
-    currentIndex: number;
+    id?: string;
+    currentIndex?: number;
     script: TEntry[];
 }
 
