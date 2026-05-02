@@ -1,5 +1,5 @@
 // src/components/NovelVisualizer.tsx
-import React3, { useEffect as useEffect3, useMemo as useMemo2, useRef, useState as useState3 } from "react";
+import React4, { useEffect as useEffect3, useMemo as useMemo2, useRef, useState as useState3 } from "react";
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from "@mui/material";
 import { alpha, darken, lighten, useTheme } from "@mui/material/styles";
 import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, Computer, Warning } from "@mui/icons-material";
@@ -497,9 +497,135 @@ var TypeOut = ({
 var TypeOut_default = TypeOut;
 
 // src/utils/TextFormatting.tsx
+import React3 from "react";
 import { Fragment as Fragment2, jsx as jsx4 } from "react/jsx-runtime";
-var formatInlineStyles = (text) => {
+var INLINE_STYLE_SHEET_ID = "novel-visualizer-inline-style-presets";
+var INLINE_STYLE_PRESET_CSS = `
+@keyframes nvInlineShinyPulse {
+    0%, 68%, 100% {
+        filter: brightness(1) saturate(1);
+        text-shadow: inherit;
+    }
+    72% {
+        filter: brightness(1.28) saturate(1.22);
+        text-shadow: 0 0 5px currentColor, 0 0 14px rgba(255, 255, 255, 0.9);
+    }
+    76% {
+        filter: brightness(1.1) saturate(1.08);
+        text-shadow: 0 0 3px currentColor, 0 0 9px rgba(255, 255, 255, 0.55);
+    }
+}
+
+@keyframes nvInlineSpookyWave {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    25% {
+        transform: translateY(-2px);
+    }
+    75% {
+        transform: translateY(2px);
+    }
+}
+
+@keyframes nvInlineQuake {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+    25% {
+        transform: translate(-0.45px, 0.45px) rotate(-0.2deg);
+    }
+    50% {
+        transform: translate(0.4px, -0.4px) rotate(0.2deg);
+    }
+    75% {
+        transform: translate(-0.35px, -0.45px) rotate(-0.15deg);
+    }
+    100% {
+        transform: translate(0.35px, 0.25px) rotate(0.15deg);
+    }
+}
+`;
+var ensureInlineStyleSheet = () => {
+  if (typeof document === "undefined") {
+    return;
+  }
+  if (document.getElementById(INLINE_STYLE_SHEET_ID)) {
+    return;
+  }
+  const styleElement = document.createElement("style");
+  styleElement.id = INLINE_STYLE_SHEET_ID;
+  styleElement.textContent = INLINE_STYLE_PRESET_CSS;
+  document.head.appendChild(styleElement);
+};
+var defaultInlineClassStyles = {
+  spooky: ({ baseColor, baseTextShadow }) => ({
+    color: baseColor,
+    display: "inline-block",
+    letterSpacing: "0.06em",
+    fontStyle: "italic",
+    animation: "nvInlineSpookyWave 2.4s ease-in-out infinite",
+    textShadow: baseTextShadow ? `${baseTextShadow}, 0 0 8px currentColor` : "0 0 8px currentColor"
+  }),
+  shiny: ({ baseColor }) => ({
+    color: baseColor,
+    display: "inline-block",
+    fontWeight: 700,
+    animation: "nvInlineShinyPulse 5.2s ease-in-out infinite",
+    textShadow: "0 0 4px currentColor, 0 0 11px rgba(255, 255, 255, 0.58)",
+    filter: "saturate(1.15)"
+  }),
+  quake: ({ baseColor, baseTextShadow }) => ({
+    color: baseColor,
+    display: "inline-block",
+    animation: "nvInlineQuake 95ms steps(2, end) infinite",
+    textShadow: baseTextShadow ? `${baseTextShadow}, 0 0 2px currentColor` : "0 0 2px currentColor"
+  }),
+  whisper: ({ baseColor, baseTextShadow, baseFontFamily }) => ({
+    color: baseColor,
+    fontFamily: baseFontFamily,
+    letterSpacing: "0.05em",
+    fontSize: "0.92em",
+    opacity: 0.85,
+    textShadow: baseTextShadow
+  })
+};
+var CLASS_TAG_PATTERN = /\[([a-zA-Z0-9_-]*)\]/g;
+var resolveClassStyles = (options) => {
+  if (options?.includeDefaultClassStyles === false) {
+    return { ...options.classStyles ?? {} };
+  }
+  return {
+    ...defaultInlineClassStyles,
+    ...options?.classStyles ?? {}
+  };
+};
+var getResolvedClassStyle = (classStyle, styleContext) => {
+  if (!classStyle) return void 0;
+  if (typeof classStyle === "function") {
+    return classStyle(styleContext);
+  }
+  return classStyle;
+};
+var renderSpookyCharacters = (text, keyPrefix) => {
+  return Array.from(text).map((character, index) => /* @__PURE__ */ jsx4(
+    "span",
+    {
+      style: {
+        display: "inline-block",
+        animation: "nvInlineSpookyWave 2.2s ease-in-out infinite",
+        animationDelay: `${index * 75}ms`
+      },
+      children: character === " " ? "\xA0" : character
+    },
+    `${keyPrefix}-char-${index}`
+  ));
+};
+var formatInlineStyles = (text, options) => {
   if (!text) return /* @__PURE__ */ jsx4(Fragment2, {});
+  ensureInlineStyleSheet();
+  const classStyles = resolveClassStyles(options);
+  const styleContext = options?.styleContext ?? {};
   const formatItalics = (text2) => {
     const italicParts = text2.split(/(\*(?!\*)[^*]+\*|_[^_]+_)/g);
     return /* @__PURE__ */ jsx4(Fragment2, { children: italicParts.map((italicPart, italicIndex) => {
@@ -582,7 +708,47 @@ var formatInlineStyles = (text) => {
       }
     }) });
   };
-  return formatHeaders(text);
+  const renderSegment = (segmentText, activeClass, segmentKey) => {
+    if (!segmentText) return null;
+    if (activeClass === null) {
+      return /* @__PURE__ */ jsx4(React3.Fragment, { children: formatHeaders(segmentText) }, segmentKey);
+    }
+    const resolvedStyle = getResolvedClassStyle(classStyles[activeClass], styleContext);
+    if (!resolvedStyle) {
+      return null;
+    }
+    if (activeClass === "spooky") {
+      return /* @__PURE__ */ jsx4("span", { className: activeClass, style: resolvedStyle, children: renderSpookyCharacters(segmentText, segmentKey) }, segmentKey);
+    }
+    return /* @__PURE__ */ jsx4("span", { className: activeClass, style: resolvedStyle, children: formatHeaders(segmentText) }, segmentKey);
+  };
+  const formatTextWithClassTokens = (sourceText, keyPrefix = "inline") => {
+    const nodes = [];
+    let lastIndex = 0;
+    let segmentIndex = 0;
+    let activeClass = null;
+    let match;
+    const tagPattern = new RegExp(CLASS_TAG_PATTERN.source, "g");
+    while ((match = tagPattern.exec(sourceText)) !== null) {
+      const [fullMatch, tagName] = match;
+      const tagStart = match.index;
+      const pendingText = sourceText.slice(lastIndex, tagStart);
+      const node = renderSegment(pendingText, activeClass, `${keyPrefix}-seg-${segmentIndex}`);
+      if (node !== null) nodes.push(node);
+      segmentIndex += 1;
+      if (tagName === "") {
+        activeClass = null;
+      } else {
+        activeClass = tagName;
+      }
+      lastIndex = tagStart + fullMatch.length;
+    }
+    const trailingText = sourceText.slice(lastIndex);
+    const trailingNode = renderSegment(trailingText, activeClass, `${keyPrefix}-seg-${segmentIndex}`);
+    if (trailingNode !== null) nodes.push(trailingNode);
+    return /* @__PURE__ */ jsx4(Fragment2, { children: nodes });
+  };
+  return formatTextWithClassTokens(text);
 };
 
 // src/components/NovelVisualizer.tsx
@@ -628,15 +794,16 @@ function NovelVisualizer(props) {
     enableAudio = true,
     enableTalkingAnimation = true,
     enableReroll = true,
-    narratorLabel = ""
+    narratorLabel = "",
+    inlineStyleOptions
   } = props;
   const [inputText, setInputText] = useState3("");
   const [finishTyping, setFinishTyping] = useState3(false);
-  const [messageKey, setMessageKey] = React3.useState(0);
+  const [messageKey, setMessageKey] = React4.useState(0);
   const [hoveredActor, setHoveredActor] = useState3(null);
-  const [audioEnabled, setAudioEnabled] = React3.useState(enableAudio);
-  const currentAudioRef = React3.useRef(null);
-  const [isAudioPlaying, setIsAudioPlaying] = React3.useState(false);
+  const [audioEnabled, setAudioEnabled] = React4.useState(enableAudio);
+  const currentAudioRef = React4.useRef(null);
+  const [isAudioPlaying, setIsAudioPlaying] = React4.useState(false);
   const [mousePosition, setMousePosition] = useState3(null);
   const [messageBoxTopVh, setMessageBoxTopVh] = useState3(isVerticalLayout ? 50 : 60);
   const [loading, setLoading] = useState3(false);
@@ -690,9 +857,25 @@ function NovelVisualizer(props) {
     };
     return /* @__PURE__ */ jsx5(Fragment3, { children: dialogueParts.map((part, index2) => {
       if (part.startsWith('"') && part.endsWith('"')) {
-        return /* @__PURE__ */ jsx5("span", { style: dialogueStyle, children: formatInlineStyles(part) }, index2);
+        return /* @__PURE__ */ jsx5("span", { style: dialogueStyle, children: formatInlineStyles(part, {
+          ...inlineStyleOptions,
+          styleContext: {
+            ...inlineStyleOptions?.styleContext ?? {},
+            baseColor: dialogueStyle.color,
+            baseTextShadow: dialogueStyle.textShadow,
+            baseFontFamily: dialogueStyle.fontFamily
+          }
+        }) }, index2);
       }
-      return /* @__PURE__ */ jsx5("span", { style: proseStyle, children: formatInlineStyles(part) }, index2);
+      return /* @__PURE__ */ jsx5("span", { style: proseStyle, children: formatInlineStyles(part, {
+        ...inlineStyleOptions,
+        styleContext: {
+          ...inlineStyleOptions?.styleContext ?? {},
+          baseColor: proseStyle.color,
+          baseTextShadow: proseStyle.textShadow,
+          baseFontFamily: proseStyle.fontFamily
+        }
+      }) }, index2);
     }) });
   };
   useEffect3(() => {
@@ -1517,5 +1700,7 @@ export {
   ActorImage_default as ActorImage,
   BlurredBackground_default as BlurredBackground,
   NovelVisualizer_default as NovelVisualizer,
-  TypeOut_default as TypeOut
+  TypeOut_default as TypeOut,
+  defaultInlineClassStyles,
+  formatInlineStyles
 };

@@ -2,6 +2,20 @@ import * as React from 'react';
 import React__default, { FC } from 'react';
 import { SvgIconComponent } from '@mui/icons-material';
 
+interface InlineStyleContext {
+    baseColor?: string;
+    baseTextShadow?: string;
+    baseFontFamily?: string;
+}
+type InlineClassStyle = React__default.CSSProperties | ((context: InlineStyleContext) => React__default.CSSProperties);
+interface FormatInlineStylesOptions {
+    classStyles?: Record<string, InlineClassStyle>;
+    includeDefaultClassStyles?: boolean;
+    styleContext?: InlineStyleContext;
+}
+declare const defaultInlineClassStyles: Record<string, InlineClassStyle>;
+declare const formatInlineStyles: (text: string, options?: FormatInlineStylesOptions) => React__default.JSX.Element;
+
 interface NovelActor {
     id: string;
     name: string;
@@ -94,6 +108,7 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
     enableTalkingAnimation?: boolean;
     enableReroll?: boolean;
     narratorLabel?: string;
+    inlineStyleOptions?: FormatInlineStylesOptions;
 }
 declare function NovelVisualizer<TActor extends NovelActor, TScript extends NovelScript, TEntry extends NovelScriptEntry>(props: NovelVisualizerProps<TActor, TScript, TEntry>): JSX.Element;
 
@@ -140,4 +155,4 @@ interface TypeOutProps {
 }
 declare const TypeOut: React__default.FC<TypeOutProps>;
 
-export { _default as ActorImage, type NovelScript as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, type NovelActor, NovelVisualizer, type NovelVisualizerProps, type SubmitButtonConfig, TypeOut };
+export { _default as ActorImage, type NovelScript as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, type FormatInlineStylesOptions, type InlineClassStyle, type InlineStyleContext, type NovelActor, NovelVisualizer, type NovelVisualizerProps, type SubmitButtonConfig, TypeOut, defaultInlineClassStyles, formatInlineStyles };

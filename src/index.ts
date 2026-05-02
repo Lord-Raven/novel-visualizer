@@ -8,3 +8,9 @@ export type {
 export { default as ActorImage } from './components/ActorImage';
 export { default as BlurredBackground } from './components/BlurredBackground';
 export { default as TypeOut } from './components/TypeOut';
+export { formatInlineStyles, defaultInlineClassStyles } from './utils/TextFormatting';
+export type {
+    InlineStyleContext,
+    InlineClassStyle,
+    FormatInlineStylesOptions
+} from './utils/TextFormatting';

@@ -1,6 +1,169 @@
-// Helper function to format bold, italic, underlined, strikethrough, subscript, and header texts, following markdown-like syntax
-export const formatInlineStyles = (text: string): React.JSX.Element => {
+import React from 'react';
+
+export interface InlineStyleContext {
+    baseColor?: string;
+    baseTextShadow?: string;
+    baseFontFamily?: string;
+}
+
+export type InlineClassStyle =
+    | React.CSSProperties
+    | ((context: InlineStyleContext) => React.CSSProperties);
+
+export interface FormatInlineStylesOptions {
+    classStyles?: Record<string, InlineClassStyle>;
+    includeDefaultClassStyles?: boolean;
+    styleContext?: InlineStyleContext;
+}
+
+const INLINE_STYLE_SHEET_ID = 'novel-visualizer-inline-style-presets';
+const INLINE_STYLE_PRESET_CSS = `
+@keyframes nvInlineShinyPulse {
+    0%, 68%, 100% {
+        filter: brightness(1) saturate(1);
+        text-shadow: inherit;
+    }
+    72% {
+        filter: brightness(1.28) saturate(1.22);
+        text-shadow: 0 0 5px currentColor, 0 0 14px rgba(255, 255, 255, 0.9);
+    }
+    76% {
+        filter: brightness(1.1) saturate(1.08);
+        text-shadow: 0 0 3px currentColor, 0 0 9px rgba(255, 255, 255, 0.55);
+    }
+}
+
+@keyframes nvInlineSpookyWave {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    25% {
+        transform: translateY(-2px);
+    }
+    75% {
+        transform: translateY(2px);
+    }
+}
+
+@keyframes nvInlineQuake {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+    25% {
+        transform: translate(-0.45px, 0.45px) rotate(-0.2deg);
+    }
+    50% {
+        transform: translate(0.4px, -0.4px) rotate(0.2deg);
+    }
+    75% {
+        transform: translate(-0.35px, -0.45px) rotate(-0.15deg);
+    }
+    100% {
+        transform: translate(0.35px, 0.25px) rotate(0.15deg);
+    }
+}
+`;
+
+const ensureInlineStyleSheet = (): void => {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    if (document.getElementById(INLINE_STYLE_SHEET_ID)) {
+        return;
+    }
+
+    const styleElement = document.createElement('style');
+    styleElement.id = INLINE_STYLE_SHEET_ID;
+    styleElement.textContent = INLINE_STYLE_PRESET_CSS;
+    document.head.appendChild(styleElement);
+};
+
+export const defaultInlineClassStyles: Record<string, InlineClassStyle> = {
+    spooky: ({ baseColor, baseTextShadow }) => ({
+        color: baseColor,
+        display: 'inline-block',
+        letterSpacing: '0.06em',
+        fontStyle: 'italic',
+        animation: 'nvInlineSpookyWave 2.4s ease-in-out infinite',
+        textShadow: baseTextShadow
+            ? `${baseTextShadow}, 0 0 8px currentColor`
+            : '0 0 8px currentColor'
+    }),
+    shiny: ({ baseColor }) => ({
+        color: baseColor,
+        display: 'inline-block',
+        fontWeight: 700,
+        animation: 'nvInlineShinyPulse 5.2s ease-in-out infinite',
+        textShadow: '0 0 4px currentColor, 0 0 11px rgba(255, 255, 255, 0.58)',
+        filter: 'saturate(1.15)'
+    }),
+    quake: ({ baseColor, baseTextShadow }) => ({
+        color: baseColor,
+        display: 'inline-block',
+        animation: 'nvInlineQuake 95ms steps(2, end) infinite',
+        textShadow: baseTextShadow
+            ? `${baseTextShadow}, 0 0 2px currentColor`
+            : '0 0 2px currentColor'
+    }),
+    whisper: ({ baseColor, baseTextShadow, baseFontFamily }) => ({
+        color: baseColor,
+        fontFamily: baseFontFamily,
+        letterSpacing: '0.05em',
+        fontSize: '0.92em',
+        opacity: 0.85,
+        textShadow: baseTextShadow
+    })
+};
+
+const CLASS_TAG_PATTERN = /\[([a-zA-Z0-9_-]*)\]/g;
+
+const resolveClassStyles = (options?: FormatInlineStylesOptions): Record<string, InlineClassStyle> => {
+    if (options?.includeDefaultClassStyles === false) {
+        return { ...(options.classStyles ?? {}) };
+    }
+
+    return {
+        ...defaultInlineClassStyles,
+        ...(options?.classStyles ?? {})
+    };
+};
+
+const getResolvedClassStyle = (
+    classStyle: InlineClassStyle | undefined,
+    styleContext: InlineStyleContext
+): React.CSSProperties | undefined => {
+    if (!classStyle) return undefined;
+    if (typeof classStyle === 'function') {
+        return classStyle(styleContext);
+    }
+    return classStyle;
+};
+
+const renderSpookyCharacters = (text: string, keyPrefix: string): React.ReactNode[] => {
+    return Array.from(text).map((character, index) => (
+        <span
+            key={`${keyPrefix}-char-${index}`}
+            style={{
+                display: 'inline-block',
+                animation: 'nvInlineSpookyWave 2.2s ease-in-out infinite',
+                animationDelay: `${index * 75}ms`
+            }}
+        >
+            {character === ' ' ? '\u00A0' : character}
+        </span>
+    ));
+};
+
+// Helper function to format bold, italic, underlined, strikethrough, subscript, and header texts, following markdown-like syntax.
+// Also supports class-style tokens like [spooky]text[] with configurable style maps.
+export const formatInlineStyles = (text: string, options?: FormatInlineStylesOptions): React.JSX.Element => {
     if (!text) return <></>;
+
+    ensureInlineStyleSheet();
+
+    const classStyles = resolveClassStyles(options);
+    const styleContext = options?.styleContext ?? {};
 
     const formatItalics = (text: string): React.JSX.Element => {
         
@@ -139,5 +302,75 @@ export const formatInlineStyles = (text: string): React.JSX.Element => {
         );
     }
 
-    return formatHeaders(text);
+    const renderSegment = (segmentText: string, activeClass: string | null, segmentKey: string): React.ReactNode | null => {
+        if (!segmentText) return null;
+
+        if (activeClass === null) {
+            return (
+                <React.Fragment key={segmentKey}>
+                    {formatHeaders(segmentText)}
+                </React.Fragment>
+            );
+        }
+
+        const resolvedStyle = getResolvedClassStyle(classStyles[activeClass], styleContext);
+
+        if (!resolvedStyle) {
+            // Unknown style: suppress content entirely.
+            return null;
+        }
+
+        if (activeClass === 'spooky') {
+            return (
+                <span key={segmentKey} className={activeClass} style={resolvedStyle}>
+                    {renderSpookyCharacters(segmentText, segmentKey)}
+                </span>
+            );
+        }
+
+        return (
+            <span key={segmentKey} className={activeClass} style={resolvedStyle}>
+                {formatHeaders(segmentText)}
+            </span>
+        );
+    };
+
+    const formatTextWithClassTokens = (sourceText: string, keyPrefix = 'inline'): React.JSX.Element => {
+        const nodes: React.ReactNode[] = [];
+        let lastIndex = 0;
+        let segmentIndex = 0;
+        let activeClass: string | null = null;
+        let match: RegExpExecArray | null;
+        const tagPattern = new RegExp(CLASS_TAG_PATTERN.source, 'g');
+
+        while ((match = tagPattern.exec(sourceText)) !== null) {
+            const [fullMatch, tagName] = match;
+            const tagStart = match.index;
+
+            // Flush text accumulated since the last tag boundary.
+            const pendingText = sourceText.slice(lastIndex, tagStart);
+            const node = renderSegment(pendingText, activeClass, `${keyPrefix}-seg-${segmentIndex}`);
+            if (node !== null) nodes.push(node);
+            segmentIndex += 1;
+
+            if (tagName === '') {
+                // [] — close active style, resume unstyled.
+                activeClass = null;
+            } else {
+                // [word] — replace active style (implicit close of previous).
+                activeClass = tagName;
+            }
+
+            lastIndex = tagStart + fullMatch.length;
+        }
+
+        // Flush any remaining text after the last tag.
+        const trailingText = sourceText.slice(lastIndex);
+        const trailingNode = renderSegment(trailingText, activeClass, `${keyPrefix}-seg-${segmentIndex}`);
+        if (trailingNode !== null) nodes.push(trailingNode);
+
+        return <>{nodes}</>;
+    };
+
+    return formatTextWithClassTokens(text);
 };

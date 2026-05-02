@@ -7,6 +7,7 @@ import ActorImage from './ActorImage';
 import { BlurredBackground } from './BlurredBackground';
 import TypeOut from './TypeOut';
 import { formatInlineStyles } from '../utils/TextFormatting';
+import type { FormatInlineStylesOptions } from '../utils/TextFormatting';
 import type { NovelActor, NovelScript, NovelScriptEntry } from '../types';
 
 interface MessageFormatTokens {
@@ -96,6 +97,7 @@ export interface NovelVisualizerProps<
     enableTalkingAnimation?: boolean;
     enableReroll?: boolean;
     narratorLabel?: string;
+    inlineStyleOptions?: FormatInlineStylesOptions;
 
 }
 
@@ -132,7 +134,8 @@ export function NovelVisualizer<
         enableAudio = true,
         enableTalkingAnimation = true,
         enableReroll = true,
-        narratorLabel = ''
+        narratorLabel = '',
+        inlineStyleOptions
     } = props;
     const [inputText, setInputText] = useState<string>('');
     const [finishTyping, setFinishTyping] = useState<boolean>(false);
@@ -218,13 +221,29 @@ export function NovelVisualizer<
 
                         return (
                             <span key={index} style={dialogueStyle}>
-                                {formatInlineStyles(part)}
+                                {formatInlineStyles(part, {
+                                    ...inlineStyleOptions,
+                                    styleContext: {
+                                        ...(inlineStyleOptions?.styleContext ?? {}),
+                                        baseColor: dialogueStyle.color,
+                                        baseTextShadow: dialogueStyle.textShadow,
+                                        baseFontFamily: dialogueStyle.fontFamily
+                                    }
+                                })}
                             </span>
                         );
                     }
                     return (
                         <span key={index} style={proseStyle}>
-                            {formatInlineStyles(part)}
+                            {formatInlineStyles(part, {
+                                ...inlineStyleOptions,
+                                styleContext: {
+                                    ...(inlineStyleOptions?.styleContext ?? {}),
+                                    baseColor: proseStyle.color,
+                                    baseTextShadow: proseStyle.textShadow,
+                                    baseFontFamily: proseStyle.fontFamily
+                                }
+                            })}
                         </span>
                     );
                 })}

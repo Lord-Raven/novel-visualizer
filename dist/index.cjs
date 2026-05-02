@@ -33,12 +33,14 @@ __export(index_exports, {
   ActorImage: () => ActorImage_default,
   BlurredBackground: () => BlurredBackground_default,
   NovelVisualizer: () => NovelVisualizer_default,
-  TypeOut: () => TypeOut_default
+  TypeOut: () => TypeOut_default,
+  defaultInlineClassStyles: () => defaultInlineClassStyles,
+  formatInlineStyles: () => formatInlineStyles
 });
 module.exports = __toCommonJS(index_exports);
 
 // src/components/NovelVisualizer.tsx
-var import_react4 = __toESM(require("react"), 1);
+var import_react5 = __toESM(require("react"), 1);
 var import_material = require("@mui/material");
 var import_styles = require("@mui/material/styles");
 var import_icons_material = require("@mui/icons-material");
@@ -536,9 +538,135 @@ var TypeOut = ({
 var TypeOut_default = TypeOut;
 
 // src/utils/TextFormatting.tsx
+var import_react4 = __toESM(require("react"), 1);
 var import_jsx_runtime4 = require("react/jsx-runtime");
-var formatInlineStyles = (text) => {
+var INLINE_STYLE_SHEET_ID = "novel-visualizer-inline-style-presets";
+var INLINE_STYLE_PRESET_CSS = `
+@keyframes nvInlineShinyPulse {
+    0%, 68%, 100% {
+        filter: brightness(1) saturate(1);
+        text-shadow: inherit;
+    }
+    72% {
+        filter: brightness(1.28) saturate(1.22);
+        text-shadow: 0 0 5px currentColor, 0 0 14px rgba(255, 255, 255, 0.9);
+    }
+    76% {
+        filter: brightness(1.1) saturate(1.08);
+        text-shadow: 0 0 3px currentColor, 0 0 9px rgba(255, 255, 255, 0.55);
+    }
+}
+
+@keyframes nvInlineSpookyWave {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    25% {
+        transform: translateY(-2px);
+    }
+    75% {
+        transform: translateY(2px);
+    }
+}
+
+@keyframes nvInlineQuake {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+    }
+    25% {
+        transform: translate(-0.45px, 0.45px) rotate(-0.2deg);
+    }
+    50% {
+        transform: translate(0.4px, -0.4px) rotate(0.2deg);
+    }
+    75% {
+        transform: translate(-0.35px, -0.45px) rotate(-0.15deg);
+    }
+    100% {
+        transform: translate(0.35px, 0.25px) rotate(0.15deg);
+    }
+}
+`;
+var ensureInlineStyleSheet = () => {
+  if (typeof document === "undefined") {
+    return;
+  }
+  if (document.getElementById(INLINE_STYLE_SHEET_ID)) {
+    return;
+  }
+  const styleElement = document.createElement("style");
+  styleElement.id = INLINE_STYLE_SHEET_ID;
+  styleElement.textContent = INLINE_STYLE_PRESET_CSS;
+  document.head.appendChild(styleElement);
+};
+var defaultInlineClassStyles = {
+  spooky: ({ baseColor, baseTextShadow }) => ({
+    color: baseColor,
+    display: "inline-block",
+    letterSpacing: "0.06em",
+    fontStyle: "italic",
+    animation: "nvInlineSpookyWave 2.4s ease-in-out infinite",
+    textShadow: baseTextShadow ? `${baseTextShadow}, 0 0 8px currentColor` : "0 0 8px currentColor"
+  }),
+  shiny: ({ baseColor }) => ({
+    color: baseColor,
+    display: "inline-block",
+    fontWeight: 700,
+    animation: "nvInlineShinyPulse 5.2s ease-in-out infinite",
+    textShadow: "0 0 4px currentColor, 0 0 11px rgba(255, 255, 255, 0.58)",
+    filter: "saturate(1.15)"
+  }),
+  quake: ({ baseColor, baseTextShadow }) => ({
+    color: baseColor,
+    display: "inline-block",
+    animation: "nvInlineQuake 95ms steps(2, end) infinite",
+    textShadow: baseTextShadow ? `${baseTextShadow}, 0 0 2px currentColor` : "0 0 2px currentColor"
+  }),
+  whisper: ({ baseColor, baseTextShadow, baseFontFamily }) => ({
+    color: baseColor,
+    fontFamily: baseFontFamily,
+    letterSpacing: "0.05em",
+    fontSize: "0.92em",
+    opacity: 0.85,
+    textShadow: baseTextShadow
+  })
+};
+var CLASS_TAG_PATTERN = /\[([a-zA-Z0-9_-]*)\]/g;
+var resolveClassStyles = (options) => {
+  if (options?.includeDefaultClassStyles === false) {
+    return { ...options.classStyles ?? {} };
+  }
+  return {
+    ...defaultInlineClassStyles,
+    ...options?.classStyles ?? {}
+  };
+};
+var getResolvedClassStyle = (classStyle, styleContext) => {
+  if (!classStyle) return void 0;
+  if (typeof classStyle === "function") {
+    return classStyle(styleContext);
+  }
+  return classStyle;
+};
+var renderSpookyCharacters = (text, keyPrefix) => {
+  return Array.from(text).map((character, index) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+    "span",
+    {
+      style: {
+        display: "inline-block",
+        animation: "nvInlineSpookyWave 2.2s ease-in-out infinite",
+        animationDelay: `${index * 75}ms`
+      },
+      children: character === " " ? "\xA0" : character
+    },
+    `${keyPrefix}-char-${index}`
+  ));
+};
+var formatInlineStyles = (text, options) => {
   if (!text) return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_jsx_runtime4.Fragment, {});
+  ensureInlineStyleSheet();
+  const classStyles = resolveClassStyles(options);
+  const styleContext = options?.styleContext ?? {};
   const formatItalics = (text2) => {
     const italicParts = text2.split(/(\*(?!\*)[^*]+\*|_[^_]+_)/g);
     return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_jsx_runtime4.Fragment, { children: italicParts.map((italicPart, italicIndex) => {
@@ -621,7 +749,47 @@ var formatInlineStyles = (text) => {
       }
     }) });
   };
-  return formatHeaders(text);
+  const renderSegment = (segmentText, activeClass, segmentKey) => {
+    if (!segmentText) return null;
+    if (activeClass === null) {
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react4.default.Fragment, { children: formatHeaders(segmentText) }, segmentKey);
+    }
+    const resolvedStyle = getResolvedClassStyle(classStyles[activeClass], styleContext);
+    if (!resolvedStyle) {
+      return null;
+    }
+    if (activeClass === "spooky") {
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: activeClass, style: resolvedStyle, children: renderSpookyCharacters(segmentText, segmentKey) }, segmentKey);
+    }
+    return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: activeClass, style: resolvedStyle, children: formatHeaders(segmentText) }, segmentKey);
+  };
+  const formatTextWithClassTokens = (sourceText, keyPrefix = "inline") => {
+    const nodes = [];
+    let lastIndex = 0;
+    let segmentIndex = 0;
+    let activeClass = null;
+    let match;
+    const tagPattern = new RegExp(CLASS_TAG_PATTERN.source, "g");
+    while ((match = tagPattern.exec(sourceText)) !== null) {
+      const [fullMatch, tagName] = match;
+      const tagStart = match.index;
+      const pendingText = sourceText.slice(lastIndex, tagStart);
+      const node = renderSegment(pendingText, activeClass, `${keyPrefix}-seg-${segmentIndex}`);
+      if (node !== null) nodes.push(node);
+      segmentIndex += 1;
+      if (tagName === "") {
+        activeClass = null;
+      } else {
+        activeClass = tagName;
+      }
+      lastIndex = tagStart + fullMatch.length;
+    }
+    const trailingText = sourceText.slice(lastIndex);
+    const trailingNode = renderSegment(trailingText, activeClass, `${keyPrefix}-seg-${segmentIndex}`);
+    if (trailingNode !== null) nodes.push(trailingNode);
+    return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_jsx_runtime4.Fragment, { children: nodes });
+  };
+  return formatTextWithClassTokens(text);
 };
 
 // src/components/NovelVisualizer.tsx
@@ -667,37 +835,38 @@ function NovelVisualizer(props) {
     enableAudio = true,
     enableTalkingAnimation = true,
     enableReroll = true,
-    narratorLabel = ""
+    narratorLabel = "",
+    inlineStyleOptions
   } = props;
-  const [inputText, setInputText] = (0, import_react4.useState)("");
-  const [finishTyping, setFinishTyping] = (0, import_react4.useState)(false);
-  const [messageKey, setMessageKey] = import_react4.default.useState(0);
-  const [hoveredActor, setHoveredActor] = (0, import_react4.useState)(null);
-  const [audioEnabled, setAudioEnabled] = import_react4.default.useState(enableAudio);
-  const currentAudioRef = import_react4.default.useRef(null);
-  const [isAudioPlaying, setIsAudioPlaying] = import_react4.default.useState(false);
-  const [mousePosition, setMousePosition] = (0, import_react4.useState)(null);
-  const [messageBoxTopVh, setMessageBoxTopVh] = (0, import_react4.useState)(isVerticalLayout ? 50 : 60);
-  const [loading, setLoading] = (0, import_react4.useState)(false);
+  const [inputText, setInputText] = (0, import_react5.useState)("");
+  const [finishTyping, setFinishTyping] = (0, import_react5.useState)(false);
+  const [messageKey, setMessageKey] = import_react5.default.useState(0);
+  const [hoveredActor, setHoveredActor] = (0, import_react5.useState)(null);
+  const [audioEnabled, setAudioEnabled] = import_react5.default.useState(enableAudio);
+  const currentAudioRef = import_react5.default.useRef(null);
+  const [isAudioPlaying, setIsAudioPlaying] = import_react5.default.useState(false);
+  const [mousePosition, setMousePosition] = (0, import_react5.useState)(null);
+  const [messageBoxTopVh, setMessageBoxTopVh] = (0, import_react5.useState)(isVerticalLayout ? 50 : 60);
+  const [loading, setLoading] = (0, import_react5.useState)(false);
   const isLoading = loading || externalLoading;
-  const messageBoxRef = (0, import_react4.useRef)(null);
-  const [isEditingMessage, setIsEditingMessage] = (0, import_react4.useState)(false);
-  const [editedMessage, setEditedMessage] = (0, import_react4.useState)("");
-  const [originalMessage, setOriginalMessage] = (0, import_react4.useState)("");
-  const [localScript, setLocalScript] = (0, import_react4.useState)(script);
-  const scriptEntries = (0, import_react4.useMemo)(() => localScript?.script ?? [], [localScript]);
-  const [index, setIndex] = (0, import_react4.useState)(script?.currentIndex ?? -1);
-  const prevIndexRef = (0, import_react4.useRef)(index);
-  const prevExternalLoadingRef = (0, import_react4.useRef)(externalLoading);
+  const messageBoxRef = (0, import_react5.useRef)(null);
+  const [isEditingMessage, setIsEditingMessage] = (0, import_react5.useState)(false);
+  const [editedMessage, setEditedMessage] = (0, import_react5.useState)("");
+  const [originalMessage, setOriginalMessage] = (0, import_react5.useState)("");
+  const [localScript, setLocalScript] = (0, import_react5.useState)(script);
+  const scriptEntries = (0, import_react5.useMemo)(() => localScript?.script ?? [], [localScript]);
+  const [index, setIndex] = (0, import_react5.useState)(script?.currentIndex ?? -1);
+  const prevIndexRef = (0, import_react5.useRef)(index);
+  const prevExternalLoadingRef = (0, import_react5.useRef)(externalLoading);
   const accentMain = theme.palette.primary.main;
   const accentLight = theme.palette.primary.light;
   const errorMain = theme.palette.error.main;
   const errorLight = theme.palette.error.light;
-  const baseTextShadow = (0, import_react4.useMemo)(
+  const baseTextShadow = (0, import_react5.useMemo)(
     () => `2px 2px 2px ${(0, import_styles.alpha)(theme.palette.common.black, 0.8)}`,
     [theme]
   );
-  const messageTokens = (0, import_react4.useMemo)(
+  const messageTokens = (0, import_react5.useMemo)(
     () => ({
       baseTextShadow,
       defaultDialogueColor: theme.palette.info.light,
@@ -729,15 +898,31 @@ function NovelVisualizer(props) {
     };
     return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_jsx_runtime5.Fragment, { children: dialogueParts.map((part, index2) => {
       if (part.startsWith('"') && part.endsWith('"')) {
-        return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { style: dialogueStyle, children: formatInlineStyles(part) }, index2);
+        return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { style: dialogueStyle, children: formatInlineStyles(part, {
+          ...inlineStyleOptions,
+          styleContext: {
+            ...inlineStyleOptions?.styleContext ?? {},
+            baseColor: dialogueStyle.color,
+            baseTextShadow: dialogueStyle.textShadow,
+            baseFontFamily: dialogueStyle.fontFamily
+          }
+        }) }, index2);
       }
-      return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { style: proseStyle, children: formatInlineStyles(part) }, index2);
+      return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { style: proseStyle, children: formatInlineStyles(part, {
+        ...inlineStyleOptions,
+        styleContext: {
+          ...inlineStyleOptions?.styleContext ?? {},
+          baseColor: proseStyle.color,
+          baseTextShadow: proseStyle.textShadow,
+          baseFontFamily: proseStyle.fontFamily
+        }
+      }) }, index2);
     }) });
   };
-  (0, import_react4.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     setLocalScript(script);
   }, [script, externalLoading]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     if (messageBoxRef.current) {
       const rect = messageBoxRef.current.getBoundingClientRect();
       const topVh = rect.top / window.innerHeight * 100;
@@ -749,13 +934,13 @@ function NovelVisualizer(props) {
     const y = e.clientY / window.innerHeight * 100;
     setMousePosition({ x, y });
   };
-  const actorsAtIndex = (0, import_react4.useMemo)(() => {
+  const actorsAtIndex = (0, import_react5.useMemo)(() => {
     if (!localScript || !Array.isArray(localScript.script)) {
       return [];
     }
     return getPresentActors(localScript, index);
   }, [localScript, index, actors, getPresentActors]);
-  const focusActor = (0, import_react4.useMemo)(() => {
+  const focusActor = (0, import_react5.useMemo)(() => {
     for (let i = Math.min(index, scriptEntries.length - 1); i >= 0; i--) {
       const speakerId = scriptEntries[i].speakerId;
       if (speakerId && actors[speakerId]) {
@@ -764,14 +949,14 @@ function NovelVisualizer(props) {
     }
     return null;
   }, [scriptEntries, index, actors]);
-  const speakerActor = (0, import_react4.useMemo)(() => {
+  const speakerActor = (0, import_react5.useMemo)(() => {
     return index >= 0 && index < scriptEntries.length && scriptEntries[index].speakerId ? actors[scriptEntries[index].speakerId] : null;
   }, [scriptEntries, index, actors]);
-  const displayMessage = (0, import_react4.useMemo)(() => {
+  const displayMessage = (0, import_react5.useMemo)(() => {
     const message = index >= 0 && index < scriptEntries.length ? scriptEntries[index].message ?? "" : "";
     return formatMessage(message, speakerActor, messageTokens);
   }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     if (prevIndexRef.current !== index) {
       setFinishTyping(false);
       if (isEditingMessage) {
@@ -798,14 +983,14 @@ function NovelVisualizer(props) {
     }
     setMessageKey((prev2) => prev2 + 1);
   }, [index, audioEnabled, scriptEntries]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     if (prevExternalLoadingRef.current !== externalLoading) {
       prevIndexRef.current = -1;
       setCurrentIndex(Math.min(Math.max(0, index), scriptEntries.length - 1));
       prevExternalLoadingRef.current = externalLoading;
     }
   }, [externalLoading, scriptEntries.length]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     if (!mousePosition) {
       setHoveredActor(null);
       return;
@@ -842,7 +1027,7 @@ function NovelVisualizer(props) {
     });
     setHoveredActor(closestActor);
   }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enableGhostSpeakers]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     const handleKeyDown = (e) => {
       const target = e.target;
       const isInputFocused = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
@@ -910,7 +1095,7 @@ function NovelVisualizer(props) {
   };
   const sceneEnded = Boolean(index >= 0 && index < scriptEntries.length && scriptEntries[index]?.endScene);
   const progressLabel = `${scriptEntries.length === 0 ? 0 : index + 1} / ${scriptEntries.length}`;
-  const placeholderText = (0, import_react4.useMemo)(() => {
+  const placeholderText = (0, import_react5.useMemo)(() => {
     if (!localScript || !Array.isArray(localScript.script)) return "Type your next action...";
     if (typeof inputPlaceholder === "function") {
       return inputPlaceholder({ index, entry: index >= 0 && index < scriptEntries.length ? scriptEntries[index] : void 0 });
@@ -1059,11 +1244,11 @@ function NovelVisualizer(props) {
     }
   };
   const hoverInfoNode = renderActorHoverInfo ? renderActorHoverInfo(hoveredActor) : null;
-  const backgroundImageUrl = (0, import_react4.useMemo)(
+  const backgroundImageUrl = (0, import_react5.useMemo)(
     () => getBackgroundImageUrl && localScript ? getBackgroundImageUrl(localScript, index) : void 0,
     [getBackgroundImageUrl, localScript, index]
   );
-  const resolvedBackgroundElements = (0, import_react4.useMemo)(() => {
+  const resolvedBackgroundElements = (0, import_react5.useMemo)(() => {
     if (typeof backgroundElements === "function") {
       if (!localScript) {
         return null;
@@ -1557,5 +1742,7 @@ var NovelVisualizer_default = NovelVisualizer;
   ActorImage,
   BlurredBackground,
   NovelVisualizer,
-  TypeOut
+  TypeOut,
+  defaultInlineClassStyles,
+  formatInlineStyles
 });
