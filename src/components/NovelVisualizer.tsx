@@ -6,16 +6,9 @@ import { AnimatePresence } from 'framer-motion';
 import ActorImage from './ActorImage';
 import { BlurredBackground } from './BlurredBackground';
 import TypeOut from './TypeOut';
-import { formatInlineStyles } from '../utils/TextFormatting';
-import type { FormatInlineStylesOptions } from '../utils/TextFormatting';
+import { formatMessageWithStyles } from '../utils/TextFormatting';
+import type { FormatInlineStylesOptions, MessageFormatTokens } from '../utils/TextFormatting';
 import type { NovelActor, NovelScript, NovelScriptEntry } from '../types';
-
-interface MessageFormatTokens {
-    baseTextShadow: string;
-    defaultDialogueColor: string;
-    defaultDialogueShadow: string;
-    fallbackFontFamily: string;
-}
 
 export interface SubmitButtonConfig {
     label: string;
@@ -192,63 +185,13 @@ export function NovelVisualizer<
         speakerActor: TActor | null | undefined,
         tokens: MessageFormatTokens
     ): JSX.Element => {
-        if (!text) return <></>;
-
-        text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-
-        const dialogueParts = text.split(/(\"[^\"]*\")/g);
-        const brightenedColor = speakerActor?.themeColor
-            ? lighten(speakerActor.themeColor, 0.5)
-            : tokens.defaultDialogueColor;
-
-        const dialogueStyle: React.CSSProperties = {
-            color: brightenedColor,
-            fontFamily: speakerActor?.themeFontFamily || tokens.fallbackFontFamily,
-            textShadow: speakerActor?.themeColor
-                ? `2px 2px 2px ${darken(speakerActor.themeColor, 0.3)}`
-                : tokens.defaultDialogueShadow
-        };
-        const proseStyle: React.CSSProperties = {
-            color: theme.palette.text.primary,
-            fontFamily: tokens.fallbackFontFamily,
-            textShadow: tokens.baseTextShadow
-        };
-
-        return (
-            <>
-                {dialogueParts.map((part, index) => {
-                    if (part.startsWith('"') && part.endsWith('"')) {
-
-                        return (
-                            <span key={index} style={dialogueStyle}>
-                                {formatInlineStyles(part, {
-                                    ...inlineStyleOptions,
-                                    styleContext: {
-                                        ...(inlineStyleOptions?.styleContext ?? {}),
-                                        baseColor: dialogueStyle.color,
-                                        baseTextShadow: dialogueStyle.textShadow,
-                                        baseFontFamily: dialogueStyle.fontFamily
-                                    }
-                                })}
-                            </span>
-                        );
-                    }
-                    return (
-                        <span key={index} style={proseStyle}>
-                            {formatInlineStyles(part, {
-                                ...inlineStyleOptions,
-                                styleContext: {
-                                    ...(inlineStyleOptions?.styleContext ?? {}),
-                                    baseColor: proseStyle.color,
-                                    baseTextShadow: proseStyle.textShadow,
-                                    baseFontFamily: proseStyle.fontFamily
-                                }
-                            })}
-                        </span>
-                    );
-                })}
-            </>
-        );
+        return formatMessageWithStyles(text, {
+            speakerThemeColor: speakerActor?.themeColor,
+            speakerThemeFontFamily: speakerActor?.themeFontFamily,
+            proseColor: theme.palette.text.primary,
+            tokens,
+            inlineStyleOptions
+        });
     };
 
 

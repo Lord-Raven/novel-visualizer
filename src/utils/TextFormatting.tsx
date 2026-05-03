@@ -1,4 +1,5 @@
 import React from 'react';
+import { darken, lighten } from '@mui/material/styles';
 
 export interface InlineStyleContext {
     baseColor?: string;
@@ -14,6 +15,21 @@ export interface FormatInlineStylesOptions {
     classStyles?: Record<string, InlineClassStyle>;
     includeDefaultClassStyles?: boolean;
     styleContext?: InlineStyleContext;
+}
+
+export interface MessageFormatTokens {
+    baseTextShadow: string;
+    defaultDialogueColor: string;
+    defaultDialogueShadow: string;
+    fallbackFontFamily: string;
+}
+
+export interface FormatMessageWithStylesOptions {
+    speakerThemeColor?: string;
+    speakerThemeFontFamily?: string;
+    proseColor: string;
+    tokens: MessageFormatTokens;
+    inlineStyleOptions?: FormatInlineStylesOptions;
 }
 
 const INLINE_STYLE_SHEET_ID = 'novel-visualizer-inline-style-presets';
@@ -118,6 +134,22 @@ export const defaultInlineClassStyles: Record<string, InlineClassStyle> = {
 
 const CLASS_TAG_PATTERN = /\[([a-zA-Z0-9_-]*)\]/g;
 
+export const resolveEndingInlineClass = (
+    sourceText: string,
+    initialActiveClass: string | null = null
+): string | null => {
+    let activeClass = initialActiveClass;
+    let match: RegExpExecArray | null;
+    const tagPattern = new RegExp(CLASS_TAG_PATTERN.source, 'g');
+
+    while ((match = tagPattern.exec(sourceText)) !== null) {
+        const [, tagName] = match;
+        activeClass = tagName === '' ? null : tagName;
+    }
+
+    return activeClass;
+};
+
 const resolveClassStyles = (options?: FormatInlineStylesOptions): Record<string, InlineClassStyle> => {
     if (options?.includeDefaultClassStyles === false) {
         return { ...(options.classStyles ?? {}) };
@@ -157,7 +189,11 @@ const renderSpookyCharacters = (text: string, keyPrefix: string): React.ReactNod
 
 // Helper function to format bold, italic, underlined, strikethrough, subscript, and header texts, following markdown-like syntax.
 // Also supports class-style tokens like [spooky]text[] with configurable style maps.
-export const formatInlineStyles = (text: string, options?: FormatInlineStylesOptions): React.JSX.Element => {
+export const formatInlineStyles = (
+    text: string,
+    options?: FormatInlineStylesOptions,
+    initialActiveClass: string | null = null
+): React.JSX.Element => {
     if (!text) return <></>;
 
     ensureInlineStyleSheet();
@@ -335,11 +371,15 @@ export const formatInlineStyles = (text: string, options?: FormatInlineStylesOpt
         );
     };
 
-    const formatTextWithClassTokens = (sourceText: string, keyPrefix = 'inline'): React.JSX.Element => {
+    const formatTextWithClassTokens = (
+        sourceText: string,
+        keyPrefix = 'inline',
+        startingClass: string | null = null
+    ): React.JSX.Element => {
         const nodes: React.ReactNode[] = [];
         let lastIndex = 0;
         let segmentIndex = 0;
-        let activeClass: string | null = null;
+        let activeClass: string | null = startingClass;
         let match: RegExpExecArray | null;
         const tagPattern = new RegExp(CLASS_TAG_PATTERN.source, 'g');
 
@@ -372,5 +412,63 @@ export const formatInlineStyles = (text: string, options?: FormatInlineStylesOpt
         return <>{nodes}</>;
     };
 
-    return formatTextWithClassTokens(text);
+    return formatTextWithClassTokens(text, 'inline', initialActiveClass);
+};
+
+export const formatMessageWithStyles = (
+    text: string,
+    options: FormatMessageWithStylesOptions
+): React.JSX.Element => {
+    if (!text) return <></>;
+
+    const normalizedText = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+    const dialogueParts = normalizedText.split(/(\"[^\"]*\")/g);
+    const brightenedColor = options.speakerThemeColor
+        ? lighten(options.speakerThemeColor, 0.5)
+        : options.tokens.defaultDialogueColor;
+
+    const dialogueStyle: React.CSSProperties = {
+        color: brightenedColor,
+        fontFamily: options.speakerThemeFontFamily || options.tokens.fallbackFontFamily,
+        textShadow: options.speakerThemeColor
+            ? `2px 2px 2px ${darken(options.speakerThemeColor, 0.3)}`
+            : options.tokens.defaultDialogueShadow
+    };
+    const proseStyle: React.CSSProperties = {
+        color: options.proseColor,
+        fontFamily: options.tokens.fallbackFontFamily,
+        textShadow: options.tokens.baseTextShadow
+    };
+
+    let activeInlineClass: string | null = null;
+
+    return (
+        <>
+            {dialogueParts.map((part, index) => {
+                const isDialoguePart = part.startsWith('"') && part.endsWith('"');
+                const baseStyle = isDialoguePart ? dialogueStyle : proseStyle;
+                const formattedPart = formatInlineStyles(
+                    part,
+                    {
+                        ...options.inlineStyleOptions,
+                        styleContext: {
+                            ...(options.inlineStyleOptions?.styleContext ?? {}),
+                            baseColor: baseStyle.color,
+                            baseTextShadow: baseStyle.textShadow,
+                            baseFontFamily: baseStyle.fontFamily
+                        }
+                    },
+                    activeInlineClass
+                );
+
+                activeInlineClass = resolveEndingInlineClass(part, activeInlineClass);
+
+                return (
+                    <span key={index} style={baseStyle}>
+                        {formattedPart}
+                    </span>
+                );
+            })}
+        </>
+    );
 };
