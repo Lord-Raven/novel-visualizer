@@ -821,7 +821,7 @@ function NovelVisualizer(props) {
     inputPlaceholder,
     getSubmitButtonConfig,
     renderNameplate,
-    renderActorHoverInfo,
+    responsiveOverlay,
     getActorImageUrl,
     getActorImageColorMultiplier,
     getPresentActors,
@@ -1243,7 +1243,7 @@ function NovelVisualizer(props) {
       });
     }
   };
-  const hoverInfoNode = renderActorHoverInfo ? renderActorHoverInfo(hoveredActor) : null;
+  const responsiveOverlayNode = responsiveOverlay ? responsiveOverlay(hoveredActor) : null;
   const backgroundImageUrl = (0, import_react5.useMemo)(
     () => getBackgroundImageUrl && localScript ? getBackgroundImageUrl(localScript, index) : void 0,
     [getBackgroundImageUrl, localScript, index]
@@ -1261,6 +1261,13 @@ function NovelVisualizer(props) {
     }
     return backgroundElements ?? null;
   }, [backgroundElements, localScript, index, actorsAtIndex]);
+  const responsiveOverlayTop = isVerticalLayout ? 2 : 5;
+  const responsiveOverlayRight = isVerticalLayout ? 2 : 5;
+  const responsiveOverlayBottomGap = isVerticalLayout ? 1 : 2;
+  const responsiveOverlayHeight = Math.max(
+    0,
+    messageBoxTopVh - responsiveOverlayTop - responsiveOverlayBottomGap
+  );
   return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
     BlurredBackground,
     {
@@ -1280,18 +1287,20 @@ function NovelVisualizer(props) {
           children: [
             resolvedBackgroundElements && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 0 }, children: resolvedBackgroundElements }),
             /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 1 }, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_framer_motion2.AnimatePresence, { children: renderActors() }) }),
-            hoverInfoNode && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+            responsiveOverlayNode && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
               "div",
               {
                 style: {
                   position: "absolute",
-                  top: isVerticalLayout ? "2%" : "5%",
-                  right: isVerticalLayout ? "2%" : "5%",
+                  top: `${responsiveOverlayTop}%`,
+                  right: `${responsiveOverlayRight}%`,
                   width: isVerticalLayout ? "35vw" : "15vw",
-                  height: "30vh",
-                  zIndex: 3
+                  height: `${responsiveOverlayHeight}vh`,
+                  maxHeight: `${responsiveOverlayHeight}vh`,
+                  zIndex: 3,
+                  overflow: "hidden"
                 },
-                children: hoverInfoNode
+                children: responsiveOverlayNode
               }
             ),
             /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(

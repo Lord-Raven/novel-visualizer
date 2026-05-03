@@ -70,7 +70,7 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
     }) => string);
     getSubmitButtonConfig?: (script: TScript, index: number, inputText: string) => SubmitButtonConfig;
     renderNameplate?: (actor: TActor | null) => React__default.ReactNode;
-    renderActorHoverInfo?: (actor: TActor | null) => React__default.ReactNode;
+    responsiveOverlay?: (hoverActor: TActor | null) => React__default.ReactNode;
     getPresentActors: (script: TScript, index: number) => TActor[];
     getActorImageUrl: (actor: TActor, script: TScript, index: number) => string;
     getActorImageColorMultiplier?: (actor: TActor, script: TScript, index: number) => string;

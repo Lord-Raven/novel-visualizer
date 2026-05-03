@@ -59,7 +59,7 @@ export interface NovelVisualizerProps<
     inputPlaceholder?: string | ((context: { index: number; entry?: TEntry }) => string);
     getSubmitButtonConfig?: (script: TScript, index: number, inputText: string) => SubmitButtonConfig;
     renderNameplate?: (actor: TActor | null) => React.ReactNode;
-    renderActorHoverInfo?: (actor: TActor | null) => React.ReactNode;
+    responsiveOverlay?: (hoverActor: TActor | null) => React.ReactNode;
     getPresentActors: (script: TScript, index: number) => TActor[];
     getActorImageUrl: (actor: TActor, script: TScript, index: number) => string;
     getActorImageColorMultiplier?: (actor: TActor, script: TScript, index: number) => string;
@@ -120,7 +120,7 @@ export function NovelVisualizer<
         inputPlaceholder,
         getSubmitButtonConfig,
         renderNameplate,
-        renderActorHoverInfo,
+        responsiveOverlay,
         getActorImageUrl,
         getActorImageColorMultiplier,
         getPresentActors,
@@ -627,7 +627,7 @@ export function NovelVisualizer<
         }
     };
 
-    const hoverInfoNode = renderActorHoverInfo ? renderActorHoverInfo(hoveredActor) : null;
+    const responsiveOverlayNode = responsiveOverlay ? responsiveOverlay(hoveredActor) : null;
 
     const backgroundImageUrl = useMemo(
         () => (getBackgroundImageUrl && localScript) ? getBackgroundImageUrl(localScript, index) : undefined,
@@ -649,6 +649,14 @@ export function NovelVisualizer<
 
         return backgroundElements ?? null;
     }, [backgroundElements, localScript, index, actorsAtIndex]);
+
+    const responsiveOverlayTop = isVerticalLayout ? 2 : 5;
+    const responsiveOverlayRight = isVerticalLayout ? 2 : 5;
+    const responsiveOverlayBottomGap = isVerticalLayout ? 1 : 2;
+    const responsiveOverlayHeight = Math.max(
+        0,
+        messageBoxTopVh - responsiveOverlayTop - responsiveOverlayBottomGap
+    );
 
     return (
         <BlurredBackground
@@ -677,18 +685,20 @@ export function NovelVisualizer<
                     </AnimatePresence>
                 </div>
 
-                {hoverInfoNode && (
+                {responsiveOverlayNode && (
                     <div
                         style={{
                             position: 'absolute',
-                            top: isVerticalLayout ? '2%' : '5%',
-                            right: isVerticalLayout ? '2%' : '5%',
+                            top: `${responsiveOverlayTop}%`,
+                            right: `${responsiveOverlayRight}%`,
                             width: isVerticalLayout ? '35vw' : '15vw',
-                            height: '30vh',
-                            zIndex: 3
+                            height: `${responsiveOverlayHeight}vh`,
+                            maxHeight: `${responsiveOverlayHeight}vh`,
+                            zIndex: 3,
+                            overflow: 'hidden'
                         }}
                     >
-                        {hoverInfoNode}
+                        {responsiveOverlayNode}
                     </div>
                 )}
 
