@@ -257,11 +257,19 @@ export function NovelVisualizer<
     }, [script, externalLoading]);
 
     useEffect(() => {
-        if (messageBoxRef.current) {
-            const rect = messageBoxRef.current.getBoundingClientRect();
+        const el = messageBoxRef.current;
+        if (!el) return;
+
+        const measure = () => {
+            const rect = el.getBoundingClientRect();
             const topVh = (rect.top / window.innerHeight) * 100;
             setMessageBoxTopVh(topVh);
-        }
+        };
+
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        return () => observer.disconnect();
     }, [isVerticalLayout, localScript]);
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -651,12 +659,8 @@ export function NovelVisualizer<
     }, [backgroundElements, localScript, index, actorsAtIndex]);
 
     const responsiveOverlayTop = isVerticalLayout ? 2 : 5;
-    const responsiveOverlayRight = isVerticalLayout ? 2 : 5;
+    const responsiveOverlaySides = isVerticalLayout ? 2 : 5;
     const responsiveOverlayBottomGap = isVerticalLayout ? 1 : 2;
-    const responsiveOverlayHeight = Math.max(
-        0,
-        messageBoxTopVh - responsiveOverlayTop - responsiveOverlayBottomGap
-    );
 
     return (
         <BlurredBackground
@@ -690,10 +694,9 @@ export function NovelVisualizer<
                         style={{
                             position: 'absolute',
                             top: `${responsiveOverlayTop}%`,
-                            right: `${responsiveOverlayRight}%`,
-                            width: isVerticalLayout ? '35vw' : '15vw',
-                            height: `${responsiveOverlayHeight}vh`,
-                            maxHeight: `${responsiveOverlayHeight}vh`,
+                            bottom: `${100 - messageBoxTopVh + responsiveOverlayBottomGap}%`,
+                            right: `${responsiveOverlaySides}%`,
+                            left: `${responsiveOverlaySides}%`,
                             zIndex: 3,
                             overflow: 'hidden'
                         }}
