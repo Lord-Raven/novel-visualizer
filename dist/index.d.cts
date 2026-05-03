@@ -14,7 +14,7 @@ interface FormatInlineStylesOptions {
     styleContext?: InlineStyleContext;
 }
 declare const defaultInlineClassStyles: Record<string, InlineClassStyle>;
-declare const formatInlineStyles: (text: string, options?: FormatInlineStylesOptions) => React__default.JSX.Element;
+declare const formatInlineStyles: (text: string, options?: FormatInlineStylesOptions, initialActiveClass?: string | null) => React__default.JSX.Element;
 
 interface NovelActor {
     id: string;

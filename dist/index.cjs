@@ -42,7 +42,7 @@ module.exports = __toCommonJS(index_exports);
 // src/components/NovelVisualizer.tsx
 var import_react5 = __toESM(require("react"), 1);
 var import_material = require("@mui/material");
-var import_styles = require("@mui/material/styles");
+var import_styles2 = require("@mui/material/styles");
 var import_icons_material = require("@mui/icons-material");
 var import_framer_motion2 = require("framer-motion");
 
@@ -539,6 +539,7 @@ var TypeOut_default = TypeOut;
 
 // src/utils/TextFormatting.tsx
 var import_react4 = __toESM(require("react"), 1);
+var import_styles = require("@mui/material/styles");
 var import_jsx_runtime4 = require("react/jsx-runtime");
 var INLINE_STYLE_SHEET_ID = "novel-visualizer-inline-style-presets";
 var INLINE_STYLE_PRESET_CSS = `
@@ -632,6 +633,16 @@ var defaultInlineClassStyles = {
   })
 };
 var CLASS_TAG_PATTERN = /\[([a-zA-Z0-9_-]*)\]/g;
+var resolveEndingInlineClass = (sourceText, initialActiveClass = null) => {
+  let activeClass = initialActiveClass;
+  let match;
+  const tagPattern = new RegExp(CLASS_TAG_PATTERN.source, "g");
+  while ((match = tagPattern.exec(sourceText)) !== null) {
+    const [, tagName] = match;
+    activeClass = tagName === "" ? null : tagName;
+  }
+  return activeClass;
+};
 var resolveClassStyles = (options) => {
   if (options?.includeDefaultClassStyles === false) {
     return { ...options.classStyles ?? {} };
@@ -662,7 +673,7 @@ var renderSpookyCharacters = (text, keyPrefix) => {
     `${keyPrefix}-char-${index}`
   ));
 };
-var formatInlineStyles = (text, options) => {
+var formatInlineStyles = (text, options, initialActiveClass = null) => {
   if (!text) return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_jsx_runtime4.Fragment, {});
   ensureInlineStyleSheet();
   const classStyles = resolveClassStyles(options);
@@ -763,11 +774,11 @@ var formatInlineStyles = (text, options) => {
     }
     return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: activeClass, style: resolvedStyle, children: formatHeaders(segmentText) }, segmentKey);
   };
-  const formatTextWithClassTokens = (sourceText, keyPrefix = "inline") => {
+  const formatTextWithClassTokens = (sourceText, keyPrefix = "inline", startingClass = null) => {
     const nodes = [];
     let lastIndex = 0;
     let segmentIndex = 0;
-    let activeClass = null;
+    let activeClass = startingClass;
     let match;
     const tagPattern = new RegExp(CLASS_TAG_PATTERN.source, "g");
     while ((match = tagPattern.exec(sourceText)) !== null) {
@@ -789,7 +800,43 @@ var formatInlineStyles = (text, options) => {
     if (trailingNode !== null) nodes.push(trailingNode);
     return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_jsx_runtime4.Fragment, { children: nodes });
   };
-  return formatTextWithClassTokens(text);
+  return formatTextWithClassTokens(text, "inline", initialActiveClass);
+};
+var formatMessageWithStyles = (text, options) => {
+  if (!text) return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_jsx_runtime4.Fragment, {});
+  const normalizedText = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+  const dialogueParts = normalizedText.split(/(\"[^\"]*\")/g);
+  const brightenedColor = options.speakerThemeColor ? (0, import_styles.lighten)(options.speakerThemeColor, 0.5) : options.tokens.defaultDialogueColor;
+  const dialogueStyle = {
+    color: brightenedColor,
+    fontFamily: options.speakerThemeFontFamily || options.tokens.fallbackFontFamily,
+    textShadow: options.speakerThemeColor ? `2px 2px 2px ${(0, import_styles.darken)(options.speakerThemeColor, 0.3)}` : options.tokens.defaultDialogueShadow
+  };
+  const proseStyle = {
+    color: options.proseColor,
+    fontFamily: options.tokens.fallbackFontFamily,
+    textShadow: options.tokens.baseTextShadow
+  };
+  let activeInlineClass = null;
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_jsx_runtime4.Fragment, { children: dialogueParts.map((part, index) => {
+    const isDialoguePart = part.startsWith('"') && part.endsWith('"');
+    const baseStyle = isDialoguePart ? dialogueStyle : proseStyle;
+    const formattedPart = formatInlineStyles(
+      part,
+      {
+        ...options.inlineStyleOptions,
+        styleContext: {
+          ...options.inlineStyleOptions?.styleContext ?? {},
+          baseColor: baseStyle.color,
+          baseTextShadow: baseStyle.textShadow,
+          baseFontFamily: baseStyle.fontFamily
+        }
+      },
+      activeInlineClass
+    );
+    activeInlineClass = resolveEndingInlineClass(part, activeInlineClass);
+    return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: baseStyle, children: formattedPart }, index);
+  }) });
 };
 
 // src/components/NovelVisualizer.tsx
@@ -807,7 +854,7 @@ var calculateActorXPosition = (actorIndex, totalActors, anySpeaker) => {
   return xPosition;
 };
 function NovelVisualizer(props) {
-  const theme = (0, import_styles.useTheme)();
+  const theme = (0, import_styles2.useTheme)();
   const {
     script,
     actors,
@@ -863,14 +910,14 @@ function NovelVisualizer(props) {
   const errorMain = theme.palette.error.main;
   const errorLight = theme.palette.error.light;
   const baseTextShadow = (0, import_react5.useMemo)(
-    () => `2px 2px 2px ${(0, import_styles.alpha)(theme.palette.common.black, 0.8)}`,
+    () => `2px 2px 2px ${(0, import_styles2.alpha)(theme.palette.common.black, 0.8)}`,
     [theme]
   );
   const messageTokens = (0, import_react5.useMemo)(
     () => ({
       baseTextShadow,
       defaultDialogueColor: theme.palette.info.light,
-      defaultDialogueShadow: `2px 2px 2px ${(0, import_styles.alpha)(theme.palette.info.dark, 0.5)}`,
+      defaultDialogueShadow: `2px 2px 2px ${(0, import_styles2.alpha)(theme.palette.info.dark, 0.5)}`,
       fallbackFontFamily: theme.typography.fontFamily
     }),
     [baseTextShadow, theme]
@@ -882,52 +929,29 @@ function NovelVisualizer(props) {
     setIndex(currentIndex);
   };
   const formatMessage = (text, speakerActor2, tokens) => {
-    if (!text) return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_jsx_runtime5.Fragment, {});
-    text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-    const dialogueParts = text.split(/(\"[^\"]*\")/g);
-    const brightenedColor = speakerActor2?.themeColor ? (0, import_styles.lighten)(speakerActor2.themeColor, 0.5) : tokens.defaultDialogueColor;
-    const dialogueStyle = {
-      color: brightenedColor,
-      fontFamily: speakerActor2?.themeFontFamily || tokens.fallbackFontFamily,
-      textShadow: speakerActor2?.themeColor ? `2px 2px 2px ${(0, import_styles.darken)(speakerActor2.themeColor, 0.3)}` : tokens.defaultDialogueShadow
-    };
-    const proseStyle = {
-      color: theme.palette.text.primary,
-      fontFamily: tokens.fallbackFontFamily,
-      textShadow: tokens.baseTextShadow
-    };
-    return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_jsx_runtime5.Fragment, { children: dialogueParts.map((part, index2) => {
-      if (part.startsWith('"') && part.endsWith('"')) {
-        return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { style: dialogueStyle, children: formatInlineStyles(part, {
-          ...inlineStyleOptions,
-          styleContext: {
-            ...inlineStyleOptions?.styleContext ?? {},
-            baseColor: dialogueStyle.color,
-            baseTextShadow: dialogueStyle.textShadow,
-            baseFontFamily: dialogueStyle.fontFamily
-          }
-        }) }, index2);
-      }
-      return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { style: proseStyle, children: formatInlineStyles(part, {
-        ...inlineStyleOptions,
-        styleContext: {
-          ...inlineStyleOptions?.styleContext ?? {},
-          baseColor: proseStyle.color,
-          baseTextShadow: proseStyle.textShadow,
-          baseFontFamily: proseStyle.fontFamily
-        }
-      }) }, index2);
-    }) });
+    return formatMessageWithStyles(text, {
+      speakerThemeColor: speakerActor2?.themeColor,
+      speakerThemeFontFamily: speakerActor2?.themeFontFamily,
+      proseColor: theme.palette.text.primary,
+      tokens,
+      inlineStyleOptions
+    });
   };
   (0, import_react5.useEffect)(() => {
     setLocalScript(script);
   }, [script, externalLoading]);
   (0, import_react5.useEffect)(() => {
-    if (messageBoxRef.current) {
-      const rect = messageBoxRef.current.getBoundingClientRect();
+    const el = messageBoxRef.current;
+    if (!el) return;
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
       const topVh = rect.top / window.innerHeight * 100;
       setMessageBoxTopVh(topVh);
-    }
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
   }, [isVerticalLayout, localScript]);
   const handleMouseMove = (e) => {
     const x = e.clientX / window.innerWidth * 100;
@@ -1147,7 +1171,7 @@ function NovelVisualizer(props) {
           zIndex,
           heightMultiplier: (isSpeaking ? 1 : sceneActorScale) * (actor.heightMultiplier ?? 1),
           speaker: isSpeaking,
-          highlightColor: isHovered ? (0, import_styles.lighten)(baseHighlightColor, 0.2) : baseHighlightColor,
+          highlightColor: isHovered ? (0, import_styles2.lighten)(baseHighlightColor, 0.2) : baseHighlightColor,
           isAudioPlaying: isSpeaking && isAudioPlaying && enableTalkingAnimation
         },
         actor.id
@@ -1171,7 +1195,7 @@ function NovelVisualizer(props) {
             zIndex: 45,
             heightMultiplier: (isVerticalLayout ? 0.7 : 0.9) * (speakerActor.heightMultiplier ?? 1),
             speaker: true,
-            highlightColor: isHovered ? (0, import_styles.lighten)(baseHighlightColor, 0.2) : baseHighlightColor,
+            highlightColor: isHovered ? (0, import_styles2.lighten)(baseHighlightColor, 0.2) : baseHighlightColor,
             isGhost: true,
             ghostSide,
             isAudioPlaying: isAudioPlaying && enableTalkingAnimation
@@ -1262,12 +1286,8 @@ function NovelVisualizer(props) {
     return backgroundElements ?? null;
   }, [backgroundElements, localScript, index, actorsAtIndex]);
   const responsiveOverlayTop = isVerticalLayout ? 2 : 5;
-  const responsiveOverlayRight = isVerticalLayout ? 2 : 5;
+  const responsiveOverlaySides = isVerticalLayout ? 2 : 5;
   const responsiveOverlayBottomGap = isVerticalLayout ? 1 : 2;
-  const responsiveOverlayHeight = Math.max(
-    0,
-    messageBoxTopVh - responsiveOverlayTop - responsiveOverlayBottomGap
-  );
   return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
     BlurredBackground,
     {
@@ -1293,10 +1313,9 @@ function NovelVisualizer(props) {
                 style: {
                   position: "absolute",
                   top: `${responsiveOverlayTop}%`,
-                  right: `${responsiveOverlayRight}%`,
-                  width: isVerticalLayout ? "35vw" : "15vw",
-                  height: `${responsiveOverlayHeight}vh`,
-                  maxHeight: `${responsiveOverlayHeight}vh`,
+                  bottom: `${100 - messageBoxTopVh + responsiveOverlayBottomGap}%`,
+                  right: `${responsiveOverlaySides}%`,
+                  left: `${responsiveOverlaySides}%`,
                   zIndex: 3,
                   overflow: "hidden"
                 },
@@ -1313,8 +1332,8 @@ function NovelVisualizer(props) {
                   left: isVerticalLayout ? "2%" : "5%",
                   right: isVerticalLayout ? "2%" : "5%",
                   bottom: isVerticalLayout ? "1%" : "4%",
-                  background: (0, import_styles.alpha)(theme.palette.background.paper, 0.92),
-                  border: `2px solid ${(0, import_styles.alpha)(theme.palette.divider, 0.3)}`,
+                  background: (0, import_styles2.alpha)(theme.palette.background.paper, 0.92),
+                  border: `2px solid ${(0, import_styles2.alpha)(theme.palette.divider, 0.3)}`,
                   borderRadius: 3,
                   p: 2,
                   color: theme.palette.text.primary,
@@ -1337,7 +1356,7 @@ function NovelVisualizer(props) {
                           size: "small",
                           sx: {
                             color: theme.palette.text.secondary,
-                            border: `1px solid ${(0, import_styles.alpha)(theme.palette.divider, 0.2)}`,
+                            border: `1px solid ${(0, import_styles2.alpha)(theme.palette.divider, 0.2)}`,
                             padding: isVerticalLayout ? "4px" : void 0,
                             minWidth: isVerticalLayout ? "28px" : void 0,
                             "&:disabled": { color: theme.palette.text.disabled }
@@ -1380,7 +1399,7 @@ function NovelVisualizer(props) {
                             fontSize: isVerticalLayout ? "0.7rem" : void 0,
                             fontWeight: 700,
                             color: theme.palette.primary.light,
-                            border: `1px solid ${(0, import_styles.alpha)(theme.palette.divider, 0.2)}`,
+                            border: `1px solid ${(0, import_styles2.alpha)(theme.palette.divider, 0.2)}`,
                             transition: "all 0.3s ease",
                             "& .MuiChip-label": {
                               display: "flex",
@@ -1399,7 +1418,7 @@ function NovelVisualizer(props) {
                           size: "small",
                           sx: {
                             color: theme.palette.text.secondary,
-                            border: `1px solid ${(0, import_styles.alpha)(theme.palette.divider, 0.2)}`,
+                            border: `1px solid ${(0, import_styles2.alpha)(theme.palette.divider, 0.2)}`,
                             padding: isVerticalLayout ? "4px" : void 0,
                             minWidth: isVerticalLayout ? "28px" : void 0,
                             "&:disabled": { color: theme.palette.text.disabled }
@@ -1434,7 +1453,7 @@ function NovelVisualizer(props) {
                           size: "small",
                           sx: {
                             color: accentMain,
-                            border: `1px solid ${(0, import_styles.alpha)(accentMain, 0.25)}`,
+                            border: `1px solid ${(0, import_styles2.alpha)(accentMain, 0.25)}`,
                             padding: isVerticalLayout ? "4px" : void 0,
                             minWidth: isVerticalLayout ? "28px" : void 0,
                             opacity: 1,
@@ -1446,7 +1465,7 @@ function NovelVisualizer(props) {
                               to: { opacity: 1, transform: "scale(1)" }
                             },
                             "&:hover": {
-                              borderColor: (0, import_styles.alpha)(accentMain, 0.4),
+                              borderColor: (0, import_styles2.alpha)(accentMain, 0.4),
                               color: accentLight
                             },
                             "&:disabled": { color: theme.palette.text.disabled }
@@ -1465,7 +1484,7 @@ function NovelVisualizer(props) {
                             size: "small",
                             sx: {
                               color: accentMain,
-                              border: `1px solid ${(0, import_styles.alpha)(accentMain, 0.25)}`,
+                              border: `1px solid ${(0, import_styles2.alpha)(accentMain, 0.25)}`,
                               padding: isVerticalLayout ? "4px" : void 0,
                               minWidth: isVerticalLayout ? "28px" : void 0,
                               opacity: 1,
@@ -1477,7 +1496,7 @@ function NovelVisualizer(props) {
                                 to: { opacity: 1, transform: "scale(1)" }
                               },
                               "&:hover": {
-                                borderColor: (0, import_styles.alpha)(accentMain, 0.4),
+                                borderColor: (0, import_styles2.alpha)(accentMain, 0.4),
                                 color: accentLight
                               }
                             },
@@ -1495,7 +1514,7 @@ function NovelVisualizer(props) {
                             size: "small",
                             sx: {
                               color: errorMain,
-                              border: `1px solid ${(0, import_styles.alpha)(errorMain, 0.25)}`,
+                              border: `1px solid ${(0, import_styles2.alpha)(errorMain, 0.25)}`,
                               padding: isVerticalLayout ? "4px" : void 0,
                               minWidth: isVerticalLayout ? "28px" : void 0,
                               opacity: 1,
@@ -1507,7 +1526,7 @@ function NovelVisualizer(props) {
                                 to: { opacity: 1, transform: "scale(1)" }
                               },
                               "&:hover": {
-                                borderColor: (0, import_styles.alpha)(errorMain, 0.4),
+                                borderColor: (0, import_styles2.alpha)(errorMain, 0.4),
                                 color: errorLight
                               }
                             },
@@ -1527,12 +1546,12 @@ function NovelVisualizer(props) {
                           size: "small",
                           sx: {
                             color: accentMain,
-                            border: `1px solid ${(0, import_styles.alpha)(accentMain, 0.25)}`,
+                            border: `1px solid ${(0, import_styles2.alpha)(accentMain, 0.25)}`,
                             padding: isVerticalLayout ? "4px" : void 0,
                             minWidth: isVerticalLayout ? "28px" : void 0,
                             transition: "all 0.3s ease",
                             "&:hover": {
-                              borderColor: (0, import_styles.alpha)(accentMain, 0.4),
+                              borderColor: (0, import_styles2.alpha)(accentMain, 0.4),
                               color: accentLight,
                               transform: "rotate(180deg)"
                             },
@@ -1588,7 +1607,7 @@ function NovelVisualizer(props) {
                               lineHeight: 1.55,
                               fontFamily: theme.typography.fontFamily,
                               color: theme.palette.text.primary,
-                              backgroundColor: (0, import_styles.alpha)(theme.palette.action.selected, 0.5),
+                              backgroundColor: (0, import_styles2.alpha)(theme.palette.action.selected, 0.5),
                               padding: "8px"
                             },
                             "& .MuiInputBase-input": {
@@ -1649,7 +1668,7 @@ function NovelVisualizer(props) {
                               borderColor: theme.palette.divider
                             },
                             "&:hover fieldset": {
-                              borderColor: (0, import_styles.alpha)(theme.palette.divider, 0.8)
+                              borderColor: (0, import_styles2.alpha)(theme.palette.divider, 0.8)
                             },
                             "&.Mui-focused fieldset": {
                               borderColor: accentMain
@@ -1657,7 +1676,7 @@ function NovelVisualizer(props) {
                             "&.Mui-disabled": {
                               color: theme.palette.text.disabled,
                               "& fieldset": {
-                                borderColor: (0, import_styles.alpha)(theme.palette.divider, 0.5)
+                                borderColor: (0, import_styles2.alpha)(theme.palette.divider, 0.5)
                               }
                             }
                           },
@@ -1665,17 +1684,17 @@ function NovelVisualizer(props) {
                             padding: isVerticalLayout ? "6px 8px" : void 0
                           },
                           "& .MuiInputBase-input::placeholder": {
-                            color: (0, import_styles.alpha)(theme.palette.text.primary, 0.55),
+                            color: (0, import_styles2.alpha)(theme.palette.text.primary, 0.55),
                             opacity: 1,
                             fontSize: isVerticalLayout ? "0.75rem" : void 0
                           },
                           "& .MuiInputBase-input.Mui-disabled::placeholder": {
-                            color: (0, import_styles.alpha)(theme.palette.text.primary, 0.4),
+                            color: (0, import_styles2.alpha)(theme.palette.text.primary, 0.4),
                             opacity: 1
                           },
                           "& .MuiInputBase-input.Mui-disabled": {
-                            color: (0, import_styles.alpha)(theme.palette.text.primary, 0.45),
-                            WebkitTextFillColor: (0, import_styles.alpha)(theme.palette.text.primary, 0.45)
+                            color: (0, import_styles2.alpha)(theme.palette.text.primary, 0.45),
+                            WebkitTextFillColor: (0, import_styles2.alpha)(theme.palette.text.primary, 0.45)
                           }
                         }
                       }
@@ -1701,7 +1720,7 @@ function NovelVisualizer(props) {
                           background: (() => {
                             const colorScheme = getSubmitButtonConfig ? localScript ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : "primary" : sceneEnded && !inputText.trim() ? "error" : "primary";
                             const baseColor = colorScheme === "error" ? errorMain : accentMain;
-                            return `linear-gradient(90deg, ${(0, import_styles.lighten)(baseColor, 0.12)}, ${(0, import_styles.darken)(baseColor, 0.2)})`;
+                            return `linear-gradient(90deg, ${(0, import_styles2.lighten)(baseColor, 0.12)}, ${(0, import_styles2.darken)(baseColor, 0.2)})`;
                           })(),
                           color: (() => {
                             const colorScheme = getSubmitButtonConfig ? localScript ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : "primary" : sceneEnded && !inputText.trim() ? "error" : "primary";
@@ -1716,7 +1735,7 @@ function NovelVisualizer(props) {
                             background: (() => {
                               const colorScheme = getSubmitButtonConfig ? localScript ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : "primary" : sceneEnded && !inputText.trim() ? "error" : "primary";
                               const baseColor = colorScheme === "error" ? errorMain : accentMain;
-                              return `linear-gradient(90deg, ${(0, import_styles.lighten)(baseColor, 0.2)}, ${(0, import_styles.darken)(baseColor, 0.28)})`;
+                              return `linear-gradient(90deg, ${(0, import_styles2.lighten)(baseColor, 0.2)}, ${(0, import_styles2.darken)(baseColor, 0.28)})`;
                             })()
                           },
                           "&:disabled": {

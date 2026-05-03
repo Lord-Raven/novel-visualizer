@@ -1,7 +1,7 @@
 // src/components/NovelVisualizer.tsx
 import React4, { useEffect as useEffect3, useMemo as useMemo2, useRef, useState as useState3 } from "react";
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from "@mui/material";
-import { alpha, darken, lighten, useTheme } from "@mui/material/styles";
+import { alpha, darken as darken2, lighten as lighten2, useTheme } from "@mui/material/styles";
 import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, Computer, Warning } from "@mui/icons-material";
 import { AnimatePresence as AnimatePresence2 } from "framer-motion";
 
@@ -498,6 +498,7 @@ var TypeOut_default = TypeOut;
 
 // src/utils/TextFormatting.tsx
 import React3 from "react";
+import { darken, lighten } from "@mui/material/styles";
 import { Fragment as Fragment2, jsx as jsx4 } from "react/jsx-runtime";
 var INLINE_STYLE_SHEET_ID = "novel-visualizer-inline-style-presets";
 var INLINE_STYLE_PRESET_CSS = `
@@ -591,6 +592,16 @@ var defaultInlineClassStyles = {
   })
 };
 var CLASS_TAG_PATTERN = /\[([a-zA-Z0-9_-]*)\]/g;
+var resolveEndingInlineClass = (sourceText, initialActiveClass = null) => {
+  let activeClass = initialActiveClass;
+  let match;
+  const tagPattern = new RegExp(CLASS_TAG_PATTERN.source, "g");
+  while ((match = tagPattern.exec(sourceText)) !== null) {
+    const [, tagName] = match;
+    activeClass = tagName === "" ? null : tagName;
+  }
+  return activeClass;
+};
 var resolveClassStyles = (options) => {
   if (options?.includeDefaultClassStyles === false) {
     return { ...options.classStyles ?? {} };
@@ -621,7 +632,7 @@ var renderSpookyCharacters = (text, keyPrefix) => {
     `${keyPrefix}-char-${index}`
   ));
 };
-var formatInlineStyles = (text, options) => {
+var formatInlineStyles = (text, options, initialActiveClass = null) => {
   if (!text) return /* @__PURE__ */ jsx4(Fragment2, {});
   ensureInlineStyleSheet();
   const classStyles = resolveClassStyles(options);
@@ -722,11 +733,11 @@ var formatInlineStyles = (text, options) => {
     }
     return /* @__PURE__ */ jsx4("span", { className: activeClass, style: resolvedStyle, children: formatHeaders(segmentText) }, segmentKey);
   };
-  const formatTextWithClassTokens = (sourceText, keyPrefix = "inline") => {
+  const formatTextWithClassTokens = (sourceText, keyPrefix = "inline", startingClass = null) => {
     const nodes = [];
     let lastIndex = 0;
     let segmentIndex = 0;
-    let activeClass = null;
+    let activeClass = startingClass;
     let match;
     const tagPattern = new RegExp(CLASS_TAG_PATTERN.source, "g");
     while ((match = tagPattern.exec(sourceText)) !== null) {
@@ -748,7 +759,43 @@ var formatInlineStyles = (text, options) => {
     if (trailingNode !== null) nodes.push(trailingNode);
     return /* @__PURE__ */ jsx4(Fragment2, { children: nodes });
   };
-  return formatTextWithClassTokens(text);
+  return formatTextWithClassTokens(text, "inline", initialActiveClass);
+};
+var formatMessageWithStyles = (text, options) => {
+  if (!text) return /* @__PURE__ */ jsx4(Fragment2, {});
+  const normalizedText = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+  const dialogueParts = normalizedText.split(/(\"[^\"]*\")/g);
+  const brightenedColor = options.speakerThemeColor ? lighten(options.speakerThemeColor, 0.5) : options.tokens.defaultDialogueColor;
+  const dialogueStyle = {
+    color: brightenedColor,
+    fontFamily: options.speakerThemeFontFamily || options.tokens.fallbackFontFamily,
+    textShadow: options.speakerThemeColor ? `2px 2px 2px ${darken(options.speakerThemeColor, 0.3)}` : options.tokens.defaultDialogueShadow
+  };
+  const proseStyle = {
+    color: options.proseColor,
+    fontFamily: options.tokens.fallbackFontFamily,
+    textShadow: options.tokens.baseTextShadow
+  };
+  let activeInlineClass = null;
+  return /* @__PURE__ */ jsx4(Fragment2, { children: dialogueParts.map((part, index) => {
+    const isDialoguePart = part.startsWith('"') && part.endsWith('"');
+    const baseStyle = isDialoguePart ? dialogueStyle : proseStyle;
+    const formattedPart = formatInlineStyles(
+      part,
+      {
+        ...options.inlineStyleOptions,
+        styleContext: {
+          ...options.inlineStyleOptions?.styleContext ?? {},
+          baseColor: baseStyle.color,
+          baseTextShadow: baseStyle.textShadow,
+          baseFontFamily: baseStyle.fontFamily
+        }
+      },
+      activeInlineClass
+    );
+    activeInlineClass = resolveEndingInlineClass(part, activeInlineClass);
+    return /* @__PURE__ */ jsx4("span", { style: baseStyle, children: formattedPart }, index);
+  }) });
 };
 
 // src/components/NovelVisualizer.tsx
@@ -841,52 +888,29 @@ function NovelVisualizer(props) {
     setIndex(currentIndex);
   };
   const formatMessage = (text, speakerActor2, tokens) => {
-    if (!text) return /* @__PURE__ */ jsx5(Fragment3, {});
-    text = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-    const dialogueParts = text.split(/(\"[^\"]*\")/g);
-    const brightenedColor = speakerActor2?.themeColor ? lighten(speakerActor2.themeColor, 0.5) : tokens.defaultDialogueColor;
-    const dialogueStyle = {
-      color: brightenedColor,
-      fontFamily: speakerActor2?.themeFontFamily || tokens.fallbackFontFamily,
-      textShadow: speakerActor2?.themeColor ? `2px 2px 2px ${darken(speakerActor2.themeColor, 0.3)}` : tokens.defaultDialogueShadow
-    };
-    const proseStyle = {
-      color: theme.palette.text.primary,
-      fontFamily: tokens.fallbackFontFamily,
-      textShadow: tokens.baseTextShadow
-    };
-    return /* @__PURE__ */ jsx5(Fragment3, { children: dialogueParts.map((part, index2) => {
-      if (part.startsWith('"') && part.endsWith('"')) {
-        return /* @__PURE__ */ jsx5("span", { style: dialogueStyle, children: formatInlineStyles(part, {
-          ...inlineStyleOptions,
-          styleContext: {
-            ...inlineStyleOptions?.styleContext ?? {},
-            baseColor: dialogueStyle.color,
-            baseTextShadow: dialogueStyle.textShadow,
-            baseFontFamily: dialogueStyle.fontFamily
-          }
-        }) }, index2);
-      }
-      return /* @__PURE__ */ jsx5("span", { style: proseStyle, children: formatInlineStyles(part, {
-        ...inlineStyleOptions,
-        styleContext: {
-          ...inlineStyleOptions?.styleContext ?? {},
-          baseColor: proseStyle.color,
-          baseTextShadow: proseStyle.textShadow,
-          baseFontFamily: proseStyle.fontFamily
-        }
-      }) }, index2);
-    }) });
+    return formatMessageWithStyles(text, {
+      speakerThemeColor: speakerActor2?.themeColor,
+      speakerThemeFontFamily: speakerActor2?.themeFontFamily,
+      proseColor: theme.palette.text.primary,
+      tokens,
+      inlineStyleOptions
+    });
   };
   useEffect3(() => {
     setLocalScript(script);
   }, [script, externalLoading]);
   useEffect3(() => {
-    if (messageBoxRef.current) {
-      const rect = messageBoxRef.current.getBoundingClientRect();
+    const el = messageBoxRef.current;
+    if (!el) return;
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
       const topVh = rect.top / window.innerHeight * 100;
       setMessageBoxTopVh(topVh);
-    }
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
   }, [isVerticalLayout, localScript]);
   const handleMouseMove = (e) => {
     const x = e.clientX / window.innerWidth * 100;
@@ -1106,7 +1130,7 @@ function NovelVisualizer(props) {
           zIndex,
           heightMultiplier: (isSpeaking ? 1 : sceneActorScale) * (actor.heightMultiplier ?? 1),
           speaker: isSpeaking,
-          highlightColor: isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor,
+          highlightColor: isHovered ? lighten2(baseHighlightColor, 0.2) : baseHighlightColor,
           isAudioPlaying: isSpeaking && isAudioPlaying && enableTalkingAnimation
         },
         actor.id
@@ -1130,7 +1154,7 @@ function NovelVisualizer(props) {
             zIndex: 45,
             heightMultiplier: (isVerticalLayout ? 0.7 : 0.9) * (speakerActor.heightMultiplier ?? 1),
             speaker: true,
-            highlightColor: isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor,
+            highlightColor: isHovered ? lighten2(baseHighlightColor, 0.2) : baseHighlightColor,
             isGhost: true,
             ghostSide,
             isAudioPlaying: isAudioPlaying && enableTalkingAnimation
@@ -1221,12 +1245,8 @@ function NovelVisualizer(props) {
     return backgroundElements ?? null;
   }, [backgroundElements, localScript, index, actorsAtIndex]);
   const responsiveOverlayTop = isVerticalLayout ? 2 : 5;
-  const responsiveOverlayRight = isVerticalLayout ? 2 : 5;
+  const responsiveOverlaySides = isVerticalLayout ? 2 : 5;
   const responsiveOverlayBottomGap = isVerticalLayout ? 1 : 2;
-  const responsiveOverlayHeight = Math.max(
-    0,
-    messageBoxTopVh - responsiveOverlayTop - responsiveOverlayBottomGap
-  );
   return /* @__PURE__ */ jsx5(
     BlurredBackground,
     {
@@ -1252,10 +1272,9 @@ function NovelVisualizer(props) {
                 style: {
                   position: "absolute",
                   top: `${responsiveOverlayTop}%`,
-                  right: `${responsiveOverlayRight}%`,
-                  width: isVerticalLayout ? "35vw" : "15vw",
-                  height: `${responsiveOverlayHeight}vh`,
-                  maxHeight: `${responsiveOverlayHeight}vh`,
+                  bottom: `${100 - messageBoxTopVh + responsiveOverlayBottomGap}%`,
+                  right: `${responsiveOverlaySides}%`,
+                  left: `${responsiveOverlaySides}%`,
                   zIndex: 3,
                   overflow: "hidden"
                 },
@@ -1660,7 +1679,7 @@ function NovelVisualizer(props) {
                           background: (() => {
                             const colorScheme = getSubmitButtonConfig ? localScript ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : "primary" : sceneEnded && !inputText.trim() ? "error" : "primary";
                             const baseColor = colorScheme === "error" ? errorMain : accentMain;
-                            return `linear-gradient(90deg, ${lighten(baseColor, 0.12)}, ${darken(baseColor, 0.2)})`;
+                            return `linear-gradient(90deg, ${lighten2(baseColor, 0.12)}, ${darken2(baseColor, 0.2)})`;
                           })(),
                           color: (() => {
                             const colorScheme = getSubmitButtonConfig ? localScript ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : "primary" : sceneEnded && !inputText.trim() ? "error" : "primary";
@@ -1675,7 +1694,7 @@ function NovelVisualizer(props) {
                             background: (() => {
                               const colorScheme = getSubmitButtonConfig ? localScript ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : "primary" : sceneEnded && !inputText.trim() ? "error" : "primary";
                               const baseColor = colorScheme === "error" ? errorMain : accentMain;
-                              return `linear-gradient(90deg, ${lighten(baseColor, 0.2)}, ${darken(baseColor, 0.28)})`;
+                              return `linear-gradient(90deg, ${lighten2(baseColor, 0.2)}, ${darken2(baseColor, 0.28)})`;
                             })()
                           },
                           "&:disabled": {
