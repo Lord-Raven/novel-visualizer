@@ -23,6 +23,8 @@ interface NovelActor {
     themeFontFamily?: string;
     defaultImageUrl?: string;
     heightMultiplier?: number;
+    filter?: 'ghost' | 'aura' | 'hologram';
+    filterColor?: string;
 }
 /**
  * Base interface for script entries that the library requires.
@@ -74,6 +76,10 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
     getPresentActors: (script: TScript, index: number) => TActor[];
     getActorImageUrl: (actor: TActor, script: TScript, index: number) => string;
     getActorImageColorMultiplier?: (actor: TActor, script: TScript, index: number) => string;
+    getActorFilter?: (actor: TActor, script: TScript, index: number) => {
+        filter?: 'ghost' | 'aura' | 'hologram';
+        filterColor?: string;
+    };
     backgroundElements?: React__default.ReactNode | ((context: {
         script: TScript;
         index: number;
@@ -125,6 +131,8 @@ interface ActorImageProps {
     onMouseLeave?: () => void;
     popInSide?: 'none' | 'left' | 'right';
     isAudioPlaying?: boolean;
+    filter?: 'ghost' | 'aura' | 'hologram';
+    filterColor?: string;
 }
 declare const _default: React.NamedExoticComponent<ActorImageProps>;
 

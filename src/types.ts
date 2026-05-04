@@ -6,6 +6,8 @@ export interface NovelActor {
     themeFontFamily?: string;
     defaultImageUrl?: string;
     heightMultiplier?: number;
+    filter?: 'ghost' | 'aura' | 'hologram';
+    filterColor?: string;
 }
 
 /**

@@ -23,7 +23,9 @@ var ActorImage = ({
   onMouseEnter,
   onMouseLeave,
   popInSide = "none",
-  isAudioPlaying = false
+  isAudioPlaying = false,
+  filter: imageFilter,
+  filterColor = "#9ad8ff"
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [displayedImageUrl, setDisplayedImageUrl] = useState("");
@@ -161,10 +163,21 @@ var ActorImage = ({
     }, updateInterval);
     return () => clearInterval(intervalId);
   }, [isAudioPlaying, speaker]);
-  const popInMaskStyle = popInSide !== "none" ? {
-    maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
-    WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)"
-  } : {};
+  const bottomMaskStyle = useMemo(() => {
+    if (imageFilter === "ghost") {
+      return {
+        maskImage: "linear-gradient(to bottom, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.72) 58%, transparent 100%)",
+        WebkitMaskImage: "linear-gradient(to bottom, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.72) 58%, transparent 100%)"
+      };
+    }
+    if (popInSide !== "none") {
+      return {
+        maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
+        WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)"
+      };
+    }
+    return {};
+  }, [imageFilter, popInSide]);
   const animateProps = useMemo(() => {
     if (speaker && isAudioPlaying) {
       const talkingVariant = variants.talking;
@@ -184,13 +197,65 @@ var ActorImage = ({
     }
     return speaker ? "talking" : "idle";
   }, [speaker, isAudioPlaying, variants, popInSide, animationParams]);
-  const filterId = `tint-${id}`;
+  const tintFilterId = `tint-${id}`;
+  const ghostTintFilterId = `ghost-tint-${id}`;
+  const auraGlowFilterId = `aura-glow-${id}`;
+  const hologramTintFilterId = `hologram-tint-${id}`;
+  const isGhost = imageFilter === "ghost";
+  const isHologram = imageFilter === "hologram";
+  const backingOpacity = isGhost ? 0.82 : isHologram ? 0.95 : 1;
+  const mainOpacity = isGhost ? 0.58 : isHologram ? 0.4 : 0.75;
   return displayedImageUrl ? /* @__PURE__ */ jsxs(Fragment, { children: [
-    /* @__PURE__ */ jsx("svg", { style: { position: "absolute", width: 0, height: 0, overflow: "hidden" }, children: /* @__PURE__ */ jsx("defs", { children: /* @__PURE__ */ jsxs("filter", { id: filterId, x: "0%", y: "0%", width: "100%", height: "100%", colorInterpolationFilters: "sRGB", children: [
-      /* @__PURE__ */ jsx("feFlood", { floodColor: highlightColor, result: "flood" }),
-      /* @__PURE__ */ jsx("feComposite", { in: "flood", in2: "SourceGraphic", operator: "in", result: "masked" }),
-      /* @__PURE__ */ jsx("feBlend", { in: "SourceGraphic", in2: "masked", mode: "multiply" })
-    ] }) }) }),
+    /* @__PURE__ */ jsx("svg", { style: { position: "absolute", width: 0, height: 0, overflow: "hidden" }, children: /* @__PURE__ */ jsxs("defs", { children: [
+      /* @__PURE__ */ jsxs("filter", { id: tintFilterId, x: "0%", y: "0%", width: "100%", height: "100%", colorInterpolationFilters: "sRGB", children: [
+        /* @__PURE__ */ jsx("feFlood", { floodColor: highlightColor, result: "flood" }),
+        /* @__PURE__ */ jsx("feComposite", { in: "flood", in2: "SourceGraphic", operator: "in", result: "masked" }),
+        /* @__PURE__ */ jsx("feBlend", { in: "SourceGraphic", in2: "masked", mode: "multiply" })
+      ] }),
+      /* @__PURE__ */ jsxs("filter", { id: ghostTintFilterId, x: "-15%", y: "-15%", width: "130%", height: "130%", colorInterpolationFilters: "sRGB", children: [
+        /* @__PURE__ */ jsx("feFlood", { floodColor: filterColor, result: "ghostFlood" }),
+        /* @__PURE__ */ jsx("feComposite", { in: "ghostFlood", in2: "SourceAlpha", operator: "in", result: "ghostMask" }),
+        /* @__PURE__ */ jsx("feGaussianBlur", { in: "ghostMask", stdDeviation: "2.2", result: "ghostSoft" }),
+        /* @__PURE__ */ jsxs("feMerge", { children: [
+          /* @__PURE__ */ jsx("feMergeNode", { in: "ghostSoft" }),
+          /* @__PURE__ */ jsx("feMergeNode", { in: "ghostMask" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("filter", { id: auraGlowFilterId, x: "-40%", y: "-40%", width: "180%", height: "180%", colorInterpolationFilters: "sRGB", children: [
+        /* @__PURE__ */ jsx("feGaussianBlur", { in: "SourceAlpha", stdDeviation: "3.2", result: "auraBlur" }),
+        /* @__PURE__ */ jsx("feFlood", { floodColor: filterColor, result: "auraFlood" }),
+        /* @__PURE__ */ jsx("feComposite", { in: "auraFlood", in2: "auraBlur", operator: "in", result: "auraGlow" }),
+        /* @__PURE__ */ jsx("feGaussianBlur", { in: "auraGlow", stdDeviation: "1.4", result: "auraSoft" }),
+        /* @__PURE__ */ jsxs("feMerge", { children: [
+          /* @__PURE__ */ jsx("feMergeNode", { in: "auraSoft" }),
+          /* @__PURE__ */ jsx("feMergeNode", { in: "auraGlow" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("filter", { id: hologramTintFilterId, x: "-25%", y: "-25%", width: "150%", height: "150%", colorInterpolationFilters: "sRGB", children: [
+        /* @__PURE__ */ jsx("feFlood", { floodColor: filterColor, result: "holoFlood" }),
+        /* @__PURE__ */ jsx("feComposite", { in: "holoFlood", in2: "SourceAlpha", operator: "in", result: "holoMask" }),
+        /* @__PURE__ */ jsx("feGaussianBlur", { in: "holoMask", stdDeviation: "1.6", result: "holoSoft" }),
+        /* @__PURE__ */ jsx("feBlend", { in: "SourceGraphic", in2: "holoSoft", mode: "screen" })
+      ] })
+    ] }) }),
+    isHologram && /* @__PURE__ */ jsx("style", { children: `@keyframes hologramScanBand {
+  from {
+    -webkit-mask-position: 0% -130%;
+    mask-position: 0% -130%;
+  }
+  to {
+    -webkit-mask-position: 0% 130%;
+    mask-position: 0% 130%;
+  }
+}
+@keyframes hologramScanlines {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 120px;
+  }
+}` }),
     /* @__PURE__ */ jsxs(
       motion.div,
       {
@@ -204,6 +269,27 @@ var ActorImage = ({
         },
         style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center" },
         children: [
+          /* @__PURE__ */ jsx(AnimatePresence, { children: displayedImageUrl && imageFilter === "aura" && /* @__PURE__ */ jsx(
+            motion.img,
+            {
+              src: displayedImageUrl,
+              initial: { opacity: 0 },
+              animate: { opacity: 1 },
+              exit: { opacity: 0 },
+              transition: { duration: 0.5 },
+              style: {
+                position: "absolute",
+                top: 0,
+                width: "100%",
+                height: "100%",
+                filter: `url(#${auraGlowFilterId})`,
+                zIndex: 3,
+                pointerEvents: "none",
+                ...bottomMaskStyle
+              }
+            },
+            `${id}_${displayedImageUrl}_aura`
+          ) }),
           /* @__PURE__ */ jsx(AnimatePresence, { children: displayedImageUrl && /* @__PURE__ */ jsx(
             motion.img,
             {
@@ -217,20 +303,21 @@ var ActorImage = ({
                 top: 0,
                 width: "100%",
                 height: "100%",
-                filter: `url(#${filterId}) blur(2.5px)`,
+                opacity: backingOpacity,
+                filter: isHologram ? `url(#${hologramTintFilterId}) blur(3.4px) saturate(1.2) brightness(1.25)` : `url(#${tintFilterId}) blur(2.5px)`,
                 zIndex: 4,
                 pointerEvents: "none",
-                ...popInMaskStyle
+                ...bottomMaskStyle
               }
             },
             `${id}_${displayedImageUrl}_bg`
           ) }),
-          /* @__PURE__ */ jsx(AnimatePresence, { children: displayedImageUrl && /* @__PURE__ */ jsx(
+          /* @__PURE__ */ jsx(AnimatePresence, { children: displayedImageUrl && imageFilter === "ghost" && /* @__PURE__ */ jsx(
             motion.img,
             {
               src: displayedImageUrl,
               initial: { opacity: 0 },
-              animate: { opacity: 0.75 },
+              animate: { opacity: 0.42 },
               exit: { opacity: 0 },
               transition: { duration: 0.5 },
               style: {
@@ -238,9 +325,102 @@ var ActorImage = ({
                 top: 0,
                 width: "100%",
                 height: "100%",
-                filter: `url(#${filterId})`,
+                filter: `url(#${ghostTintFilterId})`,
                 zIndex: 5,
-                ...popInMaskStyle
+                pointerEvents: "none",
+                ...bottomMaskStyle
+              }
+            },
+            `${id}_${displayedImageUrl}_ghost`
+          ) }),
+          /* @__PURE__ */ jsx(AnimatePresence, { children: displayedImageUrl && isHologram && /* @__PURE__ */ jsx(
+            motion.img,
+            {
+              src: displayedImageUrl,
+              initial: { opacity: 0 },
+              animate: { opacity: [0.18, 0.52, 0.18] },
+              exit: { opacity: 0 },
+              transition: { duration: 5.4, repeat: Infinity, ease: "linear" },
+              style: {
+                position: "absolute",
+                top: 0,
+                width: "100%",
+                height: "100%",
+                zIndex: 6,
+                pointerEvents: "none",
+                filter: `url(#${hologramTintFilterId}) blur(0.5px) brightness(1.28)`,
+                maskImage: "linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 48%, black 52%, rgba(0, 0, 0, 0.8) 56%, transparent 100%)",
+                WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 48%, black 52%, rgba(0, 0, 0, 0.8) 56%, transparent 100%)",
+                maskSize: "100% 230%",
+                WebkitMaskSize: "100% 230%",
+                maskPosition: "0% -130%",
+                WebkitMaskPosition: "0% -130%",
+                animation: "hologramScanBand 5.4s linear infinite",
+                ...bottomMaskStyle
+              }
+            },
+            `${id}_${displayedImageUrl}_hologram_scan`
+          ) }),
+          /* @__PURE__ */ jsx(AnimatePresence, { children: displayedImageUrl && isHologram && /* @__PURE__ */ jsx(
+            motion.div,
+            {
+              initial: { opacity: 0 },
+              animate: { opacity: [0.08, 0.18, 0.08] },
+              exit: { opacity: 0 },
+              transition: { duration: 2.6, repeat: Infinity, ease: "linear" },
+              style: {
+                position: "absolute",
+                top: 0,
+                width: "100%",
+                height: "100%",
+                zIndex: 7,
+                pointerEvents: "none",
+                mixBlendMode: "screen",
+                backgroundImage: `repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, ${filterColor} 2px, transparent 4px)`,
+                animation: "hologramScanlines 3.2s linear infinite",
+                ...bottomMaskStyle
+              }
+            },
+            `${id}_${displayedImageUrl}_hologram_scanlines`
+          ) }),
+          /* @__PURE__ */ jsx(AnimatePresence, { children: displayedImageUrl && isHologram && /* @__PURE__ */ jsx(
+            motion.div,
+            {
+              initial: { opacity: 0 },
+              animate: { opacity: [0.1, 0.24, 0.1] },
+              exit: { opacity: 0 },
+              transition: { duration: 4.1, repeat: Infinity, ease: "easeInOut" },
+              style: {
+                position: "absolute",
+                top: 0,
+                width: "100%",
+                height: "100%",
+                zIndex: 8,
+                pointerEvents: "none",
+                mixBlendMode: "screen",
+                background: `linear-gradient(to bottom, transparent 0%, ${filterColor} 42%, transparent 70%)`,
+                filter: "blur(8px)",
+                ...bottomMaskStyle
+              }
+            },
+            `${id}_${displayedImageUrl}_hologram_glow`
+          ) }),
+          /* @__PURE__ */ jsx(AnimatePresence, { children: displayedImageUrl && /* @__PURE__ */ jsx(
+            motion.img,
+            {
+              src: displayedImageUrl,
+              initial: { opacity: 0 },
+              animate: { opacity: mainOpacity },
+              exit: { opacity: 0 },
+              transition: { duration: 0.5 },
+              style: {
+                position: "absolute",
+                top: 0,
+                width: "100%",
+                height: "100%",
+                filter: isHologram ? `url(#${hologramTintFilterId}) brightness(1.12) contrast(1.06)` : `url(#${tintFilterId})`,
+                zIndex: isHologram ? 9 : 6,
+                ...bottomMaskStyle
               },
               onMouseEnter,
               onMouseLeave
@@ -683,6 +863,24 @@ var INLINE_STYLE_PRESET_CSS = `
     }
 }
 
+@keyframes nvInlineSighShadow {
+    0% {
+        opacity: 0.72;
+        filter: blur(0.65px);
+        text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.26), 0 1.25px 3px rgba(0, 0, 0, 0.22);
+    }
+    55% {
+        opacity: 0.8;
+        filter: blur(1.05px);
+        text-shadow: 0 0.5px 2px rgba(0, 0, 0, 0.3), 0 2.25px 6px rgba(0, 0, 0, 0.26);
+    }
+    100% {
+        opacity: 0.68;
+        filter: blur(0.85px);
+        text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.24), 0 1.75px 4px rgba(0, 0, 0, 0.22);
+    }
+}
+
 @keyframes nvInlineBurning {
     0%, 100% {
         filter: brightness(1) saturate(1.2);
@@ -903,7 +1101,6 @@ var defaultInlineClassStyles = {
     fontStyle: "italic",
     opacity: 0.78,
     transformOrigin: "center bottom",
-    animation: "nvInlineSigh 760ms cubic-bezier(0.18, 0.74, 0.22, 1) 1 both",
     textShadow: mergeTextShadows(
       baseTextShadow,
       "0 1px 2px rgba(0, 0, 0, 0.22)"
@@ -944,13 +1141,17 @@ var defaultInlineClassStyles = {
   }),
   spooky: ({ baseColor, baseTextShadow }) => ({
     color: baseColor,
+    display: "inline-block",
     letterSpacing: "0.06em",
     fontStyle: "italic",
+    transformOrigin: "center",
     animation: "nvInlineSpookyWave 2.4s ease-in-out infinite",
+    willChange: "transform",
     textShadow: baseTextShadow ? `${baseTextShadow}, 0 0 8px currentColor` : "0 0 8px currentColor"
   }),
   quake: ({ baseColor, baseTextShadow }) => ({
     color: baseColor,
+    display: "inline-block",
     animation: "nvInlineQuake 95ms steps(2, end) infinite",
     textShadow: baseTextShadow ? `${baseTextShadow}, 0 0 2px currentColor` : "0 0 2px currentColor"
   }),
@@ -1151,6 +1352,53 @@ var getPerCharacterStyle = (activeClass, characterIndex) => {
 };
 var renderPerCharacterSegment = (segmentText, activeClass, resolvedStyle, segmentKey) => {
   const characters = Array.from(segmentText);
+  if (activeClass === "sigh") {
+    return /* @__PURE__ */ jsx4("span", { className: activeClass, style: { ...resolvedStyle, textShadow: "none" }, children: characters.map((character, characterIndex) => {
+      const characterDelay = `${Math.min(characterIndex * 14, 140)}ms`;
+      return /* @__PURE__ */ jsxs3(
+        "span",
+        {
+          style: {
+            display: "inline-block",
+            position: "relative",
+            transformOrigin: "center bottom"
+          },
+          children: [
+            /* @__PURE__ */ jsx4(
+              "span",
+              {
+                "aria-hidden": "true",
+                style: {
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  color: "transparent",
+                  pointerEvents: "none",
+                  animation: "nvInlineSighShadow 620ms cubic-bezier(0.2, 0.7, 0.22, 1) 1 both",
+                  animationDelay: characterDelay,
+                  willChange: "filter, opacity, text-shadow"
+                },
+                children: character
+              }
+            ),
+            /* @__PURE__ */ jsx4(
+              "span",
+              {
+                style: {
+                  ...getPerCharacterStyle(activeClass, characterIndex),
+                  position: "relative",
+                  zIndex: 1,
+                  textShadow: "none"
+                },
+                children: character
+              }
+            )
+          ]
+        },
+        `${segmentKey}-char-${characterIndex}`
+      );
+    }) }, segmentKey);
+  }
   return /* @__PURE__ */ jsx4("span", { className: activeClass, style: resolvedStyle, children: characters.map((character, characterIndex) => /* @__PURE__ */ jsx4(
     "span",
     {
@@ -1400,6 +1648,7 @@ function NovelVisualizer(props) {
     responsiveOverlay,
     getActorImageUrl,
     getActorImageColorMultiplier,
+    getActorFilter,
     getPresentActors,
     backgroundElements,
     backgroundOptions,
@@ -1688,6 +1937,7 @@ function NovelVisualizer(props) {
       const yPosition = isVerticalLayout ? 15 : 0;
       const zIndex = 50 - Math.abs(xPosition - 50);
       const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(actor, activeScript, index) : "#ffffff";
+      const filterProps = getActorFilter ? getActorFilter(actor, activeScript, index) : { filter: actor.filter, filterColor: actor.filterColor || "#ffffff" };
       return /* @__PURE__ */ jsx5(
         ActorImage_default,
         {
@@ -1701,7 +1951,9 @@ function NovelVisualizer(props) {
           heightMultiplier: (isSpeaking ? 1 : sceneActorScale) * (actor.heightMultiplier ?? 1),
           speaker: isSpeaking,
           highlightColor: isHovered ? lighten2(baseHighlightColor, 0.2) : baseHighlightColor,
-          isAudioPlaying: isSpeaking && isAudioPlaying && enableTalkingAnimation
+          isAudioPlaying: isSpeaking && isAudioPlaying && enableTalkingAnimation,
+          filter: filterProps.filter,
+          filterColor: filterProps.filterColor
         },
         actor.id
       );
@@ -1711,6 +1963,7 @@ function NovelVisualizer(props) {
       const isHovered = speakerActor === hoveredActor;
       const popInSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? "left" : "right";
       const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(speakerActor, activeScript, index) : "#ffffff";
+      const filterProps = getActorFilter ? getActorFilter(speakerActor, activeScript, index) : { filter: speakerActor.filter, filterColor: speakerActor.filterColor || "#ffffff" };
       actorElements.push(
         /* @__PURE__ */ jsx5(
           ActorImage_default,
@@ -1726,7 +1979,9 @@ function NovelVisualizer(props) {
             speaker: true,
             highlightColor: isHovered ? lighten2(baseHighlightColor, 0.2) : baseHighlightColor,
             popInSide,
-            isAudioPlaying: isAudioPlaying && enableTalkingAnimation
+            isAudioPlaying: isAudioPlaying && enableTalkingAnimation,
+            filter: filterProps.filter,
+            filterColor: filterProps.filterColor
           },
           `pop-in-${speakerActor.id}`
         )

@@ -216,6 +216,24 @@ const INLINE_STYLE_PRESET_CSS = `
     }
 }
 
+@keyframes nvInlineSighShadow {
+    0% {
+        opacity: 0.72;
+        filter: blur(0.65px);
+        text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.26), 0 1.25px 3px rgba(0, 0, 0, 0.22);
+    }
+    55% {
+        opacity: 0.8;
+        filter: blur(1.05px);
+        text-shadow: 0 0.5px 2px rgba(0, 0, 0, 0.3), 0 2.25px 6px rgba(0, 0, 0, 0.26);
+    }
+    100% {
+        opacity: 0.68;
+        filter: blur(0.85px);
+        text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.24), 0 1.75px 4px rgba(0, 0, 0, 0.22);
+    }
+}
+
 @keyframes nvInlineBurning {
     0%, 100% {
         filter: brightness(1) saturate(1.2);
@@ -441,7 +459,6 @@ export const defaultInlineClassStyles: Record<string, InlineClassStyle> = {
         fontStyle: 'italic',
         opacity: 0.78,
         transformOrigin: 'center bottom',
-        animation: 'nvInlineSigh 760ms cubic-bezier(0.18, 0.74, 0.22, 1) 1 both',
         textShadow: mergeTextShadows(
             baseTextShadow,
             '0 1px 2px rgba(0, 0, 0, 0.22)'
@@ -482,15 +499,19 @@ export const defaultInlineClassStyles: Record<string, InlineClassStyle> = {
     }),
     spooky: ({ baseColor, baseTextShadow }) => ({
         color: baseColor,
+        display: 'inline-block',
         letterSpacing: '0.06em',
         fontStyle: 'italic',
+        transformOrigin: 'center',
         animation: 'nvInlineSpookyWave 2.4s ease-in-out infinite',
+        willChange: 'transform',
         textShadow: baseTextShadow
             ? `${baseTextShadow}, 0 0 8px currentColor`
             : '0 0 8px currentColor'
     }),
     quake: ({ baseColor, baseTextShadow }) => ({
         color: baseColor,
+        display: 'inline-block',
         animation: 'nvInlineQuake 95ms steps(2, end) infinite',
         textShadow: baseTextShadow
             ? `${baseTextShadow}, 0 0 2px currentColor`
@@ -680,6 +701,53 @@ const renderPerCharacterSegment = (
     segmentKey: string
 ): React.ReactNode => {
     const characters = Array.from(segmentText);
+
+    if (activeClass === 'sigh') {
+        return (
+            <span key={segmentKey} className={activeClass} style={{ ...resolvedStyle, textShadow: 'none' }}>
+                {characters.map((character, characterIndex) => {
+                    const characterDelay = `${Math.min(characterIndex * 14, 140)}ms`;
+                    return (
+                        <span
+                            key={`${segmentKey}-char-${characterIndex}`}
+                            style={{
+                                display: 'inline-block',
+                                position: 'relative',
+                                transformOrigin: 'center bottom'
+                            }}
+                        >
+                            <span
+                                aria-hidden="true"
+                                style={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    top: 0,
+                                    color: 'transparent',
+                                    pointerEvents: 'none',
+                                    animation: 'nvInlineSighShadow 620ms cubic-bezier(0.2, 0.7, 0.22, 1) 1 both',
+                                    animationDelay: characterDelay,
+                                    willChange: 'filter, opacity, text-shadow'
+                                }}
+                            >
+                                {character}
+                            </span>
+                            <span
+                                style={{
+                                    ...getPerCharacterStyle(activeClass, characterIndex),
+                                    position: 'relative',
+                                    zIndex: 1,
+                                    textShadow: 'none'
+                                }}
+                            >
+                                {character}
+                            </span>
+                        </span>
+                    );
+                })}
+            </span>
+        );
+    }
+
     return (
         <span key={segmentKey} className={activeClass} style={resolvedStyle}>
             {characters.map((character, characterIndex) => (

@@ -56,6 +56,7 @@ export interface NovelVisualizerProps<
     getPresentActors: (script: TScript, index: number) => TActor[];
     getActorImageUrl: (actor: TActor, script: TScript, index: number) => string;
     getActorImageColorMultiplier?: (actor: TActor, script: TScript, index: number) => string;
+    getActorFilter?: (actor: TActor, script: TScript, index: number) => { filter?: 'ghost' | 'aura' | 'hologram'; filterColor?: string };
     backgroundElements?: React.ReactNode | ((context: {
         script: TScript;
         index: number;
@@ -116,6 +117,7 @@ export function NovelVisualizer<
         responsiveOverlay,
         getActorImageUrl,
         getActorImageColorMultiplier,
+        getActorFilter,
         getPresentActors,
         backgroundElements,
         backgroundOptions,
@@ -460,6 +462,7 @@ export function NovelVisualizer<
             const yPosition = isVerticalLayout ? 15 : 0;
             const zIndex = 50 - Math.abs(xPosition - 50);
             const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(actor, activeScript, index) : "#ffffff";
+            const filterProps = getActorFilter ? getActorFilter(actor, activeScript, index) : {filter: actor.filter, filterColor: actor.filterColor || '#ffffff'};
 
             return (
                 <ActorImage
@@ -475,6 +478,8 @@ export function NovelVisualizer<
                     speaker={isSpeaking}
                     highlightColor={isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor}
                     isAudioPlaying={isSpeaking && isAudioPlaying && enableTalkingAnimation}
+                    filter={filterProps.filter}
+                    filterColor={filterProps.filterColor}
                 />
             );
         });
@@ -486,6 +491,7 @@ export function NovelVisualizer<
             // Alternate sides based on actor ID for consistency
             const popInSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? 'left' : 'right';
             const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(speakerActor, activeScript, index) : "#ffffff";
+            const filterProps = getActorFilter ? getActorFilter(speakerActor, activeScript, index) : {filter: speakerActor.filter, filterColor: speakerActor.filterColor || '#ffffff'};
             
             actorElements.push(
                 <ActorImage
@@ -502,6 +508,8 @@ export function NovelVisualizer<
                     highlightColor={isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor}
                     popInSide={popInSide}
                     isAudioPlaying={isAudioPlaying && enableTalkingAnimation}
+                    filter={filterProps.filter}
+                    filterColor={filterProps.filterColor}
                 />
             );
         }

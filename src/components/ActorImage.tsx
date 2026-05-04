@@ -20,6 +20,9 @@ interface ActorImageProps {
     popInSide?: 'none' | 'left' | 'right';
     // 'isAudioPlaying' indicates whether audio is currently playing for this character
     isAudioPlaying?: boolean;
+    // Optional visual treatment for special character presentation
+    filter?: 'ghost' | 'aura' | 'hologram';
+    filterColor?: string;
 }
 
 const ActorImage: FC<ActorImageProps> = ({
@@ -34,7 +37,9 @@ const ActorImage: FC<ActorImageProps> = ({
     onMouseEnter,
     onMouseLeave,
     popInSide = 'none',
-    isAudioPlaying = false
+    isAudioPlaying = false,
+    filter: imageFilter,
+    filterColor = '#9ad8ff'
 }) => {
     const [isLoaded, setIsLoaded] = useState<boolean>(false);
     const [displayedImageUrl, setDisplayedImageUrl] = useState<string>('');
@@ -206,11 +211,24 @@ const ActorImage: FC<ActorImageProps> = ({
         return () => clearInterval(intervalId);
     }, [isAudioPlaying, speaker]);
 
-    // Apply bottom fade mask for pop-in characters
-    const popInMaskStyle = popInSide !== 'none' ? {
-        maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)',
-        WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'
-    } : {};
+    // Build a single bottom mask so pop-in and ghost effects share the same clipping path.
+    const bottomMaskStyle = useMemo(() => {
+        if (imageFilter === 'ghost') {
+            return {
+                maskImage: 'linear-gradient(to bottom, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.72) 58%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.72) 58%, transparent 100%)'
+            };
+        }
+
+        if (popInSide !== 'none') {
+            return {
+                maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'
+            };
+        }
+
+        return {};
+    }, [imageFilter, popInSide]);
 
     // Build animate props based on speaker and audio state
     // When speaker and audio is playing, we need to add the scaleY animation
@@ -238,20 +256,57 @@ const ActorImage: FC<ActorImageProps> = ({
         return speaker ? 'talking' : 'idle';
     }, [speaker, isAudioPlaying, variants, popInSide, animationParams]);
 
-    const filterId = `tint-${id}`;
+    const tintFilterId = `tint-${id}`;
+    const ghostTintFilterId = `ghost-tint-${id}`;
+    const auraGlowFilterId = `aura-glow-${id}`;
+    const hologramTintFilterId = `hologram-tint-${id}`;
+    const isGhost = imageFilter === 'ghost';
+    const isHologram = imageFilter === 'hologram';
+    const backingOpacity = isGhost ? 0.82 : isHologram ? 0.95 : 1;
+    const mainOpacity = isGhost ? 0.58 : isHologram ? 0.4 : 0.75;
 
     return displayedImageUrl ? (
         <>
             {/* SVG filter: multiply image by highlightColor, preserving transparency */}
             <svg style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
                 <defs>
-                    <filter id={filterId} x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
+                    <filter id={tintFilterId} x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
                         <feFlood floodColor={highlightColor} result="flood" />
                         <feComposite in="flood" in2="SourceGraphic" operator="in" result="masked" />
                         <feBlend in="SourceGraphic" in2="masked" mode="multiply" />
                     </filter>
+                    <filter id={ghostTintFilterId} x="-15%" y="-15%" width="130%" height="130%" colorInterpolationFilters="sRGB">
+                        <feFlood floodColor={filterColor} result="ghostFlood" />
+                        <feComposite in="ghostFlood" in2="SourceAlpha" operator="in" result="ghostMask" />
+                        <feGaussianBlur in="ghostMask" stdDeviation="2.2" result="ghostSoft" />
+                        <feMerge>
+                            <feMergeNode in="ghostSoft" />
+                            <feMergeNode in="ghostMask" />
+                        </feMerge>
+                    </filter>
+                    <filter id={auraGlowFilterId} x="-40%" y="-40%" width="180%" height="180%" colorInterpolationFilters="sRGB">
+                        <feGaussianBlur in="SourceAlpha" stdDeviation="3.2" result="auraBlur" />
+                        <feFlood floodColor={filterColor} result="auraFlood" />
+                        <feComposite in="auraFlood" in2="auraBlur" operator="in" result="auraGlow" />
+                        <feGaussianBlur in="auraGlow" stdDeviation="1.4" result="auraSoft" />
+                        <feMerge>
+                            <feMergeNode in="auraSoft" />
+                            <feMergeNode in="auraGlow" />
+                        </feMerge>
+                    </filter>
+                    <filter id={hologramTintFilterId} x="-25%" y="-25%" width="150%" height="150%" colorInterpolationFilters="sRGB">
+                        <feFlood floodColor={filterColor} result="holoFlood" />
+                        <feComposite in="holoFlood" in2="SourceAlpha" operator="in" result="holoMask" />
+                        <feGaussianBlur in="holoMask" stdDeviation="1.6" result="holoSoft" />
+                        <feBlend in="SourceGraphic" in2="holoSoft" mode="screen" />
+                    </filter>
                 </defs>
             </svg>
+            {isHologram && (
+                <style>
+                    {`@keyframes hologramScanBand {\n  from {\n    -webkit-mask-position: 0% -130%;\n    mask-position: 0% -130%;\n  }\n  to {\n    -webkit-mask-position: 0% 130%;\n    mask-position: 0% 130%;\n  }\n}\n@keyframes hologramScanlines {\n  from {\n    background-position: 0 0;\n  }\n  to {\n    background-position: 0 120px;\n  }\n}`}
+                </style>
+            )}
         <motion.div
             key={`actor_motion_div_${id}`}
             variants={variants}
@@ -267,6 +322,29 @@ const ActorImage: FC<ActorImageProps> = ({
             }}
             style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center'}}>
             <AnimatePresence>
+                {/* Aura should render only as edge glow and never recolor the character layer. */}
+                {displayedImageUrl && imageFilter === 'aura' && (
+                    <motion.img
+                        key={`${id}_${displayedImageUrl}_aura`}
+                        src={displayedImageUrl}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.5 }}
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            width: '100%',
+                            height: '100%',
+                            filter: `url(#${auraGlowFilterId})`,
+                            zIndex: 3,
+                            pointerEvents: 'none',
+                            ...bottomMaskStyle
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+            <AnimatePresence>
                 {/* Backing image layer - solid but blurry. */}
                 {displayedImageUrl && (
                     <motion.img
@@ -281,10 +359,111 @@ const ActorImage: FC<ActorImageProps> = ({
                             top: 0,
                             width: '100%',
                             height: '100%',
-                            filter: `url(#${filterId}) blur(2.5px)`,
+                            opacity: backingOpacity,
+                            filter: isHologram
+                                ? `url(#${hologramTintFilterId}) blur(3.4px) saturate(1.2) brightness(1.25)`
+                                : `url(#${tintFilterId}) blur(2.5px)`,
                             zIndex: 4,
                             pointerEvents: 'none',
-                            ...popInMaskStyle
+                            ...bottomMaskStyle
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+            <AnimatePresence>
+                {/* Ghost mode adds a subtle color haze without repainting the main sprite itself. */}
+                {displayedImageUrl && imageFilter === 'ghost' && (
+                    <motion.img
+                        key={`${id}_${displayedImageUrl}_ghost`}
+                        src={displayedImageUrl}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 0.42 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.5 }}
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            width: '100%',
+                            height: '100%',
+                            filter: `url(#${ghostTintFilterId})`,
+                            zIndex: 5,
+                            pointerEvents: 'none',
+                            ...bottomMaskStyle
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+            <AnimatePresence>
+                {displayedImageUrl && isHologram && (
+                    <motion.img
+                        key={`${id}_${displayedImageUrl}_hologram_scan`}
+                        src={displayedImageUrl}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: [0.18, 0.52, 0.18] }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 5.4, repeat: Infinity, ease: 'linear' }}
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            width: '100%',
+                            height: '100%',
+                            zIndex: 6,
+                            pointerEvents: 'none',
+                            filter: `url(#${hologramTintFilterId}) blur(0.5px) brightness(1.28)`,
+                            maskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 48%, black 52%, rgba(0, 0, 0, 0.8) 56%, transparent 100%)',
+                            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 48%, black 52%, rgba(0, 0, 0, 0.8) 56%, transparent 100%)',
+                            maskSize: '100% 230%',
+                            WebkitMaskSize: '100% 230%',
+                            maskPosition: '0% -130%',
+                            WebkitMaskPosition: '0% -130%',
+                            animation: 'hologramScanBand 5.4s linear infinite',
+                            ...bottomMaskStyle
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+            <AnimatePresence>
+                {displayedImageUrl && isHologram && (
+                    <motion.div
+                        key={`${id}_${displayedImageUrl}_hologram_scanlines`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: [0.08, 0.18, 0.08] }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 2.6, repeat: Infinity, ease: 'linear' }}
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            width: '100%',
+                            height: '100%',
+                            zIndex: 7,
+                            pointerEvents: 'none',
+                            mixBlendMode: 'screen',
+                            backgroundImage: `repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, ${filterColor} 2px, transparent 4px)`,
+                            animation: 'hologramScanlines 3.2s linear infinite',
+                            ...bottomMaskStyle
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+            <AnimatePresence>
+                {displayedImageUrl && isHologram && (
+                    <motion.div
+                        key={`${id}_${displayedImageUrl}_hologram_glow`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: [0.1, 0.24, 0.1] }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 4.1, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            width: '100%',
+                            height: '100%',
+                            zIndex: 8,
+                            pointerEvents: 'none',
+                            mixBlendMode: 'screen',
+                            background: `linear-gradient(to bottom, transparent 0%, ${filterColor} 42%, transparent 70%)`,
+                            filter: 'blur(8px)',
+                            ...bottomMaskStyle
                         }}
                     />
                 )}
@@ -296,7 +475,7 @@ const ActorImage: FC<ActorImageProps> = ({
                         key={`${id}_${displayedImageUrl}_main`}
                         src={displayedImageUrl}
                         initial={{ opacity: 0 }}
-                        animate={{ opacity: 0.75 }}
+                        animate={{ opacity: mainOpacity }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.5 }}
                         style={{
@@ -304,9 +483,11 @@ const ActorImage: FC<ActorImageProps> = ({
                             top: 0,
                             width: '100%',
                             height: '100%',
-                            filter: `url(#${filterId})`,
-                            zIndex: 5,
-                            ...popInMaskStyle
+                            filter: isHologram
+                                ? `url(#${hologramTintFilterId}) brightness(1.12) contrast(1.06)`
+                                : `url(#${tintFilterId})`,
+                            zIndex: isHologram ? 9 : 6,
+                            ...bottomMaskStyle
                         }}
                         onMouseEnter={onMouseEnter}
                         onMouseLeave={onMouseLeave}
