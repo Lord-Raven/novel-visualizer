@@ -63,8 +63,7 @@ var ActorImage = ({
   highlightColor,
   onMouseEnter,
   onMouseLeave,
-  isGhost = false,
-  popInSide = "left",
+  popInSide = "none",
   isAudioPlaying = false
 }) => {
   const [isLoaded, setIsLoaded] = (0, import_react.useState)(false);
@@ -100,10 +99,10 @@ var ActorImage = ({
   const baseX = speaker ? 50 : xPosition;
   const baseY = yPosition;
   const variants = (0, import_react.useMemo)(() => {
-    if (isGhost) {
-      const ghostX = ghostSide === "left" ? 10 : 90;
-      const offscreenX = ghostSide === "left" ? -20 : 120;
-      const tiltRotate = ghostSide === "left" ? 15 : -15;
+    if (popInSide !== "none") {
+      const popInX = popInSide === "left" ? 10 : 90;
+      const offscreenX = popInSide === "left" ? -20 : 120;
+      const tiltRotate = popInSide === "left" ? 15 : -15;
       return {
         absent: {
           opacity: 0,
@@ -121,7 +120,7 @@ var ActorImage = ({
         },
         talking: {
           opacity: 0.85,
-          x: `${ghostX}vw`,
+          x: `${popInX}vw`,
           bottom: `${baseY}vh`,
           height: `${SPEAKING_HEIGHT * heightMultiplier * 0.8}vh`,
           filter: "brightness(0.9)",
@@ -135,7 +134,7 @@ var ActorImage = ({
         },
         idle: {
           opacity: 0.85,
-          x: `${ghostX}vw`,
+          x: `${popInX}vw`,
           bottom: `${baseY}vh`,
           height: `${IDLE_HEIGHT * heightMultiplier * 0.8}vh`,
           filter: "brightness(0.7)",
@@ -175,7 +174,7 @@ var ActorImage = ({
         transition: { x: { ease: import_framer_motion.easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: import_framer_motion.easeOut, duration: 0.3 } }
       }
     };
-  }, [baseX, baseY, yPosition, zIndex, heightMultiplier, isGhost, ghostSide]);
+  }, [baseX, baseY, yPosition, zIndex, heightMultiplier, popInSide]);
   const [animationParams, setAnimationParams] = (0, import_react.useState)(() => {
     const seed = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const random1 = Math.abs(Math.sin(seed) * 1e4 % 1);
@@ -203,14 +202,14 @@ var ActorImage = ({
     }, updateInterval);
     return () => clearInterval(intervalId);
   }, [isAudioPlaying, speaker]);
-  const ghostMaskStyle = isGhost ? {
+  const popInMaskStyle = popInSide !== "none" ? {
     maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
     WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)"
   } : {};
   const animateProps = (0, import_react.useMemo)(() => {
     if (speaker && isAudioPlaying) {
       const talkingVariant = variants.talking;
-      const baseTransition = isGhost ? { x: { ease: import_framer_motion.easeOut, duration: 0.4 }, bottom: { duration: 0.4 }, opacity: { ease: import_framer_motion.easeOut, duration: 0.4 }, rotate: { duration: 0.4 } } : { x: { ease: import_framer_motion.easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: import_framer_motion.easeOut, duration: 0.3 } };
+      const baseTransition = popInSide !== "none" ? { x: { ease: import_framer_motion.easeOut, duration: 0.4 }, bottom: { duration: 0.4 }, opacity: { ease: import_framer_motion.easeOut, duration: 0.4 }, rotate: { duration: 0.4 } } : { x: { ease: import_framer_motion.easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: import_framer_motion.easeOut, duration: 0.3 } };
       return {
         ...talkingVariant,
         scaleY: [1, animationParams.squish, animationParams.stretch, 1],
@@ -225,7 +224,7 @@ var ActorImage = ({
       };
     }
     return speaker ? "talking" : "idle";
-  }, [speaker, isAudioPlaying, variants, isGhost, animationParams]);
+  }, [speaker, isAudioPlaying, variants, popInSide, animationParams]);
   const filterId = `tint-${id}`;
   return displayedImageUrl ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", { style: { position: "absolute", width: 0, height: 0, overflow: "hidden" }, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("defs", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("filter", { id: filterId, x: "0%", y: "0%", width: "100%", height: "100%", colorInterpolationFilters: "sRGB", children: [
@@ -262,7 +261,7 @@ var ActorImage = ({
                 filter: `url(#${filterId}) blur(2.5px)`,
                 zIndex: 4,
                 pointerEvents: "none",
-                ...ghostMaskStyle
+                ...popInMaskStyle
               }
             },
             `${id}_${displayedImageUrl}_bg`
@@ -282,7 +281,7 @@ var ActorImage = ({
                 height: "100%",
                 filter: `url(#${filterId})`,
                 zIndex: 5,
-                ...ghostMaskStyle
+                ...popInMaskStyle
               },
               onMouseEnter,
               onMouseLeave

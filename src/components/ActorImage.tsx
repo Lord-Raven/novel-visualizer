@@ -16,10 +16,8 @@ interface ActorImageProps {
     highlightColor: string;
     onMouseEnter?: () => void;
     onMouseLeave?: () => void;
-    // 'isGhost' indicates a non-present actor that's appearing briefly for this message
-    isGhost?: boolean;
-    // 'ghostSide' determines which side of the screen the ghost enters from
-    popInSide?: 'left' | 'right';
+    // 'popInSide' determines which side of the screen the actor enters from when popping in
+    popInSide?: 'none' | 'left' | 'right';
     // 'isAudioPlaying' indicates whether audio is currently playing for this character
     isAudioPlaying?: boolean;
 }
@@ -35,8 +33,7 @@ const ActorImage: FC<ActorImageProps> = ({
     highlightColor,
     onMouseEnter,
     onMouseLeave,
-    isGhost = false,
-    popInSide = 'left',
+    popInSide = 'none',
     isAudioPlaying = false
 }) => {
     const [isLoaded, setIsLoaded] = useState<boolean>(false);
@@ -80,11 +77,11 @@ const ActorImage: FC<ActorImageProps> = ({
     const baseY = yPosition;
 
     const variants: Variants = useMemo(() => {
-        if (isGhost) {
-            // Ghost mode: tilt in from the side
-            const ghostX = ghostSide === 'left' ? 10 : 90;
-            const offscreenX = ghostSide === 'left' ? -20 : 120;
-            const tiltRotate = ghostSide === 'left' ? 15 : -15;
+        if (popInSide !== 'none') {
+            // Pop-in mode: tilt in from the side
+            const popInX = popInSide === 'left' ? 10 : 90;
+            const offscreenX = popInSide === 'left' ? -20 : 120;
+            const tiltRotate = popInSide === 'left' ? 15 : -15;
             
             return {
                 absent: {
@@ -103,7 +100,7 @@ const ActorImage: FC<ActorImageProps> = ({
                 },
                 talking: {
                     opacity: 0.85,
-                    x: `${ghostX}vw`,
+                    x: `${popInX}vw`,
                     bottom: `${baseY}vh`,
                     height: `${SPEAKING_HEIGHT * heightMultiplier * 0.8}vh`,
                     filter: 'brightness(0.9)',
@@ -117,7 +114,7 @@ const ActorImage: FC<ActorImageProps> = ({
                 },
                 idle: {
                     opacity: 0.85,
-                    x: `${ghostX}vw`,
+                    x: `${popInX}vw`,
                     bottom: `${baseY}vh`,
                     height: `${IDLE_HEIGHT * heightMultiplier * 0.8}vh`,
                     filter: 'brightness(0.7)',
@@ -159,7 +156,7 @@ const ActorImage: FC<ActorImageProps> = ({
                 transition: { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } }
             }
         };
-    }, [baseX, baseY, yPosition, zIndex, heightMultiplier, isGhost, ghostSide]);
+    }, [baseX, baseY, yPosition, zIndex, heightMultiplier, popInSide]);
 
     // Dynamic animation parameters that vary over time
     const [animationParams, setAnimationParams] = useState(() => {
@@ -209,8 +206,8 @@ const ActorImage: FC<ActorImageProps> = ({
         return () => clearInterval(intervalId);
     }, [isAudioPlaying, speaker]);
 
-    // Apply bottom fade mask for ghost characters
-    const ghostMaskStyle = isGhost ? {
+    // Apply bottom fade mask for pop-in characters
+    const popInMaskStyle = popInSide !== 'none' ? {
         maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)',
         WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'
     } : {};
@@ -221,7 +218,7 @@ const ActorImage: FC<ActorImageProps> = ({
         if (speaker && isAudioPlaying) {
             // Get the talking variant values
             const talkingVariant = variants.talking;
-            const baseTransition = isGhost 
+            const baseTransition = popInSide !== 'none'
                 ? { x: { ease: easeOut, duration: 0.4 }, bottom: { duration: 0.4 }, opacity: { ease: easeOut, duration: 0.4 }, rotate: { duration: 0.4 } }
                 : { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } };
             
@@ -239,7 +236,7 @@ const ActorImage: FC<ActorImageProps> = ({
             };
         }
         return speaker ? 'talking' : 'idle';
-    }, [speaker, isAudioPlaying, variants, isGhost, animationParams]);
+    }, [speaker, isAudioPlaying, variants, popInSide, animationParams]);
 
     const filterId = `tint-${id}`;
 
@@ -287,7 +284,7 @@ const ActorImage: FC<ActorImageProps> = ({
                             filter: `url(#${filterId}) blur(2.5px)`,
                             zIndex: 4,
                             pointerEvents: 'none',
-                            ...ghostMaskStyle
+                            ...popInMaskStyle
                         }}
                     />
                 )}
@@ -309,7 +306,7 @@ const ActorImage: FC<ActorImageProps> = ({
                             height: '100%',
                             filter: `url(#${filterId})`,
                             zIndex: 5,
-                            ...ghostMaskStyle
+                            ...popInMaskStyle
                         }}
                         onMouseEnter={onMouseEnter}
                         onMouseLeave={onMouseLeave}

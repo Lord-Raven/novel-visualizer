@@ -96,10 +96,10 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
     hideInput?: boolean;
     hideActionButtons?: boolean;
     /**
-     * When enabled, non-present actors who speak can "ghost" into the scene,
+     * When enabled, non-present actors who speak can "pop in" into the scene,
      * tilting in from the edge of the screen for visual presence.
      */
-    enableGhostSpeakers?: boolean;
+    enablePopInSpeakers?: boolean;
     enableAudio?: boolean;
     /**
      * When enabled, speaking characters will squish and stretch slightly while audio plays.
@@ -123,8 +123,7 @@ interface ActorImageProps {
     highlightColor: string;
     onMouseEnter?: () => void;
     onMouseLeave?: () => void;
-    isGhost?: boolean;
-    ghostSide?: 'left' | 'right';
+    popInSide?: 'none' | 'left' | 'right';
     isAudioPlaying?: boolean;
 }
 declare const _default: React.NamedExoticComponent<ActorImageProps>;
