@@ -604,17 +604,33 @@ var INLINE_STYLE_PRESET_CSS = `
         transform: translate3d(0, 0, 0);
         text-shadow: inherit;
     }
-    14% {
-        transform: translate3d(-0.6px, 0, 0);
+    11% {
+        transform: translate3d(calc(var(--nv-glitch-jump-x, 0.8px) * -1), calc(var(--nv-glitch-jump-y, 0.5px) * -1), 0);
         text-shadow: -1px 0 rgba(255, 0, 92, 0.9), 1px 0 rgba(0, 229, 255, 0.9);
     }
-    16% {
-        transform: translate3d(0.55px, 0, 0);
+    13% {
+        transform: translate3d(var(--nv-glitch-jump-x, 0.8px), var(--nv-glitch-jump-y, 0.5px), 0);
         text-shadow: 1px 0 rgba(255, 0, 92, 0.8), -1px 0 rgba(0, 229, 255, 0.8);
     }
-    60% {
-        transform: translate3d(0, -0.45px, 0);
+    18%, 52% {
+        transform: translate3d(0, 0, 0);
+        text-shadow: inherit;
+    }
+    55% {
+        transform: translate3d(calc(var(--nv-glitch-jump-x, 0.8px) * 0.75), calc(var(--nv-glitch-jump-y, 0.5px) * -0.65), 0);
         text-shadow: -1px 0 rgba(255, 0, 92, 0.62), 1px 0 rgba(0, 229, 255, 0.62);
+    }
+    56% {
+        transform: translate3d(calc(var(--nv-glitch-jump-x, 0.8px) * -0.9), calc(var(--nv-glitch-jump-y, 0.5px) * 0.7), 0);
+        text-shadow: 1px 0 rgba(255, 0, 92, 0.65), -1px 0 rgba(0, 229, 255, 0.65);
+    }
+    84% {
+        transform: translate3d(calc(var(--nv-glitch-jump-x, 0.8px) * -0.55), calc(var(--nv-glitch-jump-y, 0.5px) * -0.9), 0);
+        text-shadow: -1px 0 rgba(255, 0, 92, 0.62), 1px 0 rgba(0, 229, 255, 0.62);
+    }
+    86% {
+        transform: translate3d(0, 0, 0);
+        text-shadow: inherit;
     }
 }
 
@@ -679,25 +695,32 @@ var INLINE_STYLE_PRESET_CSS = `
 }
 
 @keyframes nvInlineSigh {
-    0%, 100% {
-        opacity: 0.78;
-        filter: blur(0px) saturate(0.94);
+    0% {
+        opacity: 0.56;
+        transform: translate3d(0, -0.06em, 0) scaleY(0.96);
+        filter: blur(0.55px) saturate(0.76);
     }
-    55% {
-        opacity: 0.62;
-        filter: blur(0.35px) saturate(0.74);
+    58% {
+        opacity: 0.7;
+        transform: translate3d(0, 0.14em, 0) scaleY(1.08);
+        filter: blur(0.2px) saturate(0.84);
+    }
+    100% {
+        opacity: 0.78;
+        transform: translate3d(0, 0.08em, 0) scaleY(1.03);
+        filter: blur(0px) saturate(0.9);
     }
 }
 
 @keyframes nvInlineSighChar {
     0% {
-        transform: scaleY(1);
+        transform: translate3d(0, 0, 0) scaleY(1);
     }
-    70% {
-        transform: scaleY(1.18);
+    45% {
+        transform: translate3d(0, 0.15em, 0) scaleY(1.22);
     }
     100% {
-        transform: scaleY(1.08);
+        transform: translate3d(0, 0.08em, 0) scaleY(1.08);
     }
 }
 
@@ -713,6 +736,42 @@ var INLINE_STYLE_PRESET_CSS = `
     70% {
         filter: brightness(0.98) saturate(1.28);
         text-shadow: 0 0 2px rgba(255, 205, 120, 0.85), 0 -1px 6px rgba(255, 140, 0, 0.6), 0 -2px 11px rgba(255, 68, 0, 0.38);
+    }
+}
+
+@keyframes nvInlineTearful {
+    0%,
+    100% {
+        filter: blur(0.15px) saturate(0.92);
+        text-shadow: inherit;
+    }
+    50% {
+        filter: blur(0.55px) saturate(1);
+        text-shadow: 0 0 5px rgba(190, 226, 255, 0.58), 0 1px 3px rgba(116, 166, 216, 0.32);
+    }
+}
+
+@keyframes nvInlineTearDrip {
+    0% {
+        transform: translate3d(0, 0, 0) scale(0.8);
+        opacity: 0;
+    }
+    22% {
+        opacity: 0.85;
+    }
+    100% {
+        transform: translate3d(var(--nv-tear-drift-x, 0px), 1.08em, 0) scale(0.32);
+        opacity: 0;
+    }
+}
+
+@keyframes nvInlineTearShimmer {
+    0%,
+    100% {
+        filter: brightness(0.95) saturate(0.9);
+    }
+    50% {
+        filter: brightness(1.12) saturate(1.08);
     }
 }
 
@@ -775,6 +834,44 @@ var INLINE_STYLE_PRESET_CSS = `
         nvInlineSparkRise var(--nv-spark-duration, 1.2s) linear infinite,
         nvInlineSparkGlow 1.1s ease-in-out infinite;
     animation-delay: var(--nv-spark-delay, 0ms);
+    will-change: transform, opacity;
+}
+
+.nv-inline-tearful {
+    position: relative;
+    display: inline-block;
+    overflow: visible;
+}
+
+.nv-inline-tearful-text {
+    position: relative;
+    z-index: 2;
+}
+
+.nv-inline-tearful-drops {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: -0.18em;
+    pointer-events: none;
+    overflow: visible;
+    z-index: 1;
+}
+
+.nv-inline-tear {
+    position: absolute;
+    top: 0.94em;
+    width: 0.2em;
+    height: 0.26em;
+    border-radius: 50% 50% 58% 58%;
+    background: radial-gradient(circle at 45% 30%, rgba(248, 255, 255, 0.94) 0%, rgba(181, 221, 255, 0.86) 45%, rgba(114, 174, 232, 0.15) 78%);
+    box-shadow: 0 0 6px rgba(155, 206, 255, 0.4);
+    opacity: 0;
+    animation:
+        nvInlineTearDrip var(--nv-tear-duration, 1.25s) ease-in infinite,
+        nvInlineTearShimmer 1.05s ease-in-out infinite;
+    animation-delay: var(--nv-tear-delay, 0ms);
     will-change: transform, opacity;
 }
 `;
@@ -843,22 +940,35 @@ var defaultInlineClassStyles = {
   // Text drifts downward slightly, or elongates vertically, maybe with a subtle blur or shadow effect, to evoke a sense of sadness, exhaustion, or resignation
   sigh: ({ baseColor, baseTextShadow }) => ({
     color: baseColor,
+    display: "inline-block",
     fontStyle: "italic",
     opacity: 0.78,
-    animation: "nvInlineSigh 2.4s ease-out 1 both",
+    transformOrigin: "center bottom",
+    animation: "nvInlineSigh 760ms cubic-bezier(0.18, 0.74, 0.22, 1) 1 both",
     textShadow: mergeTextShadows(
       baseTextShadow,
       "0 1px 2px rgba(0, 0, 0, 0.22)"
     ),
     filter: "saturate(0.88)"
   }),
+  // Blue-tinge, slight blur, droplets dripping from characters.
+  tearful: ({ baseColor, baseTextShadow }) => ({
+    color: baseColor,
+    fontStyle: "italic",
+    animation: "nvInlineTearful 2.2s ease-in-out infinite",
+    textShadow: mergeTextShadows(
+      baseTextShadow,
+      "0 0 5px rgba(190, 226, 255, 0.58)",
+      "0 1px 3px rgba(116, 166, 216, 0.32)"
+    ),
+    filter: "blur(0.2px) saturate(0.94)"
+  }),
   // Characters appear to smolder or burn, with a flickering effect and maybe some ember-like particles or a smoky shadow, for intense or destructive emotions
-  burning: ({ baseColor, baseTextShadow }) => ({
+  burning: ({ baseColor }) => ({
     color: baseColor,
     fontWeight: 700,
     animation: "nvInlineBurning 1.45s steps(3, end) infinite",
     textShadow: mergeTextShadows(
-      baseTextShadow,
       "0 0 3px rgba(255, 190, 92, 0.95)",
       "0 -1px 8px rgba(255, 98, 0, 0.76)",
       "0 -2px 15px rgba(255, 44, 0, 0.45)"
@@ -983,6 +1093,8 @@ var PER_CHARACTER_INLINE_CLASSES = /* @__PURE__ */ new Set(["glitch", "flutter",
 var MARKDOWN_INLINE_PATTERN = /(\*\*[^*]+\*\*|\*(?!\*)[^*]+\*|_[^_]+_|~~[^~]+~~|__[^_]+__|~[^~]+~|#{1,6} [^\n]+)/;
 var BURNING_SPARK_HORIZONTAL_OFFSETS = [8, 22, 36, 51, 68, 84];
 var BURNING_SPARK_X_DRIFTS = [-2.5, 1.5, -1, 2.2, -1.8, 1.2];
+var TEARFUL_DROP_HORIZONTAL_OFFSETS = [10, 24, 39, 55, 71, 86];
+var TEARFUL_DROP_X_DRIFTS = [-1.2, 0.9, -0.7, 1.1, -0.9, 0.6];
 var getBurningSparkStyle = (sparkIndex) => {
   const durationMs = 980 + sparkIndex * 170 % 420;
   const delayMs = -(sparkIndex * 230 % 1100);
@@ -994,6 +1106,19 @@ var getBurningSparkStyle = (sparkIndex) => {
   return {
     ...cssVars,
     left: `${BURNING_SPARK_HORIZONTAL_OFFSETS[sparkIndex % BURNING_SPARK_HORIZONTAL_OFFSETS.length]}%`
+  };
+};
+var getTearfulDropStyle = (dropIndex) => {
+  const durationMs = 980 + dropIndex * 210 % 450;
+  const delayMs = -(dropIndex * 240 % 1200);
+  const cssVars = {
+    "--nv-tear-duration": `${durationMs}ms`,
+    "--nv-tear-delay": `${delayMs}ms`,
+    "--nv-tear-drift-x": `${TEARFUL_DROP_X_DRIFTS[dropIndex % TEARFUL_DROP_X_DRIFTS.length]}px`
+  };
+  return {
+    ...cssVars,
+    left: `${TEARFUL_DROP_HORIZONTAL_OFFSETS[dropIndex % TEARFUL_DROP_HORIZONTAL_OFFSETS.length]}%`
   };
 };
 var pickDeterministicMark = (source, seed) => {
@@ -1019,12 +1144,20 @@ var toZalgoCharacter = (character, characterIndex) => {
 var getPerCharacterStyle = (activeClass, characterIndex) => {
   const cssIndex = { "--nv-char-index": `${characterIndex}` };
   if (activeClass === "glitch") {
+    const jumpX = 0.45 + characterIndex * 41 % 75 / 100;
+    const jumpY = 0.3 + characterIndex * 53 % 60 / 100;
+    const durationMs = 980 + characterIndex * 97 % 560;
+    const glitchVars = {
+      "--nv-glitch-jump-x": `${jumpX.toFixed(2)}px`,
+      "--nv-glitch-jump-y": `${jumpY.toFixed(2)}px`
+    };
     return {
       ...cssIndex,
+      ...glitchVars,
       display: "inline-block",
       transformOrigin: "center",
-      animation: "nvInlineGlitchChar 1.35s steps(2, end) infinite",
-      animationDelay: `-${characterIndex * 53 % 560}ms`,
+      animation: `nvInlineGlitchChar ${durationMs}ms steps(1, end) infinite`,
+      animationDelay: `-${characterIndex * 131 % 900}ms`,
       willChange: "transform, text-shadow"
     };
   }
@@ -1052,8 +1185,8 @@ var getPerCharacterStyle = (activeClass, characterIndex) => {
     ...cssIndex,
     display: "inline-block",
     transformOrigin: "center bottom",
-    animation: "nvInlineSighChar 620ms cubic-bezier(0.2, 0.8, 0.22, 1) 1 both",
-    animationDelay: `${Math.min(characterIndex * 20, 220)}ms`,
+    animation: "nvInlineSighChar 520ms cubic-bezier(0.22, 0.74, 0.2, 1) 1 both",
+    animationDelay: `${Math.min(characterIndex * 14, 140)}ms`,
     willChange: "transform"
   };
 };
@@ -1083,6 +1216,24 @@ var renderBurningSegment = (segmentText, resolvedStyle, segmentKey, formatText) 
         style: getBurningSparkStyle(sparkIndex)
       },
       `${segmentKey}-spark-${sparkIndex}`
+    )) })
+  ] }, segmentKey);
+};
+var renderTearfulSegment = (segmentText, resolvedStyle, segmentKey, formatText) => {
+  if (!/\S/.test(segmentText)) {
+    return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "tearful", style: resolvedStyle, children: formatText(segmentText) }, segmentKey);
+  }
+  const visibleCharacterCount = Array.from(segmentText).filter((character) => !/\s/.test(character)).length;
+  const dropCount = Math.max(2, Math.min(6, Math.ceil(visibleCharacterCount / 4)));
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "tearful nv-inline-tearful", style: resolvedStyle, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "nv-inline-tearful-text", children: formatText(segmentText) }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "nv-inline-tearful-drops", "aria-hidden": true, children: Array.from({ length: dropCount }).map((_, dropIndex) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+      "span",
+      {
+        className: "nv-inline-tear",
+        style: getTearfulDropStyle(dropIndex)
+      },
+      `${segmentKey}-tear-${dropIndex}`
     )) })
   ] }, segmentKey);
 };
@@ -1187,6 +1338,9 @@ var formatInlineStyles = (text, options, initialActiveClass = null) => {
     }
     if (activeClass === "burning") {
       return renderBurningSegment(segmentText, resolvedStyle, segmentKey, formatHeaders);
+    }
+    if (activeClass === "tearful") {
+      return renderTearfulSegment(segmentText, resolvedStyle, segmentKey, formatHeaders);
     }
     return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: activeClass, style: resolvedStyle, children: formatHeaders(segmentText) }, segmentKey);
   };
