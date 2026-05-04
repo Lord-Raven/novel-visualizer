@@ -498,7 +498,7 @@ var TypeOut_default = TypeOut;
 // src/utils/TextFormatting.tsx
 import React3 from "react";
 import { darken, lighten } from "@mui/material/styles";
-import { Fragment as Fragment2, jsx as jsx4 } from "react/jsx-runtime";
+import { Fragment as Fragment2, jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
 var INLINE_STYLE_SHEET_ID = "novel-visualizer-inline-style-presets";
 var INLINE_STYLE_PRESET_CSS = `
 @keyframes nvInlineShinyPulse {
@@ -548,22 +548,32 @@ var INLINE_STYLE_PRESET_CSS = `
 
 @keyframes nvInlineGlitch {
     0%, 100% {
-        letter-spacing: 0.03em;
         filter: saturate(1.08) contrast(1);
+    }
+    40% {
+        filter: saturate(1.2) contrast(1.08);
+    }
+    70% {
+        filter: saturate(1.12) contrast(1.12);
+    }
+}
+
+@keyframes nvInlineGlitchChar {
+    0%, 100% {
+        transform: translate3d(0, 0, 0);
         text-shadow: inherit;
     }
-    20% {
-        letter-spacing: 0.06em;
-        filter: saturate(1.3) contrast(1.08);
-        text-shadow: -1px 0 rgba(255, 0, 92, 0.95), 1px 0 rgba(0, 229, 255, 0.95);
+    14% {
+        transform: translate3d(-0.6px, 0, 0);
+        text-shadow: -1px 0 rgba(255, 0, 92, 0.9), 1px 0 rgba(0, 229, 255, 0.9);
     }
-    21% {
-        letter-spacing: 0.01em;
-        text-shadow: 1px 0 rgba(255, 0, 92, 0.88), -1px 0 rgba(0, 229, 255, 0.88);
+    16% {
+        transform: translate3d(0.55px, 0, 0);
+        text-shadow: 1px 0 rgba(255, 0, 92, 0.8), -1px 0 rgba(0, 229, 255, 0.8);
     }
-    65% {
-        filter: saturate(1.15) contrast(1.12);
-        text-shadow: -2px 0 rgba(255, 0, 92, 0.7), 2px 0 rgba(0, 229, 255, 0.7);
+    60% {
+        transform: translate3d(0, -0.45px, 0);
+        text-shadow: -1px 0 rgba(255, 0, 92, 0.62), 1px 0 rgba(0, 229, 255, 0.62);
     }
 }
 
@@ -578,45 +588,75 @@ var INLINE_STYLE_PRESET_CSS = `
     }
 }
 
+@keyframes nvInlineZalgoChar {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) skewX(0deg);
+    }
+    30% {
+        transform: translate3d(-0.5px, -0.35px, 0) skewX(-1.5deg);
+    }
+    65% {
+        transform: translate3d(0.45px, 0.25px, 0) skewX(1.2deg);
+    }
+}
+
 @keyframes nvInlineShout {
     0%, 100% {
-        filter: brightness(1) saturate(1);
-        text-shadow: inherit;
-    }
-    48% {
-        filter: brightness(1.16) saturate(1.08);
-        text-shadow: 0 0 2px currentColor, 0 2px 0 rgba(0, 0, 0, 0.35), 0 0 14px currentColor;
+        filter: brightness(1.14) saturate(1.14);
     }
 }
 
 @keyframes nvInlineFlutter {
     0%, 100% {
-        letter-spacing: 0.01em;
         opacity: 0.95;
         filter: saturate(1);
     }
     35% {
-        letter-spacing: 0.07em;
         opacity: 0.86;
         filter: saturate(1.08) hue-rotate(-7deg);
     }
     65% {
-        letter-spacing: 0.04em;
         opacity: 0.9;
         filter: saturate(1.02) hue-rotate(6deg);
+    }
+}
+
+@keyframes nvInlineFlutterChar {
+    0%, 100% {
+        transform: translate3d(0, 0, 0);
+    }
+    25% {
+        transform: translate3d(-0.7px, 0, 0);
+    }
+    50% {
+        transform: translate3d(0.7px, 0, 0);
+    }
+    75% {
+        transform: translate3d(-0.35px, 0, 0);
     }
 }
 
 @keyframes nvInlineSigh {
     0%, 100% {
         opacity: 0.78;
-        letter-spacing: 0.02em;
         filter: blur(0px) saturate(0.94);
     }
     55% {
         opacity: 0.62;
-        letter-spacing: 0.05em;
         filter: blur(0.35px) saturate(0.74);
+    }
+}
+
+@keyframes nvInlineSighChar {
+    0% {
+        transform: scaleY(1);
+    }
+    70% {
+        transform: scaleY(1.18);
+    }
+    100% {
+        transform: scaleY(1.08);
     }
 }
 
@@ -633,6 +673,68 @@ var INLINE_STYLE_PRESET_CSS = `
         filter: brightness(0.98) saturate(1.28);
         text-shadow: 0 0 2px rgba(255, 205, 120, 0.85), 0 -1px 6px rgba(255, 140, 0, 0.6), 0 -2px 11px rgba(255, 68, 0, 0.38);
     }
+}
+
+@keyframes nvInlineSparkRise {
+    0% {
+        transform: translate3d(0, 0, 0) scale(0.72);
+        opacity: 0;
+    }
+    18% {
+        opacity: 0.95;
+    }
+    100% {
+        transform: translate3d(var(--nv-spark-x-drift, 0px), -1.25em, 0) scale(0.25);
+        opacity: 0;
+    }
+}
+
+@keyframes nvInlineSparkGlow {
+    0%,
+    100% {
+        filter: brightness(0.92) saturate(1);
+    }
+    50% {
+        filter: brightness(1.35) saturate(1.14);
+    }
+}
+
+.nv-inline-burning {
+    position: relative;
+    display: inline-block;
+    overflow: visible;
+}
+
+.nv-inline-burning-text {
+    position: relative;
+    z-index: 2;
+}
+
+.nv-inline-burning-sparks {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -0.05em;
+    bottom: 0;
+    pointer-events: none;
+    overflow: visible;
+    z-index: 1;
+}
+
+.nv-inline-spark {
+    position: absolute;
+    bottom: 0.1em;
+    width: 0.24em;
+    height: 0.24em;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(255, 246, 178, 0.95) 0%, rgba(255, 204, 86, 0.9) 50%, rgba(255, 146, 0, 0) 74%);
+    box-shadow: 0 0 7px rgba(255, 208, 95, 0.65);
+    opacity: 0;
+    animation:
+        nvInlineSparkRise var(--nv-spark-duration, 1.2s) linear infinite,
+        nvInlineSparkGlow 1.1s ease-in-out infinite;
+    animation-delay: var(--nv-spark-delay, 0ms);
+    will-change: transform, opacity;
 }
 `;
 var mergeTextShadows = (...shadows) => {
@@ -655,7 +757,6 @@ var defaultInlineClassStyles = {
   // horizontal shearing or color channel offsets or other effects to randomly manipulate or offset characters
   glitch: ({ baseColor, baseTextShadow }) => ({
     color: baseColor,
-    letterSpacing: "0.03em",
     animation: "nvInlineGlitch 1.35s steps(2, end) infinite",
     textShadow: mergeTextShadows(
       baseTextShadow,
@@ -669,7 +770,7 @@ var defaultInlineClassStyles = {
     color: baseColor,
     fontWeight: 600,
     letterSpacing: "0.08em",
-    animation: "nvInlineZalgo 170ms steps(2, end) infinite",
+    animation: "nvInlineZalgo 1.7s steps(3, end) infinite",
     textShadow: mergeTextShadows(
       baseTextShadow,
       "0 -1px 0 rgba(255, 255, 255, 0.35)",
@@ -682,10 +783,10 @@ var defaultInlineClassStyles = {
   shout: ({ baseColor }) => ({
     color: baseColor,
     fontWeight: 900,
-    letterSpacing: "0.07em",
+    fontSize: "1.1em",
     textTransform: "uppercase",
-    animation: "nvInlineShout 1.9s ease-in-out infinite",
-    textShadow: "0 0 1px currentColor, 0 2px 0 rgba(0, 0, 0, 0.35), 0 0 14px currentColor",
+    filter: "brightness(1.14) saturate(1.16)",
+    textShadow: "0 0 2px currentColor, 0 3px 0 rgba(0, 0, 0, 0.4), 0 0 14px currentColor, 0 0 22px rgba(255, 255, 255, 0.2)",
     WebkitTextStroke: "0.6px rgba(0, 0, 0, 0.45)"
   }),
   // Make text appear to flutter or wobble horizontally, possibly with a subtle color shift or shadow effect, for flustered or embarrassed dialogue
@@ -703,7 +804,7 @@ var defaultInlineClassStyles = {
     color: baseColor,
     fontStyle: "italic",
     opacity: 0.78,
-    animation: "nvInlineSigh 3.4s ease-in-out infinite",
+    animation: "nvInlineSigh 2.4s ease-out 1 both",
     textShadow: mergeTextShadows(
       baseTextShadow,
       "0 1px 2px rgba(0, 0, 0, 0.22)"
@@ -778,6 +879,171 @@ var getResolvedClassStyle = (classStyle, styleContext) => {
     return classStyle(styleContext);
   }
   return classStyle;
+};
+var ZALGO_ABOVE_DIACRITICS = [
+  "\u0300",
+  "\u0301",
+  "\u0302",
+  "\u0303",
+  "\u0304",
+  "\u0305",
+  "\u0306",
+  "\u0307",
+  "\u0308",
+  "\u0309",
+  "\u030A",
+  "\u030B",
+  "\u030C",
+  "\u030D",
+  "\u030E",
+  "\u030F",
+  "\u0310",
+  "\u0311",
+  "\u0312",
+  "\u0313",
+  "\u0314",
+  "\u033D",
+  "\u0342",
+  "\u0346"
+];
+var ZALGO_BELOW_DIACRITICS = [
+  "\u0316",
+  "\u0317",
+  "\u0318",
+  "\u0319",
+  "\u031A",
+  "\u031B",
+  "\u031C",
+  "\u031D",
+  "\u031E",
+  "\u031F",
+  "\u0320",
+  "\u0321",
+  "\u0322",
+  "\u0323",
+  "\u0324",
+  "\u0325",
+  "\u0326",
+  "\u0327",
+  "\u0328",
+  "\u0329",
+  "\u032A",
+  "\u032B",
+  "\u032C",
+  "\u032D",
+  "\u032E",
+  "\u032F",
+  "\u0330",
+  "\u0331",
+  "\u0332",
+  "\u0333"
+];
+var PER_CHARACTER_INLINE_CLASSES = /* @__PURE__ */ new Set(["glitch", "flutter", "sigh", "zalgo"]);
+var MARKDOWN_INLINE_PATTERN = /(\*\*[^*]+\*\*|\*(?!\*)[^*]+\*|_[^_]+_|~~[^~]+~~|__[^_]+__|~[^~]+~|#{1,6} [^\n]+)/;
+var BURNING_SPARK_HORIZONTAL_OFFSETS = [8, 22, 36, 51, 68, 84];
+var BURNING_SPARK_X_DRIFTS = [-2.5, 1.5, -1, 2.2, -1.8, 1.2];
+var getBurningSparkStyle = (sparkIndex) => {
+  const durationMs = 980 + sparkIndex * 170 % 420;
+  const delayMs = -(sparkIndex * 230 % 1100);
+  const cssVars = {
+    "--nv-spark-duration": `${durationMs}ms`,
+    "--nv-spark-delay": `${delayMs}ms`,
+    "--nv-spark-x-drift": `${BURNING_SPARK_X_DRIFTS[sparkIndex % BURNING_SPARK_X_DRIFTS.length]}px`
+  };
+  return {
+    ...cssVars,
+    left: `${BURNING_SPARK_HORIZONTAL_OFFSETS[sparkIndex % BURNING_SPARK_HORIZONTAL_OFFSETS.length]}%`
+  };
+};
+var pickDeterministicMark = (source, seed) => {
+  return source[Math.abs(seed) % source.length];
+};
+var toZalgoCharacter = (character, characterIndex) => {
+  if (/\s/.test(character)) {
+    return character;
+  }
+  const codePoint = character.codePointAt(0) ?? 0;
+  const baseSeed = codePoint * 131 + characterIndex * 71;
+  const aboveCount = 2 + Math.abs(baseSeed) % 2;
+  const belowCount = 1 + Math.abs(baseSeed + 17) % 2;
+  let transformed = character;
+  for (let i = 0; i < aboveCount; i += 1) {
+    transformed += pickDeterministicMark(ZALGO_ABOVE_DIACRITICS, baseSeed + i * 11);
+  }
+  for (let i = 0; i < belowCount; i += 1) {
+    transformed += pickDeterministicMark(ZALGO_BELOW_DIACRITICS, baseSeed + i * 13 + 29);
+  }
+  return transformed;
+};
+var getPerCharacterStyle = (activeClass, characterIndex) => {
+  const cssIndex = { "--nv-char-index": `${characterIndex}` };
+  if (activeClass === "glitch") {
+    return {
+      ...cssIndex,
+      display: "inline-block",
+      transformOrigin: "center",
+      animation: "nvInlineGlitchChar 1.35s steps(2, end) infinite",
+      animationDelay: `-${characterIndex * 53 % 560}ms`,
+      willChange: "transform, text-shadow"
+    };
+  }
+  if (activeClass === "flutter") {
+    return {
+      ...cssIndex,
+      display: "inline-block",
+      transformOrigin: "center",
+      animation: "nvInlineFlutterChar 1.8s ease-in-out infinite",
+      animationDelay: `-${characterIndex * 80}ms`,
+      willChange: "transform"
+    };
+  }
+  if (activeClass === "zalgo") {
+    return {
+      ...cssIndex,
+      display: "inline-block",
+      transformOrigin: "center",
+      animation: "nvInlineZalgoChar 1.2s steps(2, end) infinite",
+      animationDelay: `-${characterIndex * 67 % 700}ms`,
+      willChange: "transform"
+    };
+  }
+  return {
+    ...cssIndex,
+    display: "inline-block",
+    transformOrigin: "center bottom",
+    animation: "nvInlineSighChar 620ms cubic-bezier(0.2, 0.8, 0.22, 1) 1 both",
+    animationDelay: `${Math.min(characterIndex * 20, 220)}ms`,
+    willChange: "transform"
+  };
+};
+var renderPerCharacterSegment = (segmentText, activeClass, resolvedStyle, segmentKey) => {
+  const characters = Array.from(segmentText);
+  return /* @__PURE__ */ jsx4("span", { className: activeClass, style: resolvedStyle, children: characters.map((character, characterIndex) => /* @__PURE__ */ jsx4(
+    "span",
+    {
+      style: getPerCharacterStyle(activeClass, characterIndex),
+      children: activeClass === "zalgo" ? toZalgoCharacter(character, characterIndex) : character
+    },
+    `${segmentKey}-char-${characterIndex}`
+  )) }, segmentKey);
+};
+var renderBurningSegment = (segmentText, resolvedStyle, segmentKey, formatText) => {
+  if (!/\S/.test(segmentText)) {
+    return /* @__PURE__ */ jsx4("span", { className: "burning", style: resolvedStyle, children: formatText(segmentText) }, segmentKey);
+  }
+  const visibleCharacterCount = Array.from(segmentText).filter((character) => !/\s/.test(character)).length;
+  const sparkCount = Math.max(3, Math.min(6, Math.ceil(visibleCharacterCount / 3)));
+  return /* @__PURE__ */ jsxs3("span", { className: "burning nv-inline-burning", style: resolvedStyle, children: [
+    /* @__PURE__ */ jsx4("span", { className: "nv-inline-burning-text", children: formatText(segmentText) }),
+    /* @__PURE__ */ jsx4("span", { className: "nv-inline-burning-sparks", "aria-hidden": true, children: Array.from({ length: sparkCount }).map((_, sparkIndex) => /* @__PURE__ */ jsx4(
+      "span",
+      {
+        className: "nv-inline-spark",
+        style: getBurningSparkStyle(sparkIndex)
+      },
+      `${segmentKey}-spark-${sparkIndex}`
+    )) })
+  ] }, segmentKey);
 };
 var formatInlineStyles = (text, options, initialActiveClass = null) => {
   if (!text) return /* @__PURE__ */ jsx4(Fragment2, {});
@@ -875,6 +1141,12 @@ var formatInlineStyles = (text, options, initialActiveClass = null) => {
     if (!resolvedStyle) {
       return /* @__PURE__ */ jsx4(React3.Fragment, { children: formatHeaders(segmentText) }, segmentKey);
     }
+    if (PER_CHARACTER_INLINE_CLASSES.has(activeClass) && !MARKDOWN_INLINE_PATTERN.test(segmentText)) {
+      return renderPerCharacterSegment(segmentText, activeClass, resolvedStyle, segmentKey);
+    }
+    if (activeClass === "burning") {
+      return renderBurningSegment(segmentText, resolvedStyle, segmentKey, formatHeaders);
+    }
     return /* @__PURE__ */ jsx4("span", { className: activeClass, style: resolvedStyle, children: formatHeaders(segmentText) }, segmentKey);
   };
   const formatTextWithClassTokens = (sourceText, keyPrefix = "inline", startingClass = null) => {
@@ -943,7 +1215,7 @@ var formatMessageWithStyles = (text, options) => {
 };
 
 // src/components/NovelVisualizer.tsx
-import { Fragment as Fragment3, jsx as jsx5, jsxs as jsxs3 } from "react/jsx-runtime";
+import { Fragment as Fragment3, jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
 var calculateActorXPosition = (actorIndex, totalActors, anySpeaker) => {
   const leftRange = Math.min(40, Math.ceil((totalActors - 2) / 2) * 20);
   const rightRange = Math.min(40, Math.floor((totalActors - 2) / 2) * 20);
@@ -1400,7 +1672,7 @@ function NovelVisualizer(props) {
       scale: backgroundOptions?.scale,
       overlay: backgroundOptions?.overlay,
       transitionDuration: backgroundOptions?.transitionDuration,
-      children: /* @__PURE__ */ jsxs3(
+      children: /* @__PURE__ */ jsxs4(
         "div",
         {
           style: { position: "relative", width: "100vw", height: "100vh" },
@@ -1424,7 +1696,7 @@ function NovelVisualizer(props) {
                 children: responsiveOverlayNode
               }
             ),
-            /* @__PURE__ */ jsxs3(
+            /* @__PURE__ */ jsxs4(
               Paper,
               {
                 ref: messageBoxRef,
@@ -1448,8 +1720,8 @@ function NovelVisualizer(props) {
                   overflow: "visible"
                 },
                 children: [
-                  /* @__PURE__ */ jsxs3(Box, { sx: { display: "flex", alignItems: "flex-end", overflow: "visible" }, children: [
-                    /* @__PURE__ */ jsxs3(Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "flex-end", flex: 1, overflow: "visible" }, children: [
+                  /* @__PURE__ */ jsxs4(Box, { sx: { display: "flex", alignItems: "flex-end", overflow: "visible" }, children: [
+                    /* @__PURE__ */ jsxs4(Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "flex-end", flex: 1, overflow: "visible" }, children: [
                       /* @__PURE__ */ jsx5(
                         IconButton,
                         {
@@ -1479,7 +1751,7 @@ function NovelVisualizer(props) {
                               },
                               onMouseLeave: () => setTooltip?.(null)
                             }
-                          ) : /* @__PURE__ */ jsxs3("span", { style: { display: "flex", alignItems: "center", gap: isVerticalLayout ? "2px" : "4px" }, children: [
+                          ) : /* @__PURE__ */ jsxs4("span", { style: { display: "flex", alignItems: "center", gap: isVerticalLayout ? "2px" : "4px" }, children: [
                             index + 1 < scriptEntries.length && inputText.length > 0 && /* @__PURE__ */ jsx5(
                               "span",
                               {
@@ -1542,7 +1814,7 @@ function NovelVisualizer(props) {
                         }
                       )
                     ] }),
-                    !hideActionButtons && /* @__PURE__ */ jsxs3(Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "center" }, children: [
+                    !hideActionButtons && /* @__PURE__ */ jsxs4(Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "center" }, children: [
                       !isEditingMessage ? /* @__PURE__ */ jsx5(
                         IconButton,
                         {
@@ -1574,7 +1846,7 @@ function NovelVisualizer(props) {
                           },
                           children: /* @__PURE__ */ jsx5(Edit, { fontSize: isVerticalLayout ? "inherit" : "small", sx: { fontSize: isVerticalLayout ? "16px" : void 0 } })
                         }
-                      ) : /* @__PURE__ */ jsxs3(Fragment3, { children: [
+                      ) : /* @__PURE__ */ jsxs4(Fragment3, { children: [
                         /* @__PURE__ */ jsx5(
                           IconButton,
                           {
@@ -1742,7 +2014,7 @@ function NovelVisualizer(props) {
                       )
                     }
                   ),
-                  !hideInput && /* @__PURE__ */ jsxs3(Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "center" }, children: [
+                  !hideInput && /* @__PURE__ */ jsxs4(Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "center" }, children: [
                     /* @__PURE__ */ jsx5(
                       TextField,
                       {
