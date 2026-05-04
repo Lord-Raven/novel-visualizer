@@ -19,7 +19,7 @@ interface ActorImageProps {
     // 'isGhost' indicates a non-present actor that's appearing briefly for this message
     isGhost?: boolean;
     // 'ghostSide' determines which side of the screen the ghost enters from
-    ghostSide?: 'left' | 'right';
+    popInSide?: 'left' | 'right';
     // 'isAudioPlaying' indicates whether audio is currently playing for this character
     isAudioPlaying?: boolean;
 }
@@ -36,7 +36,7 @@ const ActorImage: FC<ActorImageProps> = ({
     onMouseEnter,
     onMouseLeave,
     isGhost = false,
-    ghostSide = 'left',
+    popInSide = 'left',
     isAudioPlaying = false
 }) => {
     const [isLoaded, setIsLoaded] = useState<boolean>(false);

@@ -78,10 +78,10 @@ export interface NovelVisualizerProps<
     hideInput?: boolean;
     hideActionButtons?: boolean;
     /**
-     * When enabled, non-present actors who speak can "ghost" into the scene,
+     * When enabled, non-present actors who speak can "pop in" into the scene,
      * tilting in from the edge of the screen for visual presence.
      */
-    enableGhostSpeakers?: boolean;
+    enablePopInSpeakers?: boolean;
     enableAudio?: boolean;
     /**
      * When enabled, speaking characters will squish and stretch slightly while audio plays.
@@ -123,7 +123,7 @@ export function NovelVisualizer<
         setTooltip,
         hideInput = false,
         hideActionButtons = false,
-        enableGhostSpeakers = false,
+        enablePopInSpeakers = false,
         enableAudio = true,
         enableTalkingAnimation = true,
         enableReroll = true,
@@ -300,7 +300,7 @@ export function NovelVisualizer<
             return;
         }
 
-        if (actorsAtIndex.length === 0 && !(enableGhostSpeakers && speakerActor)) {
+        if (actorsAtIndex.length === 0 && !(enablePopInSpeakers && speakerActor)) {
             setHoveredActor(null);
             return;
         }
@@ -310,12 +310,12 @@ export function NovelVisualizer<
             xPosition: calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor))
         }));
 
-        // Add ghost speaker to hover detection if present
-        if (enableGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
-            const ghostSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? 'left' : 'right';
+        // Add pop-in speaker to hover detection if present
+        if (enablePopInSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
+            const popInSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? 'left' : 'right';
             actorPositions.push({
                 actor: speakerActor,
-                xPosition: ghostSide === 'left' ? 10 : 90
+                xPosition: popInSide === 'left' ? 10 : 90
             });
         }
 
@@ -333,7 +333,7 @@ export function NovelVisualizer<
         });
 
         setHoveredActor(closestActor);
-    }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enableGhostSpeakers]);
+    }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enablePopInSpeakers]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -479,29 +479,28 @@ export function NovelVisualizer<
             );
         });
 
-        // Check if we should render a ghost speaker
-        if (enableGhostSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
+        // Check if we should render a pop-in speaker
+        if (enablePopInSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
             const yPosition = isVerticalLayout ? 20 : 0;
             const isHovered = speakerActor === hoveredActor;
             // Alternate sides based on actor ID for consistency
-            const ghostSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? 'left' : 'right';
+            const popInSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? 'left' : 'right';
             const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(speakerActor, activeScript, index) : "#ffffff";
             
             actorElements.push(
                 <ActorImage
-                    key={`ghost-${speakerActor.id}`}
-                    id={`ghost-${speakerActor.id}`}
+                    key={`pop-in-${speakerActor.id}`}
+                    id={`pop-in-${speakerActor.id}`}
                     resolveImageUrl={() => {
                         return getActorImageUrl(speakerActor, activeScript, index);
                     }}
-                    xPosition={ghostSide === 'left' ? 10 : 90}
+                    xPosition={popInSide === 'left' ? 10 : 90}
                     yPosition={yPosition}
                     zIndex={45}
                     heightMultiplier={(isVerticalLayout ? 0.7 : 0.9) * (speakerActor.heightMultiplier ?? 1)}
                     speaker={true}
                     highlightColor={isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor}
-                    isGhost={true}
-                    ghostSide={ghostSide}
+                    popInSide={popInSide}
                     isAudioPlaying={isAudioPlaying && enableTalkingAnimation}
                 />
             );
