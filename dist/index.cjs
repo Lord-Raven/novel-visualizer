@@ -390,14 +390,15 @@ var ActorImage = ({
                 zIndex: 6,
                 pointerEvents: "none",
                 filter: `url(#${hologramTintFilterId}) blur(0.5px) brightness(1.28)`,
-                maskImage: "linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 48%, black 52%, rgba(0, 0, 0, 0.8) 56%, transparent 100%)",
-                WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 48%, black 52%, rgba(0, 0, 0, 0.8) 56%, transparent 100%)",
-                maskSize: "100% 230%",
-                WebkitMaskSize: "100% 230%",
-                maskPosition: "0% -130%",
-                WebkitMaskPosition: "0% -130%",
-                animation: "hologramScanBand 5.4s linear infinite",
-                ...bottomMaskStyle
+                maskImage: bottomMaskStyle.maskImage ? `url(${displayedImageUrl}), linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 48%, black 52%, rgba(0, 0, 0, 0.8) 56%, transparent 100%), ${bottomMaskStyle.maskImage}` : `url(${displayedImageUrl}), linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 48%, black 52%, rgba(0, 0, 0, 0.8) 56%, transparent 100%)`,
+                WebkitMaskImage: bottomMaskStyle.WebkitMaskImage ? `url(${displayedImageUrl}), linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 48%, black 52%, rgba(0, 0, 0, 0.8) 56%, transparent 100%), ${bottomMaskStyle.WebkitMaskImage}` : `url(${displayedImageUrl}), linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 48%, black 52%, rgba(0, 0, 0, 0.8) 56%, transparent 100%)`,
+                maskComposite: bottomMaskStyle.maskImage ? "intersect, intersect" : "intersect",
+                WebkitMaskComposite: bottomMaskStyle.WebkitMaskImage ? "source-in, source-in" : "source-in",
+                maskSize: bottomMaskStyle.maskImage ? "100% 100%, 100% 230%, 100% 100%" : "100% 100%, 100% 230%",
+                WebkitMaskSize: bottomMaskStyle.WebkitMaskImage ? "100% 100%, 100% 230%, 100% 100%" : "100% 100%, 100% 230%",
+                maskPosition: bottomMaskStyle.maskImage ? "0% 0%, 0% -130%, 0% 0%" : "0% 0%, 0% -130%",
+                WebkitMaskPosition: bottomMaskStyle.WebkitMaskImage ? "0% 0%, 0% -130%, 0% 0%" : "0% 0%, 0% -130%",
+                animation: "hologramScanBand 5.4s linear infinite"
               }
             },
             `${id}_${displayedImageUrl}_hologram_scan`
@@ -419,7 +420,10 @@ var ActorImage = ({
                 mixBlendMode: "screen",
                 backgroundImage: `repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, ${filterColor} 2px, transparent 4px)`,
                 animation: "hologramScanlines 3.2s linear infinite",
-                ...bottomMaskStyle
+                maskImage: bottomMaskStyle.maskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.maskImage}` : `url(${displayedImageUrl})`,
+                WebkitMaskImage: bottomMaskStyle.WebkitMaskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.WebkitMaskImage}` : `url(${displayedImageUrl})`,
+                maskComposite: bottomMaskStyle.maskImage ? "intersect" : "match-source",
+                WebkitMaskComposite: bottomMaskStyle.WebkitMaskImage ? "source-in" : "unset"
               }
             },
             `${id}_${displayedImageUrl}_hologram_scanlines`
@@ -441,7 +445,10 @@ var ActorImage = ({
                 mixBlendMode: "screen",
                 background: `linear-gradient(to bottom, transparent 0%, ${filterColor} 42%, transparent 70%)`,
                 filter: "blur(8px)",
-                ...bottomMaskStyle
+                maskImage: bottomMaskStyle.maskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.maskImage}` : `url(${displayedImageUrl})`,
+                WebkitMaskImage: bottomMaskStyle.WebkitMaskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.WebkitMaskImage}` : `url(${displayedImageUrl})`,
+                maskComposite: bottomMaskStyle.maskImage ? "intersect" : "match-source",
+                WebkitMaskComposite: bottomMaskStyle.WebkitMaskImage ? "source-in" : "unset"
               }
             },
             `${id}_${displayedImageUrl}_hologram_glow`
