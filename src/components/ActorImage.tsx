@@ -262,8 +262,8 @@ const ActorImage: FC<ActorImageProps> = ({
     const hologramTintFilterId = `hologram-tint-${id}`;
     const isGhost = imageFilter === 'ghost';
     const isHologram = imageFilter === 'hologram';
-    const backingOpacity = isGhost ? 0.82 : isHologram ? 0.95 : 1;
-    const mainOpacity = isGhost ? 0.58 : isHologram ? 0.4 : 0.75;
+    const backingOpacity = isGhost ? 0.75 : isHologram ? 0.75 : 1;
+    const mainOpacity = isGhost ? 0.5 : isHologram ? 0.5 : 0.75;
 
     return displayedImageUrl ? (
         <>
@@ -304,7 +304,26 @@ const ActorImage: FC<ActorImageProps> = ({
             </svg>
             {isHologram && (
                 <style>
-                    {`@keyframes hologramScanBand {\n  from {\n    -webkit-mask-position: 0% -130%;\n    mask-position: 0% -130%;\n  }\n  to {\n    -webkit-mask-position: 0% 130%;\n    mask-position: 0% 130%;\n  }\n}\n@keyframes hologramScanlines {\n  from {\n    background-position: 0 0;\n  }\n  to {\n    background-position: 0 120px;\n  }\n}`}
+                    {
+                        `@keyframes hologramScanBand {  
+                            0% {
+                                mask-position: 0% 100%;
+                                -webkit-mask-position: 0% 100%;
+                            }
+                            100% {
+                                mask-position: 0% -100%;
+                                -webkit-mask-position: 0% -100%;
+                            }
+                        }
+                        @keyframes hologramScanlines {
+                            from {
+                                background-position: 0 0;
+                            }
+                            to {
+                                background-position: 0 120px;
+                            }
+                        }`
+                    }
                 </style>
             )}
         <motion.div
@@ -351,7 +370,7 @@ const ActorImage: FC<ActorImageProps> = ({
                         key={`${id}_${displayedImageUrl}_bg`}
                         src={displayedImageUrl}
                         initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
+                        animate={{ opacity: backingOpacity }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.5 }}
                         style={{
@@ -393,7 +412,9 @@ const ActorImage: FC<ActorImageProps> = ({
                     />
                 )}
             </AnimatePresence>
+
             <AnimatePresence>
+                {/* Hologram scan band layer - a faint blurred duplicate that animates a slow vertical scanline mask. */}
                 {displayedImageUrl && isHologram && (
                     <motion.img
                         key={`${id}_${displayedImageUrl}_hologram_scan`}
@@ -409,25 +430,20 @@ const ActorImage: FC<ActorImageProps> = ({
                             height: '100%',
                             zIndex: 6,
                             pointerEvents: 'none',
-                            filter: `url(#${hologramTintFilterId}) blur(0.5px) brightness(1.28)`,
-                            maskImage: bottomMaskStyle.maskImage
-                                ? `url(${displayedImageUrl}), linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 48%, black 52%, rgba(0, 0, 0, 0.8) 56%, transparent 100%), ${bottomMaskStyle.maskImage}`
-                                : `url(${displayedImageUrl}), linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 48%, black 52%, rgba(0, 0, 0, 0.8) 56%, transparent 100%)`,
-                            WebkitMaskImage: bottomMaskStyle.WebkitMaskImage
-                                ? `url(${displayedImageUrl}), linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 48%, black 52%, rgba(0, 0, 0, 0.8) 56%, transparent 100%), ${bottomMaskStyle.WebkitMaskImage}`
-                                : `url(${displayedImageUrl}), linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 48%, black 52%, rgba(0, 0, 0, 0.8) 56%, transparent 100%)`,
-                            maskComposite: bottomMaskStyle.maskImage ? 'intersect, intersect' : 'intersect',
-                            WebkitMaskComposite: bottomMaskStyle.WebkitMaskImage ? 'source-in, source-in' : 'source-in',
-                            maskSize: bottomMaskStyle.maskImage ? '100% 100%, 100% 230%, 100% 100%' : '100% 100%, 100% 230%',
-                            WebkitMaskSize: bottomMaskStyle.WebkitMaskImage ? '100% 100%, 100% 230%, 100% 100%' : '100% 100%, 100% 230%',
-                            maskPosition: bottomMaskStyle.maskImage ? '0% 0%, 0% -130%, 0% 0%' : '0% 0%, 0% -130%',
-                            WebkitMaskPosition: bottomMaskStyle.WebkitMaskImage ? '0% 0%, 0% -130%, 0% 0%' : '0% 0%, 0% -130%',
+                            filter: `url(#${hologramTintFilterId}) blur(0.5px) brightness(1.5)`,
+                            maskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 98%, black 99%, transparent 100%)',
+                            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 98%, black 99%, transparent 100%)',
+                            maskSize: '100% 200%',
+                            WebkitMaskSize: '100% 200%',
+                            maskPosition: '0% -100%',
+                                WebkitMaskPosition: '0% -100%',
                             animation: 'hologramScanBand 5.4s linear infinite'
                         }}
                     />
                 )}
             </AnimatePresence>
             <AnimatePresence>
+                {/* Hologram scanlines layer - subtle animated noise to sell the hologram effect. */}
                 {displayedImageUrl && isHologram && (
                     <motion.div
                         key={`${id}_${displayedImageUrl}_hologram_scanlines`}
@@ -458,6 +474,7 @@ const ActorImage: FC<ActorImageProps> = ({
                 )}
             </AnimatePresence>
             <AnimatePresence>
+                {/* Hologram glow layer - a soft gradient that pulses independently of the main image. */}
                 {displayedImageUrl && isHologram && (
                     <motion.div
                         key={`${id}_${displayedImageUrl}_hologram_glow`}
@@ -487,6 +504,10 @@ const ActorImage: FC<ActorImageProps> = ({
                     />
                 )}
             </AnimatePresence>
+
+
+
+
             <AnimatePresence>
                 {/* Main image layer - semi transparent, but crisp. */}
                 {displayedImageUrl && (
