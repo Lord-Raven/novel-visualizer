@@ -157,7 +157,7 @@ var ActorImage = ({
         const random3 = Math.random();
         const squish = 0.992 + random1 * 6e-3;
         const stretch = 1.002 + random2 * 6e-3;
-        const duration = 0.2 + random3 * 0.3;
+        const duration = 0.2 + random3 * 0.2;
         return { squish, stretch, duration };
       });
     }, updateInterval);
@@ -2174,7 +2174,7 @@ function NovelVisualizer(props) {
                                 },
                                 onMouseLeave: () => setTooltip?.(null),
                                 style: {
-                                  color: theme.palette.text.warning || theme.palette.text.secondary
+                                  color: theme.palette.warning.main || theme.palette.text.secondary
                                 },
                                 children: "\u26A0"
                               }

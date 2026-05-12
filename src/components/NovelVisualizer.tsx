@@ -707,7 +707,7 @@ export function NovelVisualizer<
                                                 onMouseEnter={() => {setTooltip?.('Sending input will replace subsequent messages', Warning)}}
                                                 onMouseLeave={() => setTooltip?.(null)}
                                                 style={{ 
-                                                    color: theme.palette.text.warning || theme.palette.text.secondary,
+                                                    color: theme.palette.warning.main || theme.palette.text.secondary,
                                                 }}
                                             >
                                                 ⚠

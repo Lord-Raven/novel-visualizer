@@ -201,8 +201,8 @@ const ActorImage: FC<ActorImageProps> = ({
                 // Wider range for stretch: 1.002-1.008 (more extended)
                 const stretch = 1.002 + (random2 * 0.006);
                 
-                // Vary duration: 0.2-0.5s for different pacing
-                const duration = 0.2 + (random3 * 0.3);
+                // Vary duration: 0.2-0.4s for different pacing
+                const duration = 0.2 + (random3 * 0.2);
                 
                 return { squish, stretch, duration };
             });
