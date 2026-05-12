@@ -37,10 +37,10 @@ interface NovelScriptEntry {
     endScene?: boolean;
 }
 /**
- * Base interface for scripts that the library requires.
+ * Base interface for skits that the library requires.
  * Consumers can extend this with their own custom properties.
  */
-interface NovelScript<TEntry extends NovelScriptEntry = NovelScriptEntry> {
+interface NovelSkit<TEntry extends NovelScriptEntry = NovelScriptEntry> {
     id?: string;
     currentIndex?: number;
     script: TEntry[];
@@ -56,32 +56,32 @@ interface SubmitButtonConfig {
  * @template TScript - The script type
  * @template TEntry - The script entry type
  */
-interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelScript, TEntry extends NovelScriptEntry> {
-    script: TScript | null;
+interface NovelVisualizerProps<TActor extends NovelActor, TSkit extends NovelSkit, TEntry extends NovelScriptEntry> {
+    skit: TSkit | null;
     actors: Record<string, TActor>;
     playerActorId: string;
-    getBackgroundImageUrl?: (script: TScript, index: number) => string;
+    getBackgroundImageUrl?: (skit: TSkit, index: number) => string;
     isVerticalLayout?: boolean;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
-    onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<TScript>;
+    onSubmitInput?: (inputText: string, skit: TSkit, index: number) => Promise<TSkit>;
     onUpdateMessage?: (index: number, message: string) => void;
     inputPlaceholder?: string | ((context: {
         index: number;
         entry?: TEntry;
     }) => string);
-    getSubmitButtonConfig?: (script: TScript, index: number, inputText: string) => SubmitButtonConfig;
+    getSubmitButtonConfig?: (skit: TSkit, index: number, inputText: string) => SubmitButtonConfig;
     renderNameplate?: (actor: TActor | null) => React__default.ReactNode;
-    responsiveOverlay?: (script: TScript | null, hoverActor: TActor | null) => React__default.ReactNode;
-    getPresentActors: (script: TScript, index: number) => TActor[];
-    getActorImageUrl: (actor: TActor, script: TScript, index: number) => string;
-    getActorImageColorMultiplier?: (actor: TActor, script: TScript, index: number) => string;
-    getActorFilter?: (actor: TActor, script: TScript, index: number) => {
+    responsiveOverlay?: (skit: TSkit | null, hoverActor: TActor | null) => React__default.ReactNode;
+    getPresentActors: (skit: TSkit, index: number) => TActor[];
+    getActorImageUrl: (actor: TActor, skit: TSkit, index: number) => string;
+    getActorImageColorMultiplier?: (actor: TActor, skit: TSkit, index: number) => string;
+    getActorFilter?: (actor: TActor, skit: TSkit, index: number) => {
         filter?: 'ghost' | 'aura' | 'hologram';
         filterColor?: string;
     };
     backgroundElements?: React__default.ReactNode | ((context: {
-        script: TScript;
+        skit: TSkit;
         index: number;
         presentActors: TActor[];
     }) => React__default.ReactNode);
@@ -116,7 +116,7 @@ interface NovelVisualizerProps<TActor extends NovelActor, TScript extends NovelS
     narratorLabel?: string;
     inlineStyleOptions?: FormatInlineStylesOptions;
 }
-declare function NovelVisualizer<TActor extends NovelActor, TScript extends NovelScript, TEntry extends NovelScriptEntry>(props: NovelVisualizerProps<TActor, TScript, TEntry>): JSX.Element;
+declare function NovelVisualizer<TActor extends NovelActor, TSkit extends NovelSkit, TEntry extends NovelScriptEntry>(props: NovelVisualizerProps<TActor, TSkit, TEntry>): JSX.Element;
 
 interface ActorImageProps {
     id: string;
@@ -162,4 +162,4 @@ interface TypeOutProps {
 }
 declare const TypeOut: React__default.FC<TypeOutProps>;
 
-export { _default as ActorImage, type NovelScript as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, type FormatInlineStylesOptions, type InlineClassStyle, type InlineStyleContext, type NovelActor, NovelVisualizer, type NovelVisualizerProps, type SubmitButtonConfig, TypeOut, defaultInlineClassStyles, formatInlineStyles };
+export { _default as ActorImage, type NovelSkit as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, type FormatInlineStylesOptions, type InlineClassStyle, type InlineStyleContext, type NovelActor, NovelVisualizer, type NovelVisualizerProps, type SubmitButtonConfig, TypeOut, defaultInlineClassStyles, formatInlineStyles };

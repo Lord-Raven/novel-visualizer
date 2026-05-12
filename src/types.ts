@@ -22,10 +22,10 @@ export interface NovelScriptEntry {
 }
 
 /**
- * Base interface for scripts that the library requires.
+ * Base interface for skits that the library requires.
  * Consumers can extend this with their own custom properties.
  */
-export interface NovelScript<TEntry extends NovelScriptEntry = NovelScriptEntry> {
+export interface NovelSkit<TEntry extends NovelScriptEntry = NovelScriptEntry> {
     id?: string;
     currentIndex?: number;
     script: TEntry[];

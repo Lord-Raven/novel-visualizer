@@ -8,7 +8,7 @@ import { BlurredBackground } from './BlurredBackground';
 import TypeOut from './TypeOut';
 import { formatMessageWithStyles } from '../utils/TextFormatting';
 import type { FormatInlineStylesOptions, MessageFormatTokens } from '../utils/TextFormatting';
-import type { NovelActor, NovelScript, NovelScriptEntry } from '../types';
+import type { NovelActor, NovelSkit, NovelScriptEntry } from '../types';
 
 export interface SubmitButtonConfig {
     label: string;
@@ -37,28 +37,28 @@ const calculateActorXPosition = (actorIndex: number, totalActors: number, anySpe
  */
 export interface NovelVisualizerProps<
     TActor extends NovelActor,
-    TScript extends NovelScript,
+    TSkit extends NovelSkit,
     TEntry extends NovelScriptEntry
 > {
-    script: TScript | null;
+    skit: TSkit | null;
     actors: Record<string, TActor>;
     playerActorId: string;
-    getBackgroundImageUrl?: (script: TScript, index: number) => string;
+    getBackgroundImageUrl?: (skit: TSkit, index: number) => string;
     isVerticalLayout?: boolean;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
-    onSubmitInput?: (inputText: string, script: TScript, index: number) => Promise<TScript>;
+    onSubmitInput?: (inputText: string, skit: TSkit, index: number) => Promise<TSkit>;
     onUpdateMessage?: (index: number, message: string) => void;
     inputPlaceholder?: string | ((context: { index: number; entry?: TEntry }) => string);
-    getSubmitButtonConfig?: (script: TScript, index: number, inputText: string) => SubmitButtonConfig;
+    getSubmitButtonConfig?: (skit: TSkit, index: number, inputText: string) => SubmitButtonConfig;
     renderNameplate?: (actor: TActor | null) => React.ReactNode;
-    responsiveOverlay?: (script: TScript | null, hoverActor: TActor | null) => React.ReactNode;
-    getPresentActors: (script: TScript, index: number) => TActor[];
-    getActorImageUrl: (actor: TActor, script: TScript, index: number) => string;
-    getActorImageColorMultiplier?: (actor: TActor, script: TScript, index: number) => string;
-    getActorFilter?: (actor: TActor, script: TScript, index: number) => { filter?: 'ghost' | 'aura' | 'hologram'; filterColor?: string };
+    responsiveOverlay?: (skit: TSkit | null, hoverActor: TActor | null) => React.ReactNode;
+    getPresentActors: (skit: TSkit, index: number) => TActor[];
+    getActorImageUrl: (actor: TActor, skit: TSkit, index: number) => string;
+    getActorImageColorMultiplier?: (actor: TActor, skit: TSkit, index: number) => string;
+    getActorFilter?: (actor: TActor, skit: TSkit, index: number) => { filter?: 'ghost' | 'aura' | 'hologram'; filterColor?: string };
     backgroundElements?: React.ReactNode | ((context: {
-        script: TScript;
+        skit: TSkit;
         index: number;
         presentActors: TActor[];
     }) => React.ReactNode);
@@ -97,12 +97,12 @@ export interface NovelVisualizerProps<
 
 export function NovelVisualizer<
     TActor extends NovelActor,
-    TScript extends NovelScript,
+    TSkit extends NovelSkit,
     TEntry extends NovelScriptEntry
->(props: NovelVisualizerProps<TActor, TScript, TEntry>): JSX.Element {
+>(props: NovelVisualizerProps<TActor, TSkit, TEntry>): JSX.Element {
     const theme = useTheme();
     const {
-        script,
+        skit: skit,
         actors,
         playerActorId,
         getBackgroundImageUrl,
@@ -149,10 +149,10 @@ export function NovelVisualizer<
     const [editedMessage, setEditedMessage] = useState<string>('');
     const [originalMessage, setOriginalMessage] = useState<string>('');
 
-    const [localScript, setLocalScript] = useState<TScript | null>(script);
-    const scriptEntries = useMemo(() => localScript?.script ?? [], [localScript]);
+    const [localSkit, setLocalSkit] = useState<TSkit | null>(skit);
+    const scriptEntries = useMemo(() => localSkit?.script ?? [], [localSkit]);
 
-    const [index, setIndex] = useState<number>(script?.currentIndex ?? -1);
+    const [index, setIndex] = useState<number>(skit?.currentIndex ?? -1);
     const prevIndexRef = useRef<number>(index);
     const prevExternalLoadingRef = useRef<boolean>(externalLoading);
 
@@ -175,8 +175,8 @@ export function NovelVisualizer<
     );
 
     const setCurrentIndex = (currentIndex: number) => {
-        if (localScript) {
-            localScript.currentIndex = currentIndex;
+        if (localSkit) {
+            localSkit.currentIndex = currentIndex;
         }
         setIndex(currentIndex);
     }
@@ -198,8 +198,8 @@ export function NovelVisualizer<
 
 
     useEffect(() => {
-        setLocalScript(script);
-    }, [script, externalLoading]);
+        setLocalSkit(skit);
+    }, [skit, externalLoading]);
 
     useEffect(() => {
         const el = messageBoxRef.current;
@@ -215,7 +215,7 @@ export function NovelVisualizer<
         const observer = new ResizeObserver(measure);
         observer.observe(el);
         return () => observer.disconnect();
-    }, [isVerticalLayout, localScript]);
+    }, [isVerticalLayout, localSkit]);
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         const x = (e.clientX / window.innerWidth) * 100;
@@ -224,12 +224,12 @@ export function NovelVisualizer<
     };
 
     const actorsAtIndex = useMemo(() => {
-        if (!localScript || !Array.isArray(localScript.script)) {
+        if (!localSkit || !Array.isArray(localSkit.script)) {
             return [];
         }
 
-        return getPresentActors(localScript, index);
-    }, [localScript, index, actors, getPresentActors]);
+        return getPresentActors(localSkit, index);
+    }, [localSkit, index, actors, getPresentActors]);
 
     const focusActor = useMemo(() => {
         // start at index and work back to last speaker Id that is in actors:
@@ -353,10 +353,10 @@ export function NovelVisualizer<
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [inputText, index, localScript, finishTyping, isLoading, isEditingMessage]);
+    }, [inputText, index, localSkit, finishTyping, isLoading, isEditingMessage]);
 
     const next = () => {
-        if (!localScript || !Array.isArray(localScript.script)) return;
+        if (!localSkit || !Array.isArray(localSkit.script)) return;
         if (isEditingMessage) {
             handleConfirmEdit();
         }
@@ -368,7 +368,7 @@ export function NovelVisualizer<
     };
 
     const prev = () => {
-        if (!localScript || !Array.isArray(localScript.script)) return;
+        if (!localSkit || !Array.isArray(localSkit.script)) return;
         if (isEditingMessage) {
             handleConfirmEdit();
         }
@@ -376,7 +376,7 @@ export function NovelVisualizer<
     };
 
     const handleEnterEditMode = () => {
-        if (!localScript || !Array.isArray(localScript.script)) return;
+        if (!localSkit || !Array.isArray(localSkit.script)) return;
         const currentMessage = index >= 0 && index < scriptEntries.length ? scriptEntries[index]?.message ?? '' : '';
         setOriginalMessage(currentMessage);
         setEditedMessage(currentMessage);
@@ -384,7 +384,7 @@ export function NovelVisualizer<
     };
 
     const handleConfirmEdit = () => {
-        if (!localScript || !Array.isArray(localScript.script)) return;
+        if (!localSkit || !Array.isArray(localSkit.script)) return;
         const currentMessage = index >= 0 && index < scriptEntries.length ? scriptEntries[index]?.message ?? '' : '';
         if (editedMessage === currentMessage) {
             setIsEditingMessage(false);
@@ -395,11 +395,11 @@ export function NovelVisualizer<
         if (onUpdateMessage) {
             onUpdateMessage(index, editedMessage);
         } else {
-            const updated = { ...localScript };
+            const updated = { ...localSkit };
             if (index >= 0 && index < updated.script.length && updated.script[index]) {
                 updated.script[index] = { ...updated.script[index], message: editedMessage };
             }
-            setLocalScript(updated);
+            setLocalSkit(updated);
         }
 
         setIsEditingMessage(false);
@@ -407,7 +407,7 @@ export function NovelVisualizer<
     };
 
     const handleCancelEdit = () => {
-        if (!localScript || !Array.isArray(localScript.script)) return;
+        if (!localSkit || !Array.isArray(localSkit.script)) return;
         setEditedMessage(originalMessage);
         setIsEditingMessage(false);
         setOriginalMessage('');
@@ -418,7 +418,7 @@ export function NovelVisualizer<
     const progressLabel = `${scriptEntries.length === 0 ? 0 : index + 1} / ${scriptEntries.length}`;
 
     const placeholderText = useMemo(() => {
-        if (!localScript || !Array.isArray(localScript.script)) return 'Type your next action...';
+        if (!localSkit || !Array.isArray(localSkit.script)) return 'Type your next action...';
         if (typeof inputPlaceholder === 'function') {
             return inputPlaceholder({ index, entry: index >= 0 && index < scriptEntries.length ? scriptEntries[index] as TEntry : undefined });
         }
@@ -426,7 +426,7 @@ export function NovelVisualizer<
         if (sceneEnded) return 'End scene or type to continue...';
         if (isLoading) return 'Loading...';
         return 'Type your next action...';
-    }, [inputPlaceholder, index, localScript, scriptEntries, sceneEnded, isLoading]);
+    }, [inputPlaceholder, index, localSkit, scriptEntries, sceneEnded, isLoading]);
 
     const renderNameplateNode = () => {
         if (renderNameplate)
@@ -446,11 +446,11 @@ export function NovelVisualizer<
     };
 
     const renderActors = () => {
-        if (!localScript || !Array.isArray(localScript.script)) {
+        if (!localSkit || !Array.isArray(localSkit.script)) {
             return [];
         }
 
-        const activeScript = localScript;
+        const activeScript = localSkit;
 
         const scalePerActor = isVerticalLayout ? 0.05 : 0.03;
         const sceneActorScale = Math.max(0.7, 1 - Math.max(0, actorsAtIndex.length - 1) * scalePerActor);
@@ -518,7 +518,7 @@ export function NovelVisualizer<
     };
 
     const handleSubmit = () => {
-        if (!localScript || !Array.isArray(localScript.script)) return;
+        if (!localSkit || !Array.isArray(localSkit.script)) return;
         if (isEditingMessage) {
             handleConfirmEdit();
         }
@@ -532,19 +532,19 @@ export function NovelVisualizer<
         // If onSubmitInput exists, call it and then set loading to false when the promise completes
         if (inputText.trim()) {
             // Slice skit to current index + 1 to remove any future entries, then add player's input as a new entry:
-            localScript.script = localScript.script.slice(0, index + 1);
-            localScript.script.push({
+            localSkit.script = localSkit.script.slice(0, index + 1);
+            localSkit.script.push({
                 speakerId: playerActorId,
                 message: inputText,
                 speechUrl: '',
             });
-            setLocalScript({...localScript}); // Trigger re-render with updated script
-            setCurrentIndex(localScript.script.length - 1); // Move to this input.
-            atIndex = localScript.script.length - 1;
+            setLocalSkit({...localSkit}); // Trigger re-render with updated script
+            setCurrentIndex(localSkit.script.length - 1); // Move to this input.
+            atIndex = localSkit.script.length - 1;
         }
         if (onSubmitInput) {
             setLoading(true);
-            const tempScript = {...localScript}; // Create a temp copy to pass to onSubmitInput
+            const tempScript = {...localSkit}; // Create a temp copy to pass to onSubmitInput
             onSubmitInput(inputText, tempScript, atIndex).then((newScript) => {
                 setLoading(false);
                 if (newScript) {
@@ -556,7 +556,7 @@ export function NovelVisualizer<
                 } else {
                     setCurrentIndex(-1); // Set to -1 to indicate end of script if no new script is returned
                 }
-                setLocalScript(newScript ? { ...newScript } : null);
+                setLocalSkit(newScript ? { ...newScript } : null);
             }).catch((error) => {
                 console.log('Submission failed', error);
                 setLoading(false);
@@ -566,10 +566,10 @@ export function NovelVisualizer<
     };
 
     const handleReroll = () => {
-        if (!localScript || !Array.isArray(localScript.script)) return;
+        if (!localSkit || !Array.isArray(localSkit.script)) return;
         const rerollIndex = index;
         // Trim script to index before reroll point, then call onSubmitInput with the same input to regenerate from that point
-        const tempScript = {...localScript, script: localScript.script.slice(0, rerollIndex)};
+        const tempScript = {...localSkit, script: localSkit.script.slice(0, rerollIndex)};
         console.log('Reroll clicked');
         if (onSubmitInput) {
             setLoading(true);
@@ -577,7 +577,7 @@ export function NovelVisualizer<
             onSubmitInput(inputText, tempScript, rerollIndex - 1).then((newScript) => {
                 setLoading(false);
                 setCurrentIndex(Math.min((newScript?.script?.length ?? 0) - 1, rerollIndex)); // Move to reroll point, which will now have new content
-                setLocalScript(newScript ? { ...newScript } : null);
+                setLocalSkit(newScript ? { ...newScript } : null);
             }).catch((error) => {
                 console.log('Reroll failed', error);
                 setLoading(false);
@@ -585,28 +585,28 @@ export function NovelVisualizer<
         }
     };
 
-    const responsiveOverlayNode = responsiveOverlay ? responsiveOverlay(localScript, hoveredActor) : null;
+    const responsiveOverlayNode = responsiveOverlay ? responsiveOverlay(localSkit, hoveredActor) : null;
 
     const backgroundImageUrl = useMemo(
-        () => (getBackgroundImageUrl && localScript) ? getBackgroundImageUrl(localScript, index) : undefined,
-        [getBackgroundImageUrl, localScript, index]
+        () => (getBackgroundImageUrl && localSkit) ? getBackgroundImageUrl(localSkit, index) : undefined,
+        [getBackgroundImageUrl, localSkit, index]
     );
 
     const resolvedBackgroundElements = useMemo<React.ReactNode>(() => {
         if (typeof backgroundElements === 'function') {
-            if (!localScript) {
+            if (!localSkit) {
                 return null;
             }
 
             return backgroundElements({
-                script: localScript,
+                skit: localSkit,
                 index,
                 presentActors: actorsAtIndex
             });
         }
 
         return backgroundElements ?? null;
-    }, [backgroundElements, localScript, index, actorsAtIndex]);
+    }, [backgroundElements, localSkit, index, actorsAtIndex]);
 
     const responsiveOverlayTop = isVerticalLayout ? 2 : 5;
     const responsiveOverlaySides = isVerticalLayout ? 2 : 5;
@@ -1015,8 +1015,8 @@ export function NovelVisualizer<
                                 disabled={isLoading}
                                 variant="contained"
                                 startIcon={(() => {
-                                    if (getSubmitButtonConfig && localScript) {
-                                        return getSubmitButtonConfig(localScript, index, inputText).icon;
+                                    if (getSubmitButtonConfig && localSkit) {
+                                        return getSubmitButtonConfig(localSkit, index, inputText).icon;
                                     }
                                     // Default behavior
                                     if (sceneEnded && !inputText.trim()) {
@@ -1031,14 +1031,14 @@ export function NovelVisualizer<
                                     minHeight: '40px',
                                     background: (() => {
                                         const colorScheme = getSubmitButtonConfig 
-                                            ? localScript ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : 'primary'
+                                            ? localSkit ? getSubmitButtonConfig(localSkit, index, inputText).colorScheme : 'primary'
                                             : (sceneEnded && !inputText.trim() ? 'error' : 'primary');
                                         const baseColor = colorScheme === 'error' ? errorMain : accentMain;
                                         return `linear-gradient(90deg, ${lighten(baseColor, 0.12)}, ${darken(baseColor, 0.2)})`;
                                     })(),
                                     color: (() => {
                                         const colorScheme = getSubmitButtonConfig 
-                                            ? localScript ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : 'primary'
+                                            ? localSkit ? getSubmitButtonConfig(localSkit, index, inputText).colorScheme : 'primary'
                                             : (sceneEnded && !inputText.trim() ? 'error' : 'primary');
                                         const baseColor = colorScheme === 'error' ? errorMain : accentMain;
                                         return theme.palette.getContrastText(baseColor);
@@ -1050,7 +1050,7 @@ export function NovelVisualizer<
                                     '&:hover': {
                                         background: (() => {
                                             const colorScheme = getSubmitButtonConfig 
-                                                ? localScript ? getSubmitButtonConfig(localScript, index, inputText).colorScheme : 'primary'
+                                                ? localSkit ? getSubmitButtonConfig(localSkit, index, inputText).colorScheme : 'primary'
                                                 : (sceneEnded && !inputText.trim() ? 'error' : 'primary');
                                             const baseColor = colorScheme === 'error' ? errorMain : accentMain;
                                             return `linear-gradient(90deg, ${lighten(baseColor, 0.2)}, ${darken(baseColor, 0.28)})`;
@@ -1064,7 +1064,7 @@ export function NovelVisualizer<
                             >
                                 {(() => {
                                     if (getSubmitButtonConfig) {
-                                        return localScript ? getSubmitButtonConfig(localScript, index, inputText).label : 'Continue';
+                                        return localSkit ? getSubmitButtonConfig(localSkit, index, inputText).label : 'Continue';
                                     }
                                     // Default behavior
                                     if (sceneEnded && !inputText.trim()) {
