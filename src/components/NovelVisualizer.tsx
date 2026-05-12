@@ -52,7 +52,7 @@ export interface NovelVisualizerProps<
     inputPlaceholder?: string | ((context: { index: number; entry?: TEntry }) => string);
     getSubmitButtonConfig?: (script: TScript, index: number, inputText: string) => SubmitButtonConfig;
     renderNameplate?: (actor: TActor | null) => React.ReactNode;
-    responsiveOverlay?: (hoverActor: TActor | null) => React.ReactNode;
+    responsiveOverlay?: (script: TScript | null, hoverActor: TActor | null) => React.ReactNode;
     getPresentActors: (script: TScript, index: number) => TActor[];
     getActorImageUrl: (actor: TActor, script: TScript, index: number) => string;
     getActorImageColorMultiplier?: (actor: TActor, script: TScript, index: number) => string;
@@ -585,7 +585,7 @@ export function NovelVisualizer<
         }
     };
 
-    const responsiveOverlayNode = responsiveOverlay ? responsiveOverlay(hoveredActor) : null;
+    const responsiveOverlayNode = responsiveOverlay ? responsiveOverlay(localScript, hoveredActor) : null;
 
     const backgroundImageUrl = useMemo(
         () => (getBackgroundImageUrl && localScript) ? getBackgroundImageUrl(localScript, index) : undefined,
@@ -707,7 +707,7 @@ export function NovelVisualizer<
                                                 onMouseEnter={() => {setTooltip?.('Sending input will replace subsequent messages', Warning)}}
                                                 onMouseLeave={() => setTooltip?.(null)}
                                                 style={{ 
-                                                    color: theme.palette.text.secondary,
+                                                    color: theme.palette.text.warning || theme.palette.text.secondary,
                                                 }}
                                             >
                                                 ⚠

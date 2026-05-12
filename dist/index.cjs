@@ -190,7 +190,7 @@ var ActorImage = ({
     if (!isAudioPlaying || !speaker) {
       return;
     }
-    const updateInterval = 1e3 + Math.random() * 2e3;
+    const updateInterval = 500 + Math.random() * 2e3;
     const intervalId = setInterval(() => {
       setAnimationParams((prev) => {
         const random1 = Math.random();
@@ -198,7 +198,7 @@ var ActorImage = ({
         const random3 = Math.random();
         const squish = 0.992 + random1 * 6e-3;
         const stretch = 1.002 + random2 * 6e-3;
-        const duration = 0.15 + random3 * 0.55;
+        const duration = 0.2 + random3 * 0.3;
         return { squish, stretch, duration };
       });
     }, updateInterval);
@@ -2096,7 +2096,7 @@ function NovelVisualizer(props) {
       });
     }
   };
-  const responsiveOverlayNode = responsiveOverlay ? responsiveOverlay(hoveredActor) : null;
+  const responsiveOverlayNode = responsiveOverlay ? responsiveOverlay(localScript, hoveredActor) : null;
   const backgroundImageUrl = (0, import_react5.useMemo)(
     () => getBackgroundImageUrl && localScript ? getBackgroundImageUrl(localScript, index) : void 0,
     [getBackgroundImageUrl, localScript, index]
@@ -2215,7 +2215,7 @@ function NovelVisualizer(props) {
                                 },
                                 onMouseLeave: () => setTooltip?.(null),
                                 style: {
-                                  color: theme.palette.text.secondary
+                                  color: theme.palette.text.warning || theme.palette.text.secondary
                                 },
                                 children: "\u26A0"
                               }

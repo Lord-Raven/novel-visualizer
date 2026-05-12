@@ -185,8 +185,8 @@ const ActorImage: FC<ActorImageProps> = ({
             return;
         }
 
-        // Update animation parameters every 1-3 seconds for natural variation
-        const updateInterval = 1000 + Math.random() * 2000;
+        // Update animation parameters every 0.5-2.5 seconds for natural variation
+        const updateInterval = 500 + Math.random() * 2000;
         
         const intervalId = setInterval(() => {
             setAnimationParams(prev => {
@@ -201,8 +201,8 @@ const ActorImage: FC<ActorImageProps> = ({
                 // Wider range for stretch: 1.002-1.008 (more extended)
                 const stretch = 1.002 + (random2 * 0.006);
                 
-                // Vary duration: 0.15-0.7s for different pacing
-                const duration = 0.15 + (random3 * 0.55);
+                // Vary duration: 0.2-0.5s for different pacing
+                const duration = 0.2 + (random3 * 0.3);
                 
                 return { squish, stretch, duration };
             });
