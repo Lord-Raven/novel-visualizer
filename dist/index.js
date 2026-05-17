@@ -1647,6 +1647,7 @@ function NovelVisualizer(props) {
     allowTypingSkip = true,
     onSubmitInput,
     onUpdateMessage,
+    onSkitChange,
     inputPlaceholder,
     getSubmitButtonConfig,
     renderNameplate,
@@ -1732,8 +1733,15 @@ function NovelVisualizer(props) {
     });
   };
   useEffect3(() => {
-    setLocalSkit(skit);
+    if (skit != localSkit) {
+      setLocalSkit(skit);
+    }
   }, [skit, externalLoading]);
+  useEffect3(() => {
+    if (skit && onSkitChange) {
+      onSkitChange(skit);
+    }
+  }, [skit, localSkit, onSkitChange]);
   useEffect3(() => {
     const el = messageBoxRef.current;
     if (!el) return;

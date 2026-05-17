@@ -66,6 +66,7 @@ interface NovelVisualizerProps<TActor extends NovelActor, TSkit extends NovelSki
     allowTypingSkip?: boolean;
     onSubmitInput?: (inputText: string, skit: TSkit, index: number) => Promise<TSkit>;
     onUpdateMessage?: (index: number, message: string) => void;
+    onSkitChange?: (newSkit: TSkit) => void;
     inputPlaceholder?: string | ((context: {
         index: number;
         entry?: TEntry;

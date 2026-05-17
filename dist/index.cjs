@@ -1688,6 +1688,7 @@ function NovelVisualizer(props) {
     allowTypingSkip = true,
     onSubmitInput,
     onUpdateMessage,
+    onSkitChange,
     inputPlaceholder,
     getSubmitButtonConfig,
     renderNameplate,
@@ -1773,8 +1774,15 @@ function NovelVisualizer(props) {
     });
   };
   (0, import_react5.useEffect)(() => {
-    setLocalSkit(skit);
+    if (skit != localSkit) {
+      setLocalSkit(skit);
+    }
   }, [skit, externalLoading]);
+  (0, import_react5.useEffect)(() => {
+    if (skit && onSkitChange) {
+      onSkitChange(skit);
+    }
+  }, [skit, localSkit, onSkitChange]);
   (0, import_react5.useEffect)(() => {
     const el = messageBoxRef.current;
     if (!el) return;

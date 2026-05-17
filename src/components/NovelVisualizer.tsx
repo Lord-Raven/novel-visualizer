@@ -49,6 +49,7 @@ export interface NovelVisualizerProps<
     allowTypingSkip?: boolean;
     onSubmitInput?: (inputText: string, skit: TSkit, index: number) => Promise<TSkit>;
     onUpdateMessage?: (index: number, message: string) => void;
+    onSkitChange?: (newSkit: TSkit) => void;
     inputPlaceholder?: string | ((context: { index: number; entry?: TEntry }) => string);
     getSubmitButtonConfig?: (skit: TSkit, index: number, inputText: string) => SubmitButtonConfig;
     renderNameplate?: (actor: TActor | null) => React.ReactNode;
@@ -111,6 +112,7 @@ export function NovelVisualizer<
         allowTypingSkip = true,
         onSubmitInput,
         onUpdateMessage,
+        onSkitChange,
         inputPlaceholder,
         getSubmitButtonConfig,
         renderNameplate,
@@ -210,8 +212,16 @@ export function NovelVisualizer<
 
 
     useEffect(() => {
-        setLocalSkit(skit);
+        if (skit != localSkit) {
+            setLocalSkit(skit);
+        }
     }, [skit, externalLoading]);
+
+    useEffect(() => {
+        if (skit && onSkitChange) {
+            onSkitChange(skit);
+        }
+    }, [skit, localSkit, onSkitChange]);
 
     useEffect(() => {
         const el = messageBoxRef.current;
