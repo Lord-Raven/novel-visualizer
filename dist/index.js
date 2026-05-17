@@ -1738,10 +1738,10 @@ function NovelVisualizer(props) {
     }
   }, [skit, externalLoading]);
   useEffect3(() => {
-    if (skit && onSkitChange) {
-      onSkitChange(skit);
+    if (localSkit && onSkitChange) {
+      onSkitChange(localSkit);
     }
-  }, [skit, localSkit, onSkitChange]);
+  }, [localSkit, onSkitChange]);
   useEffect3(() => {
     const el = messageBoxRef.current;
     if (!el) return;

@@ -1779,10 +1779,10 @@ function NovelVisualizer(props) {
     }
   }, [skit, externalLoading]);
   (0, import_react5.useEffect)(() => {
-    if (skit && onSkitChange) {
-      onSkitChange(skit);
+    if (localSkit && onSkitChange) {
+      onSkitChange(localSkit);
     }
-  }, [skit, localSkit, onSkitChange]);
+  }, [localSkit, onSkitChange]);
   (0, import_react5.useEffect)(() => {
     const el = messageBoxRef.current;
     if (!el) return;

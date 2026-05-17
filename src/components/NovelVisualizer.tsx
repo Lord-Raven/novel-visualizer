@@ -190,7 +190,7 @@ export function NovelVisualizer<
 
     const setCurrentIndex = (currentIndex: number) => {
         if (localSkit) {
-            setLocalSkit({ ...localSkit, currentIndex });
+            setLocalSkit({ ...localSkit, currentIndex: currentIndex });
         }
         setIndex(currentIndex);
     }
@@ -218,10 +218,10 @@ export function NovelVisualizer<
     }, [skit, externalLoading]);
 
     useEffect(() => {
-        if (skit && onSkitChange) {
-            onSkitChange(skit);
+        if (localSkit && onSkitChange) {
+            onSkitChange(localSkit);
         }
-    }, [skit, localSkit, onSkitChange]);
+    }, [localSkit, onSkitChange]);
 
     useEffect(() => {
         const el = messageBoxRef.current;
