@@ -13,7 +13,7 @@ import type { NovelActor, NovelSkit, NovelScriptEntry } from '../types';
 export interface SubmitButtonConfig {
     label: string;
     icon?: React.ReactElement;
-    colorScheme?: 'primary' | 'error';
+    colorScheme?: 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
 }
 
 const calculateActorXPosition = (actorIndex: number, totalActors: number, anySpeaker: boolean): number => {
@@ -160,6 +160,18 @@ export function NovelVisualizer<
     const accentLight = theme.palette.primary.light;
     const errorMain = theme.palette.error.main;
     const errorLight = theme.palette.error.light;
+
+    const getColorFromScheme = (colorScheme: string): string => {
+        const schemeMap: Record<string, string> = {
+            'primary': theme.palette.primary.main,
+            'secondary': theme.palette.secondary.main,
+            'error': theme.palette.error.main,
+            'warning': theme.palette.warning.main,
+            'info': theme.palette.info.main,
+            'success': theme.palette.success.main,
+        };
+        return schemeMap[colorScheme] || theme.palette.primary.main;
+    };
     const baseTextShadow = useMemo(
         () => `2px 2px 2px ${alpha(theme.palette.common.black, 0.8)}`,
         [theme]
@@ -176,7 +188,7 @@ export function NovelVisualizer<
 
     const setCurrentIndex = (currentIndex: number) => {
         if (localSkit) {
-            localSkit.currentIndex = currentIndex;
+            setLocalSkit({ ...localSkit, currentIndex });
         }
         setIndex(currentIndex);
     }
@@ -1033,14 +1045,14 @@ export function NovelVisualizer<
                                         const colorScheme = getSubmitButtonConfig 
                                             ? localSkit ? getSubmitButtonConfig(localSkit, index, inputText).colorScheme : 'primary'
                                             : (sceneEnded && !inputText.trim() ? 'error' : 'primary');
-                                        const baseColor = colorScheme === 'error' ? errorMain : accentMain;
+                                        const baseColor = getColorFromScheme(colorScheme ?? 'primary');
                                         return `linear-gradient(90deg, ${lighten(baseColor, 0.12)}, ${darken(baseColor, 0.2)})`;
                                     })(),
                                     color: (() => {
                                         const colorScheme = getSubmitButtonConfig 
                                             ? localSkit ? getSubmitButtonConfig(localSkit, index, inputText).colorScheme : 'primary'
                                             : (sceneEnded && !inputText.trim() ? 'error' : 'primary');
-                                        const baseColor = colorScheme === 'error' ? errorMain : accentMain;
+                                        const baseColor = getColorFromScheme(colorScheme ?? 'primary');
                                         return theme.palette.getContrastText(baseColor);
                                     })(),
                                     fontWeight: 800,
@@ -1052,7 +1064,7 @@ export function NovelVisualizer<
                                             const colorScheme = getSubmitButtonConfig 
                                                 ? localSkit ? getSubmitButtonConfig(localSkit, index, inputText).colorScheme : 'primary'
                                                 : (sceneEnded && !inputText.trim() ? 'error' : 'primary');
-                                            const baseColor = colorScheme === 'error' ? errorMain : accentMain;
+                                            const baseColor = getColorFromScheme(colorScheme ?? 'primary');
                                             return `linear-gradient(90deg, ${lighten(baseColor, 0.2)}, ${darken(baseColor, 0.28)})`;
                                         })()
                                     },

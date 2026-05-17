@@ -49,7 +49,7 @@ interface NovelSkit<TEntry extends NovelScriptEntry = NovelScriptEntry> {
 interface SubmitButtonConfig {
     label: string;
     icon?: React__default.ReactElement;
-    colorScheme?: 'primary' | 'error';
+    colorScheme?: 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
 }
 /**
  * Props for the NovelVisualizer component.
