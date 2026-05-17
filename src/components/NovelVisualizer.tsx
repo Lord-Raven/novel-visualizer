@@ -670,7 +670,7 @@ export function NovelVisualizer<
                             right: `${responsiveOverlaySides}%`,
                             left: `${responsiveOverlaySides}%`,
                             zIndex: 3,
-                            overflow: 'hidden'
+                            overflow: 'visible'
                         }}
                     >
                         {responsiveOverlayNode}
@@ -690,7 +690,7 @@ export function NovelVisualizer<
                         borderRadius: 3,
                         p: 2,
                         color: theme.palette.text.primary,
-                        zIndex: 2,
+                        zIndex: 4,
                         backdropFilter: 'blur(8px)',
                         minHeight: isVerticalLayout ? '20vh' : undefined,
                         display: 'flex',

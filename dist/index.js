@@ -2124,7 +2124,7 @@ function NovelVisualizer(props) {
                   right: `${responsiveOverlaySides}%`,
                   left: `${responsiveOverlaySides}%`,
                   zIndex: 3,
-                  overflow: "hidden"
+                  overflow: "visible"
                 },
                 children: responsiveOverlayNode
               }
