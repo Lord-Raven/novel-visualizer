@@ -1779,8 +1779,12 @@ function NovelVisualizer(props) {
     }
   }, [skit, externalLoading]);
   (0, import_react5.useEffect)(() => {
-    if (localSkit && onSkitChange) {
-      onSkitChange(localSkit);
+    if (skit && localSkit) {
+      skit.currentIndex = localSkit?.currentIndex ?? skit.currentIndex;
+      skit.script = localSkit?.script ?? skit.script;
+      if (onSkitChange) {
+        onSkitChange(skit);
+      }
     }
   }, [localSkit, onSkitChange]);
   (0, import_react5.useEffect)(() => {
@@ -2185,7 +2189,7 @@ function NovelVisualizer(props) {
                   borderRadius: 3,
                   p: 2,
                   color: theme.palette.text.primary,
-                  zIndex: 2,
+                  zIndex: 4,
                   backdropFilter: "blur(8px)",
                   minHeight: isVerticalLayout ? "20vh" : void 0,
                   display: "flex",

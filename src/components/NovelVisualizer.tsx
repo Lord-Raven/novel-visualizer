@@ -218,8 +218,13 @@ export function NovelVisualizer<
     }, [skit, externalLoading]);
 
     useEffect(() => {
-        if (localSkit && onSkitChange) {
-            onSkitChange(localSkit);
+        // Update skit properties to match localSkit:
+        if (skit && localSkit) {
+            skit.currentIndex = localSkit?.currentIndex ?? skit.currentIndex;
+            skit.script = localSkit?.script ?? skit.script;
+            if (onSkitChange) {
+                onSkitChange(skit);
+            }
         }
     }, [localSkit, onSkitChange]);
 
