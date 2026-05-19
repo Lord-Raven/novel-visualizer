@@ -262,8 +262,8 @@ const ActorImage: FC<ActorImageProps> = ({
     const hologramTintFilterId = `hologram-tint-${id}`;
     const isGhost = imageFilter === 'ghost';
     const isHologram = imageFilter === 'hologram';
-    const backingOpacity = isGhost ? 0.75 : isHologram ? 0.75 : 1;
-    const mainOpacity = isGhost ? 0.5 : isHologram ? 0.5 : 0.75;
+    const backingOpacity = isGhost ? 0.6 : isHologram ? 0.6 : 1;
+    const mainOpacity = isGhost ? 0.4 : isHologram ? 0.4 : 0.75;
 
     return displayedImageUrl ? (
         <>
@@ -322,6 +322,21 @@ const ActorImage: FC<ActorImageProps> = ({
                             to {
                                 background-position: 0 120px;
                             }
+                        }
+                        @keyframes hologramPulseBand {
+                            0% { opacity: 0.18; }
+                            50% { opacity: 0.52; }
+                            100% { opacity: 0.18; }
+                        }
+                        @keyframes hologramPulseScanlines {
+                            0% { opacity: 0.08; }
+                            50% { opacity: 0.18; }
+                            100% { opacity: 0.08; }
+                        }
+                        @keyframes hologramPulseGlow {
+                            0% { opacity: 0.1; }
+                            50% { opacity: 0.24; }
+                            100% { opacity: 0.1; }
                         }`
                     }
                 </style>
@@ -414,94 +429,86 @@ const ActorImage: FC<ActorImageProps> = ({
             </AnimatePresence>
 
             <AnimatePresence>
-                {/* Hologram scan band layer - a faint blurred duplicate that animates a slow vertical scanline mask. */}
-                {displayedImageUrl && isHologram && (
-                    <motion.img
-                        key={`${id}_${displayedImageUrl}_hologram_scan`}
-                        src={displayedImageUrl}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: [0.18, 0.52, 0.18] }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 5.4, repeat: Infinity, ease: 'linear' }}
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            width: '100%',
-                            height: '100%',
-                            zIndex: 6,
-                            pointerEvents: 'none',
-                            filter: `url(#${hologramTintFilterId}) blur(0.5px) brightness(1.5)`,
-                            maskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 98%, black 99%, transparent 100%)',
-                            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 98%, black 99%, transparent 100%)',
-                            maskSize: '100% 200%',
-                            WebkitMaskSize: '100% 200%',
-                            maskPosition: '0% -100%',
-                                WebkitMaskPosition: '0% -100%',
-                            animation: 'hologramScanBand 5.4s linear infinite'
-                        }}
-                    />
-                )}
-            </AnimatePresence>
-            <AnimatePresence>
-                {/* Hologram scanlines layer - subtle animated noise to sell the hologram effect. */}
+                {/* Group hologram sublayers under one keyed container so old image layers always exit together. */}
                 {displayedImageUrl && isHologram && (
                     <motion.div
-                        key={`${id}_${displayedImageUrl}_hologram_scanlines`}
+                        key={`${id}_${displayedImageUrl}_hologram_layers`}
                         initial={{ opacity: 0 }}
-                        animate={{ opacity: [0.08, 0.18, 0.08] }}
+                        animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 2.6, repeat: Infinity, ease: 'linear' }}
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            width: '100%',
-                            height: '100%',
-                            zIndex: 7,
-                            pointerEvents: 'none',
-                            mixBlendMode: 'screen',
-                            backgroundImage: `repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, ${filterColor} 2px, transparent 4px)`,
-                            animation: 'hologramScanlines 3.2s linear infinite',
-                            maskImage: bottomMaskStyle.maskImage
-                                ? `url(${displayedImageUrl}), ${bottomMaskStyle.maskImage}`
-                                : `url(${displayedImageUrl})`,
-                            WebkitMaskImage: bottomMaskStyle.WebkitMaskImage
-                                ? `url(${displayedImageUrl}), ${bottomMaskStyle.WebkitMaskImage}`
-                                : `url(${displayedImageUrl})`,
-                            maskComposite: bottomMaskStyle.maskImage ? 'intersect' : 'match-source',
-                            WebkitMaskComposite: bottomMaskStyle.WebkitMaskImage ? 'source-in' : 'unset',
-                        }}
-                    />
-                )}
-            </AnimatePresence>
-            <AnimatePresence>
-                {/* Hologram glow layer - a soft gradient that pulses independently of the main image. */}
-                {displayedImageUrl && isHologram && (
-                    <motion.div
-                        key={`${id}_${displayedImageUrl}_hologram_glow`}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: [0.1, 0.24, 0.1] }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 4.1, repeat: Infinity, ease: 'easeInOut' }}
+                        transition={{ duration: 0.45 }}
                         style={{
                             position: 'absolute',
                             top: 0,
                             width: '100%',
                             height: '100%',
                             zIndex: 8,
-                            pointerEvents: 'none',
-                            mixBlendMode: 'screen',
-                            background: `linear-gradient(to bottom, transparent 0%, ${filterColor} 42%, transparent 70%)`,
-                            filter: 'blur(8px)',
-                            maskImage: bottomMaskStyle.maskImage
-                                ? `url(${displayedImageUrl}), ${bottomMaskStyle.maskImage}`
-                                : `url(${displayedImageUrl})`,
-                            WebkitMaskImage: bottomMaskStyle.WebkitMaskImage
-                                ? `url(${displayedImageUrl}), ${bottomMaskStyle.WebkitMaskImage}`
-                                : `url(${displayedImageUrl})`,
-                            maskComposite: bottomMaskStyle.maskImage ? 'intersect' : 'match-source',
-                            WebkitMaskComposite: bottomMaskStyle.WebkitMaskImage ? 'source-in' : 'unset'
+                            pointerEvents: 'none'
                         }}
-                    />
+                    >
+                        <img
+                            src={displayedImageUrl}
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                width: '100%',
+                                height: '100%',
+                                zIndex: 0,
+                                pointerEvents: 'none',
+                                filter: `url(#${hologramTintFilterId}) blur(0.5px) brightness(1.5)`,
+                                maskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 98%, black 99%, transparent 100%)',
+                                WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 98%, black 99%, transparent 100%)',
+                                maskSize: '100% 200%',
+                                WebkitMaskSize: '100% 200%',
+                                maskPosition: '0% -100%',
+                                WebkitMaskPosition: '0% -100%',
+                                animation: 'hologramScanBand 5.4s linear infinite, hologramPulseBand 5.4s linear infinite'
+                            }}
+                        />
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                width: '100%',
+                                height: '100%',
+                                zIndex: 1,
+                                pointerEvents: 'none',
+                                mixBlendMode: 'screen',
+                                backgroundImage: `repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, ${filterColor} 2px, transparent 4px)`,
+                                animation: 'hologramScanlines 3.2s linear infinite, hologramPulseScanlines 2.6s linear infinite',
+                                maskImage: bottomMaskStyle.maskImage
+                                    ? `url(${displayedImageUrl}), ${bottomMaskStyle.maskImage}`
+                                    : `url(${displayedImageUrl})`,
+                                WebkitMaskImage: bottomMaskStyle.WebkitMaskImage
+                                    ? `url(${displayedImageUrl}), ${bottomMaskStyle.WebkitMaskImage}`
+                                    : `url(${displayedImageUrl})`,
+                                maskComposite: bottomMaskStyle.maskImage ? 'intersect' : 'match-source',
+                                WebkitMaskComposite: bottomMaskStyle.WebkitMaskImage ? 'source-in' : 'unset'
+                            }}
+                        />
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                width: '100%',
+                                height: '100%',
+                                zIndex: 2,
+                                pointerEvents: 'none',
+                                mixBlendMode: 'screen',
+                                background: `linear-gradient(to bottom, transparent 0%, ${filterColor} 42%, transparent 70%)`,
+                                filter: 'blur(8px)',
+                                animation: 'hologramPulseGlow 4.1s ease-in-out infinite',
+                                maskImage: bottomMaskStyle.maskImage
+                                    ? `url(${displayedImageUrl}), ${bottomMaskStyle.maskImage}`
+                                    : `url(${displayedImageUrl})`,
+                                WebkitMaskImage: bottomMaskStyle.WebkitMaskImage
+                                    ? `url(${displayedImageUrl}), ${bottomMaskStyle.WebkitMaskImage}`
+                                    : `url(${displayedImageUrl})`,
+                                maskComposite: bottomMaskStyle.maskImage ? 'intersect' : 'match-source',
+                                WebkitMaskComposite: bottomMaskStyle.WebkitMaskImage ? 'source-in' : 'unset'
+                            }}
+                        />
+                    </motion.div>
                 )}
             </AnimatePresence>
 

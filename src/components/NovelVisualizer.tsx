@@ -138,7 +138,6 @@ export function NovelVisualizer<
     const [finishTyping, setFinishTyping] = useState<boolean>(false);
     const [messageKey, setMessageKey] = React.useState<number>(0); // Key to force TypeOut reset
     const [hoveredActor, setHoveredActor] = useState<TActor | null>(null);
-    const [audioEnabled, setAudioEnabled] = React.useState<boolean>(enableAudio);
     const currentAudioRef = React.useRef<HTMLAudioElement | null>(null);
     const [isAudioPlaying, setIsAudioPlaying] = React.useState<boolean>(false);
     const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
@@ -291,7 +290,7 @@ export function NovelVisualizer<
                 currentAudioRef.current.currentTime = 0;
                 setIsAudioPlaying(false);
             }
-            if (audioEnabled && index >= 0 && index < scriptEntries.length && scriptEntries[index].speechUrl) {
+            if (enableAudio && index >= 0 && index < scriptEntries.length && scriptEntries[index].speechUrl) {
                 const audio = new Audio(scriptEntries[index].speechUrl);
                 currentAudioRef.current = audio;
                 
@@ -308,7 +307,16 @@ export function NovelVisualizer<
             prevIndexRef.current = index;
         }
         setMessageKey((prev) => prev + 1);
-    }, [index, audioEnabled, scriptEntries]);
+    }, [index, enableAudio, scriptEntries]);
+
+    useEffect(() => {
+        if (currentAudioRef.current) {
+            currentAudioRef.current.pause();
+            currentAudioRef.current.currentTime = 0;
+            currentAudioRef.current = null;
+            setIsAudioPlaying(false);
+        }
+    }, [enableAudio]);
 
     useEffect(() => {
         if (prevExternalLoadingRef.current !== externalLoading) {

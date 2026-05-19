@@ -244,8 +244,8 @@ var ActorImage = ({
   const hologramTintFilterId = `hologram-tint-${id}`;
   const isGhost = imageFilter === "ghost";
   const isHologram = imageFilter === "hologram";
-  const backingOpacity = isGhost ? 0.75 : isHologram ? 0.75 : 1;
-  const mainOpacity = isGhost ? 0.5 : isHologram ? 0.5 : 0.75;
+  const backingOpacity = isGhost ? 0.6 : isHologram ? 0.6 : 1;
+  const mainOpacity = isGhost ? 0.4 : isHologram ? 0.4 : 0.75;
   return displayedImageUrl ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", { style: { position: "absolute", width: 0, height: 0, overflow: "hidden" }, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("defs", { children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("filter", { id: tintFilterId, x: "0%", y: "0%", width: "100%", height: "100%", colorInterpolationFilters: "sRGB", children: [
@@ -296,6 +296,21 @@ var ActorImage = ({
                             to {
                                 background-position: 0 120px;
                             }
+                        }
+                        @keyframes hologramPulseBand {
+                            0% { opacity: 0.18; }
+                            50% { opacity: 0.52; }
+                            100% { opacity: 0.18; }
+                        }
+                        @keyframes hologramPulseScanlines {
+                            0% { opacity: 0.08; }
+                            50% { opacity: 0.18; }
+                            100% { opacity: 0.08; }
+                        }
+                        @keyframes hologramPulseGlow {
+                            0% { opacity: 0.1; }
+                            50% { opacity: 0.24; }
+                            100% { opacity: 0.1; }
                         }` }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
       import_framer_motion.motion.div,
@@ -374,82 +389,88 @@ var ActorImage = ({
             },
             `${id}_${displayedImageUrl}_ghost`
           ) }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: displayedImageUrl && isHologram && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-            import_framer_motion.motion.img,
-            {
-              src: displayedImageUrl,
-              initial: { opacity: 0 },
-              animate: { opacity: [0.18, 0.52, 0.18] },
-              exit: { opacity: 0 },
-              transition: { duration: 5.4, repeat: Infinity, ease: "linear" },
-              style: {
-                position: "absolute",
-                top: 0,
-                width: "100%",
-                height: "100%",
-                zIndex: 6,
-                pointerEvents: "none",
-                filter: `url(#${hologramTintFilterId}) blur(0.5px) brightness(1.5)`,
-                maskImage: "linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 98%, black 99%, transparent 100%)",
-                WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 98%, black 99%, transparent 100%)",
-                maskSize: "100% 200%",
-                WebkitMaskSize: "100% 200%",
-                maskPosition: "0% -100%",
-                WebkitMaskPosition: "0% -100%",
-                animation: "hologramScanBand 5.4s linear infinite"
-              }
-            },
-            `${id}_${displayedImageUrl}_hologram_scan`
-          ) }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: displayedImageUrl && isHologram && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: displayedImageUrl && isHologram && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
             import_framer_motion.motion.div,
             {
               initial: { opacity: 0 },
-              animate: { opacity: [0.08, 0.18, 0.08] },
+              animate: { opacity: 1 },
               exit: { opacity: 0 },
-              transition: { duration: 2.6, repeat: Infinity, ease: "linear" },
-              style: {
-                position: "absolute",
-                top: 0,
-                width: "100%",
-                height: "100%",
-                zIndex: 7,
-                pointerEvents: "none",
-                mixBlendMode: "screen",
-                backgroundImage: `repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, ${filterColor} 2px, transparent 4px)`,
-                animation: "hologramScanlines 3.2s linear infinite",
-                maskImage: bottomMaskStyle.maskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.maskImage}` : `url(${displayedImageUrl})`,
-                WebkitMaskImage: bottomMaskStyle.WebkitMaskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.WebkitMaskImage}` : `url(${displayedImageUrl})`,
-                maskComposite: bottomMaskStyle.maskImage ? "intersect" : "match-source",
-                WebkitMaskComposite: bottomMaskStyle.WebkitMaskImage ? "source-in" : "unset"
-              }
-            },
-            `${id}_${displayedImageUrl}_hologram_scanlines`
-          ) }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: displayedImageUrl && isHologram && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-            import_framer_motion.motion.div,
-            {
-              initial: { opacity: 0 },
-              animate: { opacity: [0.1, 0.24, 0.1] },
-              exit: { opacity: 0 },
-              transition: { duration: 4.1, repeat: Infinity, ease: "easeInOut" },
+              transition: { duration: 0.45 },
               style: {
                 position: "absolute",
                 top: 0,
                 width: "100%",
                 height: "100%",
                 zIndex: 8,
-                pointerEvents: "none",
-                mixBlendMode: "screen",
-                background: `linear-gradient(to bottom, transparent 0%, ${filterColor} 42%, transparent 70%)`,
-                filter: "blur(8px)",
-                maskImage: bottomMaskStyle.maskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.maskImage}` : `url(${displayedImageUrl})`,
-                WebkitMaskImage: bottomMaskStyle.WebkitMaskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.WebkitMaskImage}` : `url(${displayedImageUrl})`,
-                maskComposite: bottomMaskStyle.maskImage ? "intersect" : "match-source",
-                WebkitMaskComposite: bottomMaskStyle.WebkitMaskImage ? "source-in" : "unset"
-              }
+                pointerEvents: "none"
+              },
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                  "img",
+                  {
+                    src: displayedImageUrl,
+                    style: {
+                      position: "absolute",
+                      top: 0,
+                      width: "100%",
+                      height: "100%",
+                      zIndex: 0,
+                      pointerEvents: "none",
+                      filter: `url(#${hologramTintFilterId}) blur(0.5px) brightness(1.5)`,
+                      maskImage: "linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 98%, black 99%, transparent 100%)",
+                      WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 98%, black 99%, transparent 100%)",
+                      maskSize: "100% 200%",
+                      WebkitMaskSize: "100% 200%",
+                      maskPosition: "0% -100%",
+                      WebkitMaskPosition: "0% -100%",
+                      animation: "hologramScanBand 5.4s linear infinite, hologramPulseBand 5.4s linear infinite"
+                    }
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                  "div",
+                  {
+                    style: {
+                      position: "absolute",
+                      top: 0,
+                      width: "100%",
+                      height: "100%",
+                      zIndex: 1,
+                      pointerEvents: "none",
+                      mixBlendMode: "screen",
+                      backgroundImage: `repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, ${filterColor} 2px, transparent 4px)`,
+                      animation: "hologramScanlines 3.2s linear infinite, hologramPulseScanlines 2.6s linear infinite",
+                      maskImage: bottomMaskStyle.maskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.maskImage}` : `url(${displayedImageUrl})`,
+                      WebkitMaskImage: bottomMaskStyle.WebkitMaskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.WebkitMaskImage}` : `url(${displayedImageUrl})`,
+                      maskComposite: bottomMaskStyle.maskImage ? "intersect" : "match-source",
+                      WebkitMaskComposite: bottomMaskStyle.WebkitMaskImage ? "source-in" : "unset"
+                    }
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                  "div",
+                  {
+                    style: {
+                      position: "absolute",
+                      top: 0,
+                      width: "100%",
+                      height: "100%",
+                      zIndex: 2,
+                      pointerEvents: "none",
+                      mixBlendMode: "screen",
+                      background: `linear-gradient(to bottom, transparent 0%, ${filterColor} 42%, transparent 70%)`,
+                      filter: "blur(8px)",
+                      animation: "hologramPulseGlow 4.1s ease-in-out infinite",
+                      maskImage: bottomMaskStyle.maskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.maskImage}` : `url(${displayedImageUrl})`,
+                      WebkitMaskImage: bottomMaskStyle.WebkitMaskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.WebkitMaskImage}` : `url(${displayedImageUrl})`,
+                      maskComposite: bottomMaskStyle.maskImage ? "intersect" : "match-source",
+                      WebkitMaskComposite: bottomMaskStyle.WebkitMaskImage ? "source-in" : "unset"
+                    }
+                  }
+                )
+              ]
             },
-            `${id}_${displayedImageUrl}_hologram_glow`
+            `${id}_${displayedImageUrl}_hologram_layers`
           ) }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: displayedImageUrl && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
             import_framer_motion.motion.img,
@@ -1714,7 +1735,6 @@ function NovelVisualizer(props) {
   const [finishTyping, setFinishTyping] = (0, import_react5.useState)(false);
   const [messageKey, setMessageKey] = import_react5.default.useState(0);
   const [hoveredActor, setHoveredActor] = (0, import_react5.useState)(null);
-  const [audioEnabled, setAudioEnabled] = import_react5.default.useState(enableAudio);
   const currentAudioRef = import_react5.default.useRef(null);
   const [isAudioPlaying, setIsAudioPlaying] = import_react5.default.useState(false);
   const [mousePosition, setMousePosition] = (0, import_react5.useState)(null);
@@ -1839,7 +1859,7 @@ function NovelVisualizer(props) {
         currentAudioRef.current.currentTime = 0;
         setIsAudioPlaying(false);
       }
-      if (audioEnabled && index >= 0 && index < scriptEntries.length && scriptEntries[index].speechUrl) {
+      if (enableAudio && index >= 0 && index < scriptEntries.length && scriptEntries[index].speechUrl) {
         const audio = new Audio(scriptEntries[index].speechUrl);
         currentAudioRef.current = audio;
         audio.addEventListener("play", () => setIsAudioPlaying(true));
@@ -1853,7 +1873,15 @@ function NovelVisualizer(props) {
       prevIndexRef.current = index;
     }
     setMessageKey((prev2) => prev2 + 1);
-  }, [index, audioEnabled, scriptEntries]);
+  }, [index, enableAudio, scriptEntries]);
+  (0, import_react5.useEffect)(() => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.currentTime = 0;
+      currentAudioRef.current = null;
+      setIsAudioPlaying(false);
+    }
+  }, [enableAudio]);
   (0, import_react5.useEffect)(() => {
     if (prevExternalLoadingRef.current !== externalLoading) {
       prevIndexRef.current = -1;
