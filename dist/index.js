@@ -205,6 +205,41 @@ var ActorImage = ({
   const isHologram = imageFilter === "hologram";
   const backingOpacity = isGhost ? 0.6 : isHologram ? 0.6 : 1;
   const mainOpacity = isGhost ? 0.4 : isHologram ? 0.4 : 0.75;
+  const hologramAlphaMaskStyle = useMemo(() => {
+    const hasBottomMask = Boolean(bottomMaskStyle.maskImage && bottomMaskStyle.WebkitMaskImage);
+    if (hasBottomMask) {
+      return {
+        maskImage: `url(${displayedImageUrl}), ${bottomMaskStyle.maskImage}`,
+        WebkitMaskImage: `url(${displayedImageUrl}), ${bottomMaskStyle.WebkitMaskImage}`,
+        maskSize: "100% 100%, 100% 100%",
+        WebkitMaskSize: "100% 100%, 100% 100%",
+        maskPosition: "50% 50%, 50% 50%",
+        WebkitMaskPosition: "50% 50%, 50% 50%",
+        maskRepeat: "no-repeat, no-repeat",
+        WebkitMaskRepeat: "no-repeat, no-repeat",
+        maskComposite: "intersect",
+        WebkitMaskComposite: "source-in"
+      };
+    }
+    return {
+      maskImage: `url(${displayedImageUrl})`,
+      WebkitMaskImage: `url(${displayedImageUrl})`,
+      maskSize: "100% 100%",
+      WebkitMaskSize: "100% 100%",
+      maskPosition: "50% 50%",
+      WebkitMaskPosition: "50% 50%",
+      maskRepeat: "no-repeat",
+      WebkitMaskRepeat: "no-repeat",
+      maskComposite: "match-source",
+      WebkitMaskComposite: "unset"
+    };
+  }, [bottomMaskStyle.WebkitMaskImage, bottomMaskStyle.maskImage, displayedImageUrl]);
+  const hologramLayerTransform = useMemo(() => {
+    if (popInSide !== "none") {
+      return "translate3d(0.35%, -0.25%, 0) scale(1.005)";
+    }
+    return "translate3d(0.8%, -0.6%, 0) scale(1.01)";
+  }, [popInSide]);
   return displayedImageUrl ? /* @__PURE__ */ jsxs(Fragment, { children: [
     /* @__PURE__ */ jsx("svg", { style: { position: "absolute", width: 0, height: 0, overflow: "hidden" }, children: /* @__PURE__ */ jsxs("defs", { children: [
       /* @__PURE__ */ jsxs("filter", { id: tintFilterId, x: "0%", y: "0%", width: "100%", height: "100%", colorInterpolationFilters: "sRGB", children: [
@@ -399,10 +434,9 @@ var ActorImage = ({
                       mixBlendMode: "screen",
                       backgroundImage: `repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, ${filterColor} 2px, transparent 4px)`,
                       animation: "hologramScanlines 3.2s linear infinite, hologramPulseScanlines 2.6s linear infinite",
-                      maskImage: bottomMaskStyle.maskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.maskImage}` : `url(${displayedImageUrl})`,
-                      WebkitMaskImage: bottomMaskStyle.WebkitMaskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.WebkitMaskImage}` : `url(${displayedImageUrl})`,
-                      maskComposite: bottomMaskStyle.maskImage ? "intersect" : "match-source",
-                      WebkitMaskComposite: bottomMaskStyle.WebkitMaskImage ? "source-in" : "unset"
+                      transform: hologramLayerTransform,
+                      transformOrigin: "50% 100%",
+                      ...hologramAlphaMaskStyle
                     }
                   }
                 ),
@@ -420,10 +454,9 @@ var ActorImage = ({
                       background: `linear-gradient(to bottom, transparent 0%, ${filterColor} 42%, transparent 70%)`,
                       filter: "blur(8px)",
                       animation: "hologramPulseGlow 4.1s ease-in-out infinite",
-                      maskImage: bottomMaskStyle.maskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.maskImage}` : `url(${displayedImageUrl})`,
-                      WebkitMaskImage: bottomMaskStyle.WebkitMaskImage ? `url(${displayedImageUrl}), ${bottomMaskStyle.WebkitMaskImage}` : `url(${displayedImageUrl})`,
-                      maskComposite: bottomMaskStyle.maskImage ? "intersect" : "match-source",
-                      WebkitMaskComposite: bottomMaskStyle.WebkitMaskImage ? "source-in" : "unset"
+                      transform: hologramLayerTransform,
+                      transformOrigin: "50% 100%",
+                      ...hologramAlphaMaskStyle
                     }
                   }
                 )
@@ -693,7 +726,10 @@ var TypeOut = ({
     "span",
     {
       className,
-      style: { userSelect: "none" },
+      style: {
+        userSelect: "none",
+        whiteSpace: "pre-line"
+      },
       "aria-label": "message",
       children: displayContent
     }

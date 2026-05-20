@@ -181,7 +181,10 @@ export const TypeOut: React.FC<TypeOutProps> = ({
     return (
         <span
             className={className}
-            style={{ userSelect: 'none' }}
+            style={{
+                userSelect: 'none',
+                whiteSpace: 'pre-line'
+            }}
             aria-label="message"
         >
             {displayContent}
