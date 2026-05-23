@@ -1,6 +1,7 @@
 import React, { FC, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from '@mui/material';
 import { alpha, darken, lighten, useTheme } from '@mui/material/styles';
+import type { SxProps, Theme } from '@mui/material/styles';
 import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, CardGiftcard, SvgIconComponent, Computer, Warning } from '@mui/icons-material';
 import { AnimatePresence } from 'framer-motion';
 import ActorImage from './ActorImage';
@@ -93,6 +94,11 @@ export interface NovelVisualizerProps<
     enableReroll?: boolean;
     narratorLabel?: string;
     inlineStyleOptions?: FormatInlineStylesOptions;
+    /**
+     * Optional sx overrides for the main message display Paper.
+     * Values provided here supplement and can override the component defaults.
+     */
+    messageWindowSx?: SxProps<Theme>;
 
 }
 
@@ -132,7 +138,8 @@ export function NovelVisualizer<
         enableTalkingAnimation = true,
         enableReroll = true,
         narratorLabel = '',
-        inlineStyleOptions
+        inlineStyleOptions,
+        messageWindowSx
     } = props;
     const [inputText, setInputText] = useState<string>('');
     const [finishTyping, setFinishTyping] = useState<boolean>(false);
@@ -694,23 +701,25 @@ export function NovelVisualizer<
                     ref={messageBoxRef}
                     elevation={8}
                     sx={{
-                        position: 'absolute',
-                        left: isVerticalLayout ? '2%' : '5%',
-                        right: isVerticalLayout ? '2%' : '5%',
-                        bottom: isVerticalLayout ? '1%' : '4%',
-                        background: alpha(theme.palette.background.paper, 0.92),
-                        border: `2px solid ${alpha(theme.palette.divider, 0.3)}`,
-                        borderRadius: 3,
-                        p: 2,
-                        color: theme.palette.text.primary,
-                        zIndex: 4,
-                        backdropFilter: 'blur(8px)',
-                        minHeight: isVerticalLayout ? '20vh' : undefined,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        overflow: 'visible'
-                    }}
+                            position: 'absolute',
+                            left: isVerticalLayout ? '2%' : '5%',
+                            right: isVerticalLayout ? '2%' : '5%',
+                            bottom: isVerticalLayout ? '1%' : '4%',
+                            background: alpha(theme.palette.background.paper, 0.92),
+                            border: `2px solid ${alpha(theme.palette.divider, 0.3)}`,
+                            borderRadius: 3,
+                            p: 2,
+                            color: theme.palette.text.primary,
+                            zIndex: 4,
+                            backdropFilter: 'blur(8px)',
+                            minHeight: isVerticalLayout ? '20vh' : undefined,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            overflow: 'visible',
+                            
+                            ...messageWindowSx
+                        }}
                 >
                     <Box sx={{ display: 'flex', alignItems: 'flex-end', overflow: 'visible' }}>
                         <Box sx={{ display: 'flex', gap: isVerticalLayout ? 0.5 : 1.5, alignItems: 'flex-end', flex: 1, overflow: 'visible' }}>

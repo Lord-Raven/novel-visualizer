@@ -1,5 +1,6 @@
 import * as React from 'react';
 import React__default, { FC } from 'react';
+import { SxProps, Theme } from '@mui/material/styles';
 import { SvgIconComponent } from '@mui/icons-material';
 
 interface InlineStyleContext {
@@ -116,6 +117,11 @@ interface NovelVisualizerProps<TActor extends NovelActor, TSkit extends NovelSki
     enableReroll?: boolean;
     narratorLabel?: string;
     inlineStyleOptions?: FormatInlineStylesOptions;
+    /**
+     * Optional sx overrides for the main message display Paper.
+     * Values provided here supplement and can override the component defaults.
+     */
+    messageWindowSx?: SxProps<Theme>;
 }
 declare function NovelVisualizer<TActor extends NovelActor, TSkit extends NovelSkit, TEntry extends NovelScriptEntry>(props: NovelVisualizerProps<TActor, TSkit, TEntry>): JSX.Element;
 

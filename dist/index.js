@@ -762,11 +762,26 @@ var INLINE_STYLE_PRESET_CSS = `
     0%, 100% {
         transform: translateY(0px);
     }
+    12.5% {
+        transform: translateY(-1px);
+    }
     25% {
-        transform: translateY(-2px);
+        transform: translateY(-1.8px);
+    }
+    37.5% {
+        transform: translateY(-0.7px);
+    }
+    50% {
+        transform: translateY(1.5px);
+    }
+    62.5% {
+        transform: translateY(2px);
     }
     75% {
-        transform: translateY(2px);
+        transform: translateY(0.9px);
+    }
+    87.5% {
+        transform: translateY(-0.8px);
     }
 }
 
@@ -775,16 +790,16 @@ var INLINE_STYLE_PRESET_CSS = `
         transform: translate(0, 0) rotate(0deg);
     }
     25% {
-        transform: translate(-0.45px, 0.45px) rotate(-0.2deg);
+        transform: translate(-0.52px, 0.52px) rotate(-0.2deg);
     }
     50% {
-        transform: translate(0.4px, -0.4px) rotate(0.2deg);
+        transform: translate(0.46px, -0.46px) rotate(0.2deg);
     }
     75% {
-        transform: translate(-0.35px, -0.45px) rotate(-0.15deg);
+        transform: translate(-0.4px, -0.52px) rotate(-0.15deg);
     }
     100% {
-        transform: translate(0.35px, 0.25px) rotate(0.15deg);
+        transform: translate(0.4px, 0.29px) rotate(0.15deg);
     }
 }
 
@@ -856,6 +871,60 @@ var INLINE_STYLE_PRESET_CSS = `
     }
     65% {
         transform: translate3d(0.45px, 0.25px, 0) skewX(1.2deg);
+    }
+}
+
+@keyframes nvInlineArcanePulse {
+    0%,
+    100% {
+        filter: brightness(0.96) saturate(1);
+        text-shadow: inherit;
+    }
+    48% {
+        filter: brightness(1.09) saturate(1.14);
+        text-shadow: 0 0 4px currentColor, 0 0 10px rgba(255, 255, 255, 0.38);
+    }
+}
+
+@keyframes nvInlineArcaneChar {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0);
+        opacity: 0.96;
+        text-shadow: inherit;
+    }
+    24% {
+        transform: translate3d(0, -0.035em, 0);
+        opacity: 1;
+    }
+    56% {
+        text-shadow: 0 0 3px currentColor, 0 0 7px rgba(255, 255, 255, 0.4);
+    }
+    72% {
+        transform: translate3d(0, 0.02em, 0);
+    }
+}
+
+@keyframes nvInlineHologramPulse {
+    0%,
+    100% {
+        opacity: 0.82;
+        filter: brightness(0.94) saturate(1.08);
+        text-shadow: inherit;
+    }
+    50% {
+        opacity: 0.92;
+        filter: brightness(1.12) saturate(1.22);
+        text-shadow: 0 0 4px rgba(138, 244, 255, 0.75), 0 0 12px rgba(94, 214, 255, 0.55), 0 0 20px rgba(106, 255, 240, 0.36);
+    }
+}
+
+@keyframes nvInlineHologramScanlines {
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 0 0.42em;
     }
 }
 
@@ -1110,6 +1179,16 @@ var ensureInlineStyleSheet = () => {
   styleElement.textContent = INLINE_STYLE_PRESET_CSS;
   document.head.appendChild(styleElement);
 };
+var getMutedInlineColor = (color, amount = 0.2) => {
+  if (!color) {
+    return color;
+  }
+  try {
+    return darken(color, amount);
+  } catch {
+    return color;
+  }
+};
 var defaultInlineClassStyles = {
   // horizontal shearing or color channel offsets or other effects to randomly manipulate or offset characters
   glitch: ({ baseColor, baseTextShadow }) => ({
@@ -1135,6 +1214,36 @@ var defaultInlineClassStyles = {
       "0 0 14px rgba(145, 255, 210, 0.28)"
     ),
     filter: "brightness(0.96) saturate(0.82)"
+  }),
+  arcane: ({ baseColor, baseTextShadow }) => ({
+    color: baseColor,
+    letterSpacing: "0.03em",
+    animation: "nvInlineArcanePulse 2.7s ease-in-out infinite",
+    textShadow: mergeTextShadows(
+      baseTextShadow,
+      "0 0 4px currentColor",
+      "0 0 11px rgba(255, 255, 255, 0.42)"
+    ),
+    filter: "saturate(1.05)"
+  }),
+  // Futuristic readout look with scanline drift, neon bloom, and slight transparency.
+  hologram: ({ baseColor, baseTextShadow }) => ({
+    color: baseColor ?? "#8ff8ff",
+    display: "inline-block",
+    opacity: 0.86,
+    letterSpacing: "0.02em",
+    animation: "nvInlineHologramPulse 4.6s ease-in-out infinite, nvInlineHologramScanlines 7.2s linear infinite",
+    textShadow: mergeTextShadows(
+      baseTextShadow,
+      "0 0 4px rgba(148, 244, 255, 0.65)",
+      "0 0 12px rgba(102, 214, 255, 0.45)"
+    ),
+    backgroundImage: "linear-gradient(currentColor, currentColor), repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0px, rgba(255, 255, 255, 0.24) 1px, rgba(255, 255, 255, 0.04) 1px, rgba(255, 255, 255, 0.04) 3px)",
+    backgroundSize: "100% 100%, 100% 0.42em",
+    backgroundClip: "text",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    filter: "saturate(1.14)"
   }),
   // Give text a bold, impactful style with a strong outline (maybe an overshot scaled shadow or other effect to make it feel like it's popping off the page) and maybe a slight shake or pulse.
   shout: ({ baseColor }) => ({
@@ -1170,7 +1279,7 @@ var defaultInlineClassStyles = {
     filter: "saturate(0.88)"
   }),
   // Blue-tinge, slight blur, droplets dripping from characters.
-  tearful: ({ baseColor, baseTextShadow }) => ({
+  tears: ({ baseColor, baseTextShadow }) => ({
     color: baseColor,
     fontStyle: "italic",
     animation: "nvInlineTearful 2.2s ease-in-out infinite",
@@ -1182,7 +1291,7 @@ var defaultInlineClassStyles = {
     filter: "blur(0.2px) saturate(0.94)"
   }),
   // Characters appear to smolder or burn, with a flickering effect and maybe some ember-like particles or a smoky shadow, for intense or destructive emotions
-  burning: ({ baseColor }) => ({
+  burn: ({ baseColor }) => ({
     color: baseColor,
     fontWeight: 700,
     animation: "nvInlineBurning 1.45s steps(3, end) infinite",
@@ -1194,7 +1303,7 @@ var defaultInlineClassStyles = {
     filter: "saturate(1.32) contrast(1.04)"
   }),
   // Make text appear shiny or reflective, possibly with a pulsing effect
-  shiny: ({ baseColor }) => ({
+  shine: ({ baseColor }) => ({
     color: baseColor,
     fontWeight: 700,
     animation: "nvInlineShinyPulse 5.2s ease-in-out infinite",
@@ -1214,16 +1323,21 @@ var defaultInlineClassStyles = {
   quake: ({ baseColor, baseTextShadow }) => ({
     color: baseColor,
     display: "inline-block",
-    animation: "nvInlineQuake 95ms steps(2, end) infinite",
+    animation: "nvInlineQuake 110ms steps(2, end) infinite",
     textShadow: baseTextShadow ? `${baseTextShadow}, 0 0 2px currentColor` : "0 0 2px currentColor"
   }),
   whisper: ({ baseColor, baseTextShadow, baseFontFamily }) => ({
-    color: baseColor,
+    color: getMutedInlineColor(baseColor, 0.22),
+    display: "inline-block",
     fontFamily: baseFontFamily,
+    fontStyle: "italic",
     letterSpacing: "0.05em",
     fontSize: "0.92em",
-    opacity: 0.85,
-    textShadow: baseTextShadow
+    opacity: 0.78,
+    transform: "skewX(-5deg)",
+    transformOrigin: "center",
+    textShadow: baseTextShadow,
+    filter: "saturate(0.72)"
   })
 };
 var CLASS_TAG_PATTERN = /\[([a-zA-Z0-9_-]*)\]/g;
@@ -1311,7 +1425,17 @@ var ZALGO_BELOW_DIACRITICS = [
   "\u0332",
   "\u0333"
 ];
-var PER_CHARACTER_INLINE_CLASSES = /* @__PURE__ */ new Set(["glitch", "flutter", "sigh", "zalgo"]);
+var ARCANE_RUNIC_MARKS = [
+  "\u0358",
+  "\u035B",
+  "\u035C",
+  "\u0363",
+  "\u0364",
+  "\u0365",
+  "\u0366",
+  "\u0367"
+];
+var PER_CHARACTER_INLINE_CLASSES = /* @__PURE__ */ new Set(["glitch", "flutter", "sigh", "zalgo", "arcane"]);
 var MARKDOWN_INLINE_PATTERN = /(\*\*[^*]+\*\*|\*(?!\*)[^*]+\*|_[^_]+_|~~[^~]+~~|__[^_]+__|~[^~]+~|#{1,6} [^\n]+)/;
 var BURNING_SPARK_HORIZONTAL_OFFSETS = [8, 22, 36, 51, 68, 84];
 var BURNING_SPARK_X_DRIFTS = [-2.5, 1.5, -1, 2.2, -1.8, 1.2];
@@ -1363,6 +1487,17 @@ var toZalgoCharacter = (character, characterIndex) => {
   }
   return transformed;
 };
+var toArcaneCharacter = (character, characterIndex) => {
+  if (/\s/.test(character)) {
+    return character;
+  }
+  const codePoint = character.codePointAt(0) ?? 0;
+  const seed = codePoint * 113 + characterIndex * 53;
+  if (Math.abs(seed) % 4 !== 0) {
+    return character;
+  }
+  return `${character}${pickDeterministicMark(ARCANE_RUNIC_MARKS, seed + 19)}`;
+};
 var getPerCharacterStyle = (activeClass, characterIndex) => {
   const cssIndex = { "--nv-char-index": `${characterIndex}` };
   if (activeClass === "glitch") {
@@ -1401,6 +1536,16 @@ var getPerCharacterStyle = (activeClass, characterIndex) => {
       animation: "nvInlineZalgoChar 1.2s steps(2, end) infinite",
       animationDelay: `-${characterIndex * 67 % 700}ms`,
       willChange: "transform"
+    };
+  }
+  if (activeClass === "arcane") {
+    return {
+      ...cssIndex,
+      display: "inline-block",
+      transformOrigin: "center",
+      animation: "nvInlineArcaneChar 1.9s ease-in-out infinite",
+      animationDelay: `-${characterIndex * 83 % 920}ms`,
+      willChange: "transform, text-shadow, opacity"
     };
   }
   return {
@@ -1465,7 +1610,7 @@ var renderPerCharacterSegment = (segmentText, activeClass, resolvedStyle, segmen
     "span",
     {
       style: getPerCharacterStyle(activeClass, characterIndex),
-      children: activeClass === "zalgo" ? toZalgoCharacter(character, characterIndex) : character
+      children: activeClass === "zalgo" ? toZalgoCharacter(character, characterIndex) : activeClass === "arcane" ? toArcaneCharacter(character, characterIndex) : character
     },
     `${segmentKey}-char-${characterIndex}`
   )) }, segmentKey);
@@ -1724,7 +1869,8 @@ function NovelVisualizer(props) {
     enableTalkingAnimation = true,
     enableReroll = true,
     narratorLabel = "",
-    inlineStyleOptions
+    inlineStyleOptions,
+    messageWindowSx
   } = props;
   const [inputText, setInputText] = useState3("");
   const [finishTyping, setFinishTyping] = useState3(false);
@@ -2218,7 +2364,8 @@ function NovelVisualizer(props) {
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  overflow: "visible"
+                  overflow: "visible",
+                  ...messageWindowSx
                 },
                 children: [
                   /* @__PURE__ */ jsxs4(Box, { sx: { display: "flex", alignItems: "flex-end", overflow: "visible" }, children: [
