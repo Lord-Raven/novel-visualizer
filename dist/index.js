@@ -2350,9 +2350,9 @@ function NovelVisualizer(props) {
                 elevation: 8,
                 sx: {
                   position: "absolute",
-                  left: isVerticalLayout ? "2%" : "5%",
-                  right: isVerticalLayout ? "2%" : "5%",
-                  bottom: isVerticalLayout ? "1%" : "4%",
+                  left: `${responsiveOverlaySides}%`,
+                  right: `${responsiveOverlaySides}%`,
+                  bottom: `${responsiveOverlayBottomGap}%`,
                   background: alpha(theme.palette.background.paper, 0.92),
                   border: `2px solid ${alpha(theme.palette.divider, 0.3)}`,
                   borderRadius: 3,
