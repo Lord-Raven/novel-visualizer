@@ -51,28 +51,28 @@ const INLINE_STYLE_PRESET_CSS = `
 
 @keyframes nvInlineSpookyWave {
     0%, 100% {
-        transform: translateY(0px);
+        transform: translateY(-2px);
     }
     12.5% {
-        transform: translateY(-1px);
+        transform: translateY(-1.2px);
     }
     25% {
-        transform: translateY(-1.8px);
+        transform: translateY(0px);
     }
     37.5% {
-        transform: translateY(-0.7px);
+        transform: translateY(1.2px);
     }
     50% {
-        transform: translateY(1.5px);
-    }
-    62.5% {
         transform: translateY(2px);
     }
+    62.5% {
+        transform: translateY(1.2px);
+    }
     75% {
-        transform: translateY(0.9px);
+        transform: translateY(0px);
     }
     87.5% {
-        transform: translateY(-0.8px);
+        transform: translateY(-1.2px);
     }
 }
 
@@ -269,7 +269,7 @@ const INLINE_STYLE_PRESET_CSS = `
     100% {
         opacity: 0.78;
         transform: translate3d(0, 0.08em, 0) scaleY(1.03);
-        filter: blur(0px) saturate(0.9);
+        filter: blur(0.18px) saturate(0.9);
     }
 }
 
@@ -298,8 +298,8 @@ const INLINE_STYLE_PRESET_CSS = `
     }
     100% {
         opacity: 0.68;
-        filter: blur(0.85px);
-        text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.24), 0 1.75px 4px rgba(0, 0, 0, 0.22);
+        filter: blur(1px);
+        text-shadow: 0 0.75px 1.5px rgba(0, 0, 0, 0.25), 0 2.1px 4.5px rgba(0, 0, 0, 0.22);
     }
 }
 
@@ -393,11 +393,11 @@ const INLINE_STYLE_PRESET_CSS = `
     position: absolute;
     left: 0;
     right: 0;
-    top: -0.05em;
+    top: 0;
     bottom: 0;
     pointer-events: none;
     overflow: visible;
-    z-index: 1;
+    z-index: 3;
 }
 
 .nv-inline-spark {
@@ -575,7 +575,7 @@ export const defaultInlineClassStyles: Record<string, InlineClassStyle> = {
             baseTextShadow,
             '0 1px 2px rgba(0, 0, 0, 0.22)'
         ),
-        filter: 'saturate(0.88)'
+        filter: 'blur(0.14px) saturate(0.88)'
     }),
     // Blue-tinge, slight blur, droplets dripping from characters.
     tears: ({ baseColor, baseTextShadow }) => ({
