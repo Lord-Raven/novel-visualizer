@@ -2034,7 +2034,7 @@ function NovelVisualizer(props) {
       setAudioAnalyser(analyser);
       return analyser;
     } catch (error) {
-      console.error("Error creating audio analyser:", error);
+      console.warn("Audio analyser unavailable; continuing without waveform analysis.", error);
       cleanupCurrentAudioGraph();
       return null;
     }
@@ -2124,7 +2124,8 @@ function NovelVisualizer(props) {
       if (enableAudio && index >= 0 && index < scriptEntries.length && scriptEntries[index].speechUrl) {
         const audio = new Audio(scriptEntries[index].speechUrl);
         currentAudioRef.current = audio;
-        attachAudioAnalyser(audio);
+        audio.crossOrigin = "anonymous";
+        const analyser = attachAudioAnalyser(audio);
         if (audioContextRef.current?.state === "suspended") {
           void audioContextRef.current.resume().catch((error) => {
             console.error("Error resuming audio context:", error);
@@ -2132,9 +2133,18 @@ function NovelVisualizer(props) {
         }
         const handlePlay = () => setIsAudioPlaying(true);
         const handlePauseOrEnded = () => setIsAudioPlaying(false);
+        const handleAudioError = () => setIsAudioPlaying(false);
+        const handleMaybeCorsRestriction = () => {
+          if (analyser || !audioContextRef.current || audioContextRef.current.state !== "running") {
+            return;
+          }
+          cleanupCurrentAudioGraph();
+        };
         audio.addEventListener("play", handlePlay);
         audio.addEventListener("pause", handlePauseOrEnded);
         audio.addEventListener("ended", handlePauseOrEnded);
+        audio.addEventListener("error", handleAudioError);
+        audio.addEventListener("playing", handleMaybeCorsRestriction);
         audio.play().catch((err) => {
           console.error("Error playing audio:", err);
           setIsAudioPlaying(false);
@@ -2143,6 +2153,8 @@ function NovelVisualizer(props) {
           audio.removeEventListener("play", handlePlay);
           audio.removeEventListener("pause", handlePauseOrEnded);
           audio.removeEventListener("ended", handlePauseOrEnded);
+          audio.removeEventListener("error", handleAudioError);
+          audio.removeEventListener("playing", handleMaybeCorsRestriction);
         };
       }
       prevIndexRef.current = index;

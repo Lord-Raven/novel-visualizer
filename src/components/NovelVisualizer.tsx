@@ -232,7 +232,10 @@ export function NovelVisualizer<
 
             return analyser;
         } catch (error) {
-            console.error('Error creating audio analyser:', error);
+            // Cross-origin audio can block MediaElementAudioSource analysis unless the
+            // source server sends permissive CORS headers. Keep playback functional by
+            // gracefully disabling analyser-driven animation.
+            console.warn('Audio analyser unavailable; continuing without waveform analysis.', error);
             cleanupCurrentAudioGraph();
             return null;
         }
@@ -346,7 +349,12 @@ export function NovelVisualizer<
                 const audio = new Audio(scriptEntries[index].speechUrl);
                 currentAudioRef.current = audio;
 
-                attachAudioAnalyser(audio);
+                // Required for cross-origin waveform analysis when the remote server
+                // allows it via Access-Control-Allow-Origin. If CORS is not permitted,
+                // playback will still proceed without analyser data.
+                audio.crossOrigin = 'anonymous';
+
+                const analyser = attachAudioAnalyser(audio);
 
                 // Resume the AudioContext now, before play(), so that audio routed
                 // through Web Audio is not silently swallowed by a suspended context.
@@ -361,10 +369,22 @@ export function NovelVisualizer<
                 // Set up event listeners for audio state
                 const handlePlay = () => setIsAudioPlaying(true);
                 const handlePauseOrEnded = () => setIsAudioPlaying(false);
+                const handleAudioError = () => setIsAudioPlaying(false);
+
+                // Some browsers surface CORS/analysis restrictions when playback starts.
+                // If that happens, detach the graph and continue with plain playback.
+                const handleMaybeCorsRestriction = () => {
+                    if (analyser || !audioContextRef.current || audioContextRef.current.state !== 'running') {
+                        return;
+                    }
+                    cleanupCurrentAudioGraph();
+                };
 
                 audio.addEventListener('play', handlePlay);
                 audio.addEventListener('pause', handlePauseOrEnded);
                 audio.addEventListener('ended', handlePauseOrEnded);
+                audio.addEventListener('error', handleAudioError);
+                audio.addEventListener('playing', handleMaybeCorsRestriction);
 
                 audio.play().catch(err => {
                     console.error('Error playing audio:', err);
@@ -375,6 +395,8 @@ export function NovelVisualizer<
                     audio.removeEventListener('play', handlePlay);
                     audio.removeEventListener('pause', handlePauseOrEnded);
                     audio.removeEventListener('ended', handlePauseOrEnded);
+                    audio.removeEventListener('error', handleAudioError);
+                    audio.removeEventListener('playing', handleMaybeCorsRestriction);
                 };
             }
             prevIndexRef.current = index;
