@@ -908,14 +908,14 @@ var INLINE_STYLE_PRESET_CSS = `
 @keyframes nvInlineHologramPulse {
     0%,
     100% {
-        opacity: 0.82;
-        filter: brightness(0.94) saturate(1.08);
+        opacity: 0.88;
+        filter: brightness(0.99) saturate(1.12);
         text-shadow: inherit;
     }
     50% {
-        opacity: 0.92;
-        filter: brightness(1.12) saturate(1.22);
-        text-shadow: 0 0 4px rgba(138, 244, 255, 0.75), 0 0 12px rgba(94, 214, 255, 0.55), 0 0 20px rgba(106, 255, 240, 0.36);
+        opacity: 0.93;
+        filter: brightness(1.05) saturate(1.18);
+        text-shadow: 0 0 3px rgba(138, 244, 255, 0.58), 0 0 8px rgba(94, 214, 255, 0.42), 0 0 14px rgba(106, 255, 240, 0.28);
     }
 }
 
@@ -1230,20 +1230,20 @@ var defaultInlineClassStyles = {
   hologram: ({ baseColor, baseTextShadow }) => ({
     color: baseColor ?? "#8ff8ff",
     display: "inline-block",
-    opacity: 0.86,
+    opacity: 0.9,
     letterSpacing: "0.02em",
-    animation: "nvInlineHologramPulse 4.6s ease-in-out infinite, nvInlineHologramScanlines 7.2s linear infinite",
+    animation: "nvInlineHologramPulse 6.8s ease-in-out infinite, nvInlineHologramScanlines 2.7s linear infinite",
     textShadow: mergeTextShadows(
       baseTextShadow,
-      "0 0 4px rgba(148, 244, 255, 0.65)",
-      "0 0 12px rgba(102, 214, 255, 0.45)"
+      "0 0 3px rgba(148, 244, 255, 0.58)",
+      "0 0 9px rgba(102, 214, 255, 0.38)"
     ),
-    backgroundImage: "linear-gradient(currentColor, currentColor), repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0px, rgba(255, 255, 255, 0.24) 1px, rgba(255, 255, 255, 0.04) 1px, rgba(255, 255, 255, 0.04) 3px)",
-    backgroundSize: "100% 100%, 100% 0.42em",
+    backgroundImage: "linear-gradient(currentColor, currentColor), repeating-linear-gradient(180deg, rgba(228, 252, 255, 0.52) 0px, rgba(228, 252, 255, 0.52) 1px, rgba(128, 220, 255, 0.14) 1px, rgba(128, 220, 255, 0.14) 3px)",
+    backgroundSize: "100% 100%, 100% 0.36em",
     backgroundClip: "text",
     WebkitBackgroundClip: "text",
     WebkitTextFillColor: "transparent",
-    filter: "saturate(1.14)"
+    filter: "saturate(1.18) contrast(1.04)"
   }),
   // Give text a bold, impactful style with a strong outline (maybe an overshot scaled shadow or other effect to make it feel like it's popping off the page) and maybe a slight shake or pulse.
   shout: ({ baseColor }) => ({
@@ -1312,12 +1312,8 @@ var defaultInlineClassStyles = {
   }),
   spooky: ({ baseColor, baseTextShadow }) => ({
     color: baseColor,
-    display: "inline-block",
     letterSpacing: "0.06em",
     fontStyle: "italic",
-    transformOrigin: "center",
-    animation: "nvInlineSpookyWave 2.4s ease-in-out infinite",
-    willChange: "transform",
     textShadow: baseTextShadow ? `${baseTextShadow}, 0 0 8px currentColor` : "0 0 8px currentColor"
   }),
   quake: ({ baseColor, baseTextShadow }) => ({
@@ -1435,7 +1431,7 @@ var ARCANE_RUNIC_MARKS = [
   "\u0366",
   "\u0367"
 ];
-var PER_CHARACTER_INLINE_CLASSES = /* @__PURE__ */ new Set(["glitch", "flutter", "sigh", "zalgo", "arcane"]);
+var PER_CHARACTER_INLINE_CLASSES = /* @__PURE__ */ new Set(["glitch", "flutter", "sigh", "zalgo", "arcane", "spooky"]);
 var MARKDOWN_INLINE_PATTERN = /(\*\*[^*]+\*\*|\*(?!\*)[^*]+\*|_[^_]+_|~~[^~]+~~|__[^_]+__|~[^~]+~|#{1,6} [^\n]+)/;
 var BURNING_SPARK_HORIZONTAL_OFFSETS = [8, 22, 36, 51, 68, 84];
 var BURNING_SPARK_X_DRIFTS = [-2.5, 1.5, -1, 2.2, -1.8, 1.2];
@@ -1516,6 +1512,16 @@ var getPerCharacterStyle = (activeClass, characterIndex) => {
       animation: `nvInlineGlitchChar ${durationMs}ms steps(1, end) infinite`,
       animationDelay: `-${characterIndex * 131 % 900}ms`,
       willChange: "transform, text-shadow"
+    };
+  }
+  if (activeClass === "spooky") {
+    return {
+      ...cssIndex,
+      display: "inline-block",
+      transformOrigin: "center",
+      animation: "nvInlineSpookyWave 2.4s ease-in-out infinite",
+      animationDelay: `-${characterIndex * 90 % 2400}ms`,
+      willChange: "transform"
     };
   }
   if (activeClass === "flutter") {
@@ -1615,13 +1621,13 @@ var renderPerCharacterSegment = (segmentText, activeClass, resolvedStyle, segmen
     `${segmentKey}-char-${characterIndex}`
   )) }, segmentKey);
 };
-var renderBurningSegment = (segmentText, resolvedStyle, segmentKey, formatText) => {
+var renderBurnSegment = (segmentText, resolvedStyle, segmentKey, formatText) => {
   if (!/\S/.test(segmentText)) {
-    return /* @__PURE__ */ jsx4("span", { className: "burning", style: resolvedStyle, children: formatText(segmentText) }, segmentKey);
+    return /* @__PURE__ */ jsx4("span", { className: "burn", style: resolvedStyle, children: formatText(segmentText) }, segmentKey);
   }
   const visibleCharacterCount = Array.from(segmentText).filter((character) => !/\s/.test(character)).length;
   const sparkCount = Math.max(3, Math.min(6, Math.ceil(visibleCharacterCount / 3)));
-  return /* @__PURE__ */ jsxs3("span", { className: "burning nv-inline-burning", style: resolvedStyle, children: [
+  return /* @__PURE__ */ jsxs3("span", { className: "burn nv-inline-burning", style: resolvedStyle, children: [
     /* @__PURE__ */ jsx4("span", { className: "nv-inline-burning-text", children: formatText(segmentText) }),
     /* @__PURE__ */ jsx4("span", { className: "nv-inline-burning-sparks", "aria-hidden": true, children: Array.from({ length: sparkCount }).map((_, sparkIndex) => /* @__PURE__ */ jsx4(
       "span",
@@ -1633,13 +1639,13 @@ var renderBurningSegment = (segmentText, resolvedStyle, segmentKey, formatText) 
     )) })
   ] }, segmentKey);
 };
-var renderTearfulSegment = (segmentText, resolvedStyle, segmentKey, formatText) => {
+var renderTearsSegment = (segmentText, resolvedStyle, segmentKey, formatText) => {
   if (!/\S/.test(segmentText)) {
-    return /* @__PURE__ */ jsx4("span", { className: "tearful", style: resolvedStyle, children: formatText(segmentText) }, segmentKey);
+    return /* @__PURE__ */ jsx4("span", { className: "tears", style: resolvedStyle, children: formatText(segmentText) }, segmentKey);
   }
   const visibleCharacterCount = Array.from(segmentText).filter((character) => !/\s/.test(character)).length;
   const dropCount = Math.max(2, Math.min(6, Math.ceil(visibleCharacterCount / 4)));
-  return /* @__PURE__ */ jsxs3("span", { className: "tearful nv-inline-tearful", style: resolvedStyle, children: [
+  return /* @__PURE__ */ jsxs3("span", { className: "tears nv-inline-tearful", style: resolvedStyle, children: [
     /* @__PURE__ */ jsx4("span", { className: "nv-inline-tearful-text", children: formatText(segmentText) }),
     /* @__PURE__ */ jsx4("span", { className: "nv-inline-tearful-drops", "aria-hidden": true, children: Array.from({ length: dropCount }).map((_, dropIndex) => /* @__PURE__ */ jsx4(
       "span",
@@ -1750,11 +1756,11 @@ var formatInlineStyles = (text, options, initialActiveClass = null) => {
     if (PER_CHARACTER_INLINE_CLASSES.has(activeClass) && !MARKDOWN_INLINE_PATTERN.test(segmentText)) {
       return renderPerCharacterSegment(segmentText, activeClass, resolvedStyle, segmentKey);
     }
-    if (activeClass === "burning") {
-      return renderBurningSegment(segmentText, resolvedStyle, segmentKey, formatHeaders);
+    if (activeClass === "burn") {
+      return renderBurnSegment(segmentText, resolvedStyle, segmentKey, formatHeaders);
     }
-    if (activeClass === "tearful") {
-      return renderTearfulSegment(segmentText, resolvedStyle, segmentKey, formatHeaders);
+    if (activeClass === "tears") {
+      return renderTearsSegment(segmentText, resolvedStyle, segmentKey, formatHeaders);
     }
     return /* @__PURE__ */ jsx4("span", { className: activeClass, style: resolvedStyle, children: formatHeaders(segmentText) }, segmentKey);
   };
