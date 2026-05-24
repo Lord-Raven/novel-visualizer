@@ -170,7 +170,9 @@ const ActorImage: FC<ActorImageProps> = ({
     // Motion value for scaleY – driven by the audio analyser (RAF loop) when available,
     // or left at 1 when using the fallback interval approach (scaleY goes into animate then).
     const scaleYMotionValue = useMotionValue(1);
-    const springScaleY = useSpring(scaleYMotionValue, { stiffness: 320, damping: 14 });
+    // Damping is set near critical (2 * sqrt(stiffness) ≈ 35.8) to prevent the spring
+    // from ringing after the RAF loop ends, which was causing visible animation in silence.
+    const springScaleY = useSpring(scaleYMotionValue, { stiffness: 320, damping: 36 });
 
     // Dynamic animation parameters that vary over time
     const [animationParams, setAnimationParams] = useState(() => {
@@ -202,6 +204,10 @@ const ActorImage: FC<ActorImageProps> = ({
         let rafId: number;
         const startTime = performance.now();
 
+        // Below this RMS level the audio is considered silent and the character stays still.
+        // This prevents the noise floor of the analyser from driving visible oscillation.
+        const SILENCE_THRESHOLD = 0.01;
+
         const analyse = () => {
             audioAnalyser.getFloatTimeDomainData(dataArray);
 
@@ -212,16 +218,22 @@ const ActorImage: FC<ActorImageProps> = ({
             }
             const rms = Math.sqrt(sumSquares / bufferLength);
 
-            // Map RMS → oscillation magnitude (cap at ±8% scale change).
-            const magnitude = Math.min(rms * 10, 0.08);
+            if (rms < SILENCE_THRESHOLD) {
+                // Treat as silence – snap target to rest so the (now critically-damped)
+                // spring settles without oscillating.
+                scaleYMotionValue.set(1);
+            } else {
+                // Map RMS → oscillation magnitude (cap at ±8% scale change).
+                const magnitude = Math.min(rms * 10, 0.08);
 
-            // Oscillation frequency scales with loudness: quiet speech ~8 Hz, loud ~22 Hz.
-            const frequency = 8 + rms * 14;
+                // Oscillation frequency scales with loudness: quiet speech ~8 Hz, loud ~22 Hz.
+                const frequency = 8 + rms * 14;
 
-            const elapsed = (performance.now() - startTime) / 1000;
-            const oscillation = Math.sin(elapsed * frequency * Math.PI * 2);
+                const elapsed = (performance.now() - startTime) / 1000;
+                const oscillation = Math.sin(elapsed * frequency * Math.PI * 2);
 
-            scaleYMotionValue.set(1 + magnitude * oscillation);
+                scaleYMotionValue.set(1 + magnitude * oscillation);
+            }
 
             rafId = requestAnimationFrame(analyse);
         };

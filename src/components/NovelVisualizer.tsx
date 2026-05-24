@@ -348,15 +348,18 @@ export function NovelVisualizer<
 
                 attachAudioAnalyser(audio);
 
+                // Resume the AudioContext now, before play(), so that audio routed
+                // through Web Audio is not silently swallowed by a suspended context.
+                // The context is created in an async effect (outside a user gesture),
+                // so it starts suspended; we must resume it proactively.
+                if (audioContextRef.current?.state === 'suspended') {
+                    void audioContextRef.current.resume().catch((error) => {
+                        console.error('Error resuming audio context:', error);
+                    });
+                }
+
                 // Set up event listeners for audio state
-                const handlePlay = () => {
-                    if (audioContextRef.current?.state === 'suspended') {
-                        void audioContextRef.current.resume().catch((error) => {
-                            console.error('Error resuming audio context:', error);
-                        });
-                    }
-                    setIsAudioPlaying(true);
-                };
+                const handlePlay = () => setIsAudioPlaying(true);
                 const handlePauseOrEnded = () => setIsAudioPlaying(false);
 
                 audio.addEventListener('play', handlePlay);

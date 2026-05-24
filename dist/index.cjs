@@ -179,7 +179,7 @@ var ActorImage = ({
     };
   }, [baseX, baseY, yPosition, zIndex, heightMultiplier, popInSide]);
   const scaleYMotionValue = (0, import_framer_motion.useMotionValue)(1);
-  const springScaleY = (0, import_framer_motion.useSpring)(scaleYMotionValue, { stiffness: 320, damping: 14 });
+  const springScaleY = (0, import_framer_motion.useSpring)(scaleYMotionValue, { stiffness: 320, damping: 36 });
   const [animationParams, setAnimationParams] = (0, import_react.useState)(() => {
     const seed = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const random1 = Math.abs(Math.sin(seed) * 1e4 % 1);
@@ -198,6 +198,7 @@ var ActorImage = ({
     const dataArray = new Float32Array(bufferLength);
     let rafId;
     const startTime = performance.now();
+    const SILENCE_THRESHOLD = 0.01;
     const analyse = () => {
       audioAnalyser.getFloatTimeDomainData(dataArray);
       let sumSquares = 0;
@@ -205,11 +206,15 @@ var ActorImage = ({
         sumSquares += dataArray[i] * dataArray[i];
       }
       const rms = Math.sqrt(sumSquares / bufferLength);
-      const magnitude = Math.min(rms * 10, 0.08);
-      const frequency = 8 + rms * 14;
-      const elapsed = (performance.now() - startTime) / 1e3;
-      const oscillation = Math.sin(elapsed * frequency * Math.PI * 2);
-      scaleYMotionValue.set(1 + magnitude * oscillation);
+      if (rms < SILENCE_THRESHOLD) {
+        scaleYMotionValue.set(1);
+      } else {
+        const magnitude = Math.min(rms * 10, 0.08);
+        const frequency = 8 + rms * 14;
+        const elapsed = (performance.now() - startTime) / 1e3;
+        const oscillation = Math.sin(elapsed * frequency * Math.PI * 2);
+        scaleYMotionValue.set(1 + magnitude * oscillation);
+      }
       rafId = requestAnimationFrame(analyse);
     };
     rafId = requestAnimationFrame(analyse);
@@ -2120,14 +2125,12 @@ function NovelVisualizer(props) {
         const audio = new Audio(scriptEntries[index].speechUrl);
         currentAudioRef.current = audio;
         attachAudioAnalyser(audio);
-        const handlePlay = () => {
-          if (audioContextRef.current?.state === "suspended") {
-            void audioContextRef.current.resume().catch((error) => {
-              console.error("Error resuming audio context:", error);
-            });
-          }
-          setIsAudioPlaying(true);
-        };
+        if (audioContextRef.current?.state === "suspended") {
+          void audioContextRef.current.resume().catch((error) => {
+            console.error("Error resuming audio context:", error);
+          });
+        }
+        const handlePlay = () => setIsAudioPlaying(true);
         const handlePauseOrEnded = () => setIsAudioPlaying(false);
         audio.addEventListener("play", handlePlay);
         audio.addEventListener("pause", handlePauseOrEnded);
