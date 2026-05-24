@@ -138,6 +138,7 @@ interface ActorImageProps {
     onMouseLeave?: () => void;
     popInSide?: 'none' | 'left' | 'right';
     isAudioPlaying?: boolean;
+    audioAnalyser?: AnalyserNode | null;
     filter?: 'ghost' | 'aura' | 'hologram';
     filterColor?: string;
 }

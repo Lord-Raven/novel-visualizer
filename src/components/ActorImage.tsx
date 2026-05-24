@@ -1,4 +1,4 @@
-import {motion, Variants, easeOut, easeIn, AnimatePresence} from "framer-motion";
+import {motion, Variants, easeOut, easeIn, AnimatePresence, useMotionValue, useSpring} from "framer-motion";
 import {FC, useState, useEffect, useMemo, memo} from "react";
 
 const IDLE_HEIGHT: number = 80;
@@ -20,6 +20,9 @@ interface ActorImageProps {
     popInSide?: 'none' | 'left' | 'right';
     // 'isAudioPlaying' indicates whether audio is currently playing for this character
     isAudioPlaying?: boolean;
+    // Optional Web Audio AnalyserNode for waveform-driven squish/stretch animation.
+    // When provided, replaces the interval-based fallback with real-time amplitude analysis.
+    audioAnalyser?: AnalyserNode | null;
     // Optional visual treatment for special character presentation
     filter?: 'ghost' | 'aura' | 'hologram';
     filterColor?: string;
@@ -38,6 +41,7 @@ const ActorImage: FC<ActorImageProps> = ({
     onMouseLeave,
     popInSide = 'none',
     isAudioPlaying = false,
+    audioAnalyser = null,
     filter: imageFilter,
     filterColor = '#9ad8ff'
 }) => {
@@ -163,6 +167,11 @@ const ActorImage: FC<ActorImageProps> = ({
         };
     }, [baseX, baseY, yPosition, zIndex, heightMultiplier, popInSide]);
 
+    // Motion value for scaleY – driven by the audio analyser (RAF loop) when available,
+    // or left at 1 when using the fallback interval approach (scaleY goes into animate then).
+    const scaleYMotionValue = useMotionValue(1);
+    const springScaleY = useSpring(scaleYMotionValue, { stiffness: 320, damping: 14 });
+
     // Dynamic animation parameters that vary over time
     const [animationParams, setAnimationParams] = useState(() => {
         const seed = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -179,9 +188,55 @@ const ActorImage: FC<ActorImageProps> = ({
         return { squish, stretch, duration };
     });
 
-    // Continuously vary animation parameters when audio is playing
+    // Web Audio analyser-driven animation: RAF loop reads waveform amplitude and maps it
+    // to a real-time scaleY oscillation. Silence → no movement; louder speech → larger and
+    // slightly faster squish/stretch. The spring smooths abrupt amplitude changes.
     useEffect(() => {
-        if (!isAudioPlaying || !speaker) {
+        if (!audioAnalyser || !speaker) {
+            scaleYMotionValue.set(1);
+            return;
+        }
+
+        const bufferLength = audioAnalyser.fftSize;
+        const dataArray = new Float32Array(bufferLength);
+        let rafId: number;
+        const startTime = performance.now();
+
+        const analyse = () => {
+            audioAnalyser.getFloatTimeDomainData(dataArray);
+
+            // RMS amplitude – values are in [-1, 1] for float time-domain data.
+            let sumSquares = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                sumSquares += dataArray[i] * dataArray[i];
+            }
+            const rms = Math.sqrt(sumSquares / bufferLength);
+
+            // Map RMS → oscillation magnitude (cap at ±8% scale change).
+            const magnitude = Math.min(rms * 10, 0.08);
+
+            // Oscillation frequency scales with loudness: quiet speech ~8 Hz, loud ~22 Hz.
+            const frequency = 8 + rms * 14;
+
+            const elapsed = (performance.now() - startTime) / 1000;
+            const oscillation = Math.sin(elapsed * frequency * Math.PI * 2);
+
+            scaleYMotionValue.set(1 + magnitude * oscillation);
+
+            rafId = requestAnimationFrame(analyse);
+        };
+
+        rafId = requestAnimationFrame(analyse);
+        return () => {
+            cancelAnimationFrame(rafId);
+            scaleYMotionValue.set(1);
+        };
+    }, [audioAnalyser, speaker, scaleYMotionValue]);
+
+    // Fallback: continuously vary animation parameters via interval when no analyser is
+    // available but isAudioPlaying is true. Ignored when audioAnalyser is provided.
+    useEffect(() => {
+        if (!isAudioPlaying || !speaker || audioAnalyser) {
             return;
         }
 
@@ -209,7 +264,7 @@ const ActorImage: FC<ActorImageProps> = ({
         }, updateInterval);
 
         return () => clearInterval(intervalId);
-    }, [isAudioPlaying, speaker]);
+    }, [isAudioPlaying, audioAnalyser, speaker]);
 
     // Build a single bottom mask so pop-in and ghost effects share the same clipping path.
     const bottomMaskStyle = useMemo(() => {
@@ -230,11 +285,13 @@ const ActorImage: FC<ActorImageProps> = ({
         return {};
     }, [imageFilter, popInSide]);
 
-    // Build animate props based on speaker and audio state
-    // When speaker and audio is playing, we need to add the scaleY animation
+    // Build animate props based on speaker and audio state.
+    // When an audioAnalyser is provided, scaleY is driven by the RAF motion value (in style)
+    // and must NOT appear here. The fallback interval approach still injects scaleY into
+    // animate when no analyser is available.
     const animateProps = useMemo(() => {
-        if (speaker && isAudioPlaying) {
-            // Get the talking variant values
+        if (speaker && isAudioPlaying && !audioAnalyser) {
+            // Fallback: no analyser – use randomly-varied keyframe loop.
             const talkingVariant = variants.talking;
             const baseTransition = popInSide !== 'none'
                 ? { x: { ease: easeOut, duration: 0.4 }, bottom: { duration: 0.4 }, opacity: { ease: easeOut, duration: 0.4 }, rotate: { duration: 0.4 } }
@@ -254,7 +311,7 @@ const ActorImage: FC<ActorImageProps> = ({
             };
         }
         return speaker ? 'talking' : 'idle';
-    }, [speaker, isAudioPlaying, variants, popInSide, animationParams]);
+    }, [speaker, isAudioPlaying, audioAnalyser, variants, popInSide, animationParams]);
 
     const tintFilterId = `tint-${id}`;
     const ghostTintFilterId = `ghost-tint-${id}`;
@@ -392,7 +449,7 @@ const ActorImage: FC<ActorImageProps> = ({
                     ? `${baseTransform} translateX(-50%)`
                     : 'translateX(-50%)';
             }}
-            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center'}}>
+            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center', scaleY: springScaleY}}>
             <AnimatePresence>
                 {/* Aura should render only as edge glow and never recolor the character layer. */}
                 {displayedImageUrl && imageFilter === 'aura' && (

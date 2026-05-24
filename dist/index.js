@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Ca
 import { AnimatePresence as AnimatePresence2 } from "framer-motion";
 
 // src/components/ActorImage.tsx
-import { motion, easeOut, easeIn, AnimatePresence } from "framer-motion";
+import { motion, easeOut, easeIn, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import { useState, useEffect, useMemo, memo } from "react";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 var IDLE_HEIGHT = 80;
@@ -24,6 +24,7 @@ var ActorImage = ({
   onMouseLeave,
   popInSide = "none",
   isAudioPlaying = false,
+  audioAnalyser = null,
   filter: imageFilter,
   filterColor = "#9ad8ff"
 }) => {
@@ -136,6 +137,8 @@ var ActorImage = ({
       }
     };
   }, [baseX, baseY, yPosition, zIndex, heightMultiplier, popInSide]);
+  const scaleYMotionValue = useMotionValue(1);
+  const springScaleY = useSpring(scaleYMotionValue, { stiffness: 320, damping: 14 });
   const [animationParams, setAnimationParams] = useState(() => {
     const seed = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const random1 = Math.abs(Math.sin(seed) * 1e4 % 1);
@@ -146,7 +149,36 @@ var ActorImage = ({
     return { squish, stretch, duration };
   });
   useEffect(() => {
-    if (!isAudioPlaying || !speaker) {
+    if (!audioAnalyser || !speaker) {
+      scaleYMotionValue.set(1);
+      return;
+    }
+    const bufferLength = audioAnalyser.fftSize;
+    const dataArray = new Float32Array(bufferLength);
+    let rafId;
+    const startTime = performance.now();
+    const analyse = () => {
+      audioAnalyser.getFloatTimeDomainData(dataArray);
+      let sumSquares = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        sumSquares += dataArray[i] * dataArray[i];
+      }
+      const rms = Math.sqrt(sumSquares / bufferLength);
+      const magnitude = Math.min(rms * 10, 0.08);
+      const frequency = 8 + rms * 14;
+      const elapsed = (performance.now() - startTime) / 1e3;
+      const oscillation = Math.sin(elapsed * frequency * Math.PI * 2);
+      scaleYMotionValue.set(1 + magnitude * oscillation);
+      rafId = requestAnimationFrame(analyse);
+    };
+    rafId = requestAnimationFrame(analyse);
+    return () => {
+      cancelAnimationFrame(rafId);
+      scaleYMotionValue.set(1);
+    };
+  }, [audioAnalyser, speaker, scaleYMotionValue]);
+  useEffect(() => {
+    if (!isAudioPlaying || !speaker || audioAnalyser) {
       return;
     }
     const updateInterval = 500 + Math.random() * 2e3;
@@ -162,7 +194,7 @@ var ActorImage = ({
       });
     }, updateInterval);
     return () => clearInterval(intervalId);
-  }, [isAudioPlaying, speaker]);
+  }, [isAudioPlaying, audioAnalyser, speaker]);
   const bottomMaskStyle = useMemo(() => {
     if (imageFilter === "ghost") {
       return {
@@ -179,7 +211,7 @@ var ActorImage = ({
     return {};
   }, [imageFilter, popInSide]);
   const animateProps = useMemo(() => {
-    if (speaker && isAudioPlaying) {
+    if (speaker && isAudioPlaying && !audioAnalyser) {
       const talkingVariant = variants.talking;
       const baseTransition = popInSide !== "none" ? { x: { ease: easeOut, duration: 0.4 }, bottom: { duration: 0.4 }, opacity: { ease: easeOut, duration: 0.4 }, rotate: { duration: 0.4 } } : { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } };
       return {
@@ -196,7 +228,7 @@ var ActorImage = ({
       };
     }
     return speaker ? "talking" : "idle";
-  }, [speaker, isAudioPlaying, variants, popInSide, animationParams]);
+  }, [speaker, isAudioPlaying, audioAnalyser, variants, popInSide, animationParams]);
   const tintFilterId = `tint-${id}`;
   const ghostTintFilterId = `ghost-tint-${id}`;
   const auraGlowFilterId = `aura-glow-${id}`;
@@ -317,7 +349,7 @@ var ActorImage = ({
           const baseTransform = generatedTransform?.trim() || "";
           return baseTransform ? `${baseTransform} translateX(-50%)` : "translateX(-50%)";
         },
-        style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center" },
+        style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center", scaleY: springScaleY },
         children: [
           /* @__PURE__ */ jsx(AnimatePresence, { children: displayedImageUrl && imageFilter === "aura" && /* @__PURE__ */ jsx(
             motion.img,
@@ -1883,7 +1915,11 @@ function NovelVisualizer(props) {
   const [messageKey, setMessageKey] = React4.useState(0);
   const [hoveredActor, setHoveredActor] = useState3(null);
   const currentAudioRef = React4.useRef(null);
+  const audioContextRef = React4.useRef(null);
+  const currentAudioSourceRef = React4.useRef(null);
+  const currentAudioAnalyserRef = React4.useRef(null);
   const [isAudioPlaying, setIsAudioPlaying] = React4.useState(false);
+  const [audioAnalyser, setAudioAnalyser] = React4.useState(null);
   const [mousePosition, setMousePosition] = useState3(null);
   const [messageBoxTopVh, setMessageBoxTopVh] = useState3(isVerticalLayout ? 50 : 60);
   const [loading, setLoading] = useState3(false);
@@ -1925,6 +1961,38 @@ function NovelVisualizer(props) {
     }),
     [baseTextShadow, theme]
   );
+  const cleanupCurrentAudioGraph = React4.useCallback(() => {
+    currentAudioSourceRef.current?.disconnect();
+    currentAudioAnalyserRef.current?.disconnect();
+    currentAudioSourceRef.current = null;
+    currentAudioAnalyserRef.current = null;
+    setAudioAnalyser(null);
+  }, []);
+  const attachAudioAnalyser = React4.useCallback((audio) => {
+    if (typeof window === "undefined" || typeof window.AudioContext === "undefined") {
+      cleanupCurrentAudioGraph();
+      return null;
+    }
+    try {
+      const audioContext = audioContextRef.current ?? new window.AudioContext();
+      audioContextRef.current = audioContext;
+      cleanupCurrentAudioGraph();
+      const source = audioContext.createMediaElementSource(audio);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.7;
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+      currentAudioSourceRef.current = source;
+      currentAudioAnalyserRef.current = analyser;
+      setAudioAnalyser(analyser);
+      return analyser;
+    } catch (error) {
+      console.error("Error creating audio analyser:", error);
+      cleanupCurrentAudioGraph();
+      return null;
+    }
+  }, [cleanupCurrentAudioGraph]);
   const setCurrentIndex = (currentIndex) => {
     if (localSkit) {
       setLocalSkit({ ...localSkit, currentIndex });
@@ -2005,22 +2073,38 @@ function NovelVisualizer(props) {
         currentAudioRef.current.pause();
         currentAudioRef.current.currentTime = 0;
         setIsAudioPlaying(false);
+        cleanupCurrentAudioGraph();
       }
       if (enableAudio && index >= 0 && index < scriptEntries.length && scriptEntries[index].speechUrl) {
         const audio = new Audio(scriptEntries[index].speechUrl);
         currentAudioRef.current = audio;
-        audio.addEventListener("play", () => setIsAudioPlaying(true));
-        audio.addEventListener("pause", () => setIsAudioPlaying(false));
-        audio.addEventListener("ended", () => setIsAudioPlaying(false));
+        attachAudioAnalyser(audio);
+        const handlePlay = () => {
+          if (audioContextRef.current?.state === "suspended") {
+            void audioContextRef.current.resume().catch((error) => {
+              console.error("Error resuming audio context:", error);
+            });
+          }
+          setIsAudioPlaying(true);
+        };
+        const handlePauseOrEnded = () => setIsAudioPlaying(false);
+        audio.addEventListener("play", handlePlay);
+        audio.addEventListener("pause", handlePauseOrEnded);
+        audio.addEventListener("ended", handlePauseOrEnded);
         audio.play().catch((err) => {
           console.error("Error playing audio:", err);
           setIsAudioPlaying(false);
         });
+        return () => {
+          audio.removeEventListener("play", handlePlay);
+          audio.removeEventListener("pause", handlePauseOrEnded);
+          audio.removeEventListener("ended", handlePauseOrEnded);
+        };
       }
       prevIndexRef.current = index;
     }
     setMessageKey((prev2) => prev2 + 1);
-  }, [index, enableAudio, scriptEntries]);
+  }, [index, enableAudio, scriptEntries, attachAudioAnalyser, cleanupCurrentAudioGraph]);
   useEffect3(() => {
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
@@ -2028,7 +2112,17 @@ function NovelVisualizer(props) {
       currentAudioRef.current = null;
       setIsAudioPlaying(false);
     }
-  }, [enableAudio]);
+    cleanupCurrentAudioGraph();
+  }, [enableAudio, cleanupCurrentAudioGraph]);
+  useEffect3(() => {
+    return () => {
+      cleanupCurrentAudioGraph();
+      if (audioContextRef.current) {
+        void audioContextRef.current.close().catch(() => void 0);
+        audioContextRef.current = null;
+      }
+    };
+  }, [cleanupCurrentAudioGraph]);
   useEffect3(() => {
     if (prevExternalLoadingRef.current !== externalLoading) {
       prevIndexRef.current = -1;
@@ -2196,6 +2290,7 @@ function NovelVisualizer(props) {
           speaker: isSpeaking,
           highlightColor: isHovered ? lighten2(baseHighlightColor, 0.2) : baseHighlightColor,
           isAudioPlaying: isSpeaking && isAudioPlaying && enableTalkingAnimation,
+          audioAnalyser: isSpeaking && isAudioPlaying && enableTalkingAnimation ? audioAnalyser : null,
           filter: filterProps.filter,
           filterColor: filterProps.filterColor
         },
@@ -2224,6 +2319,7 @@ function NovelVisualizer(props) {
             highlightColor: isHovered ? lighten2(baseHighlightColor, 0.2) : baseHighlightColor,
             popInSide,
             isAudioPlaying: isAudioPlaying && enableTalkingAnimation,
+            audioAnalyser: isAudioPlaying && enableTalkingAnimation ? audioAnalyser : null,
             filter: filterProps.filter,
             filterColor: filterProps.filterColor
           },

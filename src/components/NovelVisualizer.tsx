@@ -146,7 +146,11 @@ export function NovelVisualizer<
     const [messageKey, setMessageKey] = React.useState<number>(0); // Key to force TypeOut reset
     const [hoveredActor, setHoveredActor] = useState<TActor | null>(null);
     const currentAudioRef = React.useRef<HTMLAudioElement | null>(null);
+    const audioContextRef = React.useRef<AudioContext | null>(null);
+    const currentAudioSourceRef = React.useRef<MediaElementAudioSourceNode | null>(null);
+    const currentAudioAnalyserRef = React.useRef<AnalyserNode | null>(null);
     const [isAudioPlaying, setIsAudioPlaying] = React.useState<boolean>(false);
+    const [audioAnalyser, setAudioAnalyser] = React.useState<AnalyserNode | null>(null);
     const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
     const [messageBoxTopVh, setMessageBoxTopVh] = useState<number>(isVerticalLayout ? 50 : 60);
     const [loading, setLoading] = useState<boolean>(false);
@@ -193,6 +197,46 @@ export function NovelVisualizer<
         }),
         [baseTextShadow, theme]
     );
+
+    const cleanupCurrentAudioGraph = React.useCallback(() => {
+        currentAudioSourceRef.current?.disconnect();
+        currentAudioAnalyserRef.current?.disconnect();
+        currentAudioSourceRef.current = null;
+        currentAudioAnalyserRef.current = null;
+        setAudioAnalyser(null);
+    }, []);
+
+    const attachAudioAnalyser = React.useCallback((audio: HTMLAudioElement) => {
+        if (typeof window === 'undefined' || typeof window.AudioContext === 'undefined') {
+            cleanupCurrentAudioGraph();
+            return null;
+        }
+
+        try {
+            const audioContext = audioContextRef.current ?? new window.AudioContext();
+            audioContextRef.current = audioContext;
+
+            cleanupCurrentAudioGraph();
+
+            const source = audioContext.createMediaElementSource(audio);
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 2048;
+            analyser.smoothingTimeConstant = 0.7;
+
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+
+            currentAudioSourceRef.current = source;
+            currentAudioAnalyserRef.current = analyser;
+            setAudioAnalyser(analyser);
+
+            return analyser;
+        } catch (error) {
+            console.error('Error creating audio analyser:', error);
+            cleanupCurrentAudioGraph();
+            return null;
+        }
+    }, [cleanupCurrentAudioGraph]);
 
     const setCurrentIndex = (currentIndex: number) => {
         if (localSkit) {
@@ -296,25 +340,44 @@ export function NovelVisualizer<
                 currentAudioRef.current.pause();
                 currentAudioRef.current.currentTime = 0;
                 setIsAudioPlaying(false);
+                cleanupCurrentAudioGraph();
             }
             if (enableAudio && index >= 0 && index < scriptEntries.length && scriptEntries[index].speechUrl) {
                 const audio = new Audio(scriptEntries[index].speechUrl);
                 currentAudioRef.current = audio;
-                
+
+                attachAudioAnalyser(audio);
+
                 // Set up event listeners for audio state
-                audio.addEventListener('play', () => setIsAudioPlaying(true));
-                audio.addEventListener('pause', () => setIsAudioPlaying(false));
-                audio.addEventListener('ended', () => setIsAudioPlaying(false));
-                
+                const handlePlay = () => {
+                    if (audioContextRef.current?.state === 'suspended') {
+                        void audioContextRef.current.resume().catch((error) => {
+                            console.error('Error resuming audio context:', error);
+                        });
+                    }
+                    setIsAudioPlaying(true);
+                };
+                const handlePauseOrEnded = () => setIsAudioPlaying(false);
+
+                audio.addEventListener('play', handlePlay);
+                audio.addEventListener('pause', handlePauseOrEnded);
+                audio.addEventListener('ended', handlePauseOrEnded);
+
                 audio.play().catch(err => {
                     console.error('Error playing audio:', err);
                     setIsAudioPlaying(false);
                 });
+
+                return () => {
+                    audio.removeEventListener('play', handlePlay);
+                    audio.removeEventListener('pause', handlePauseOrEnded);
+                    audio.removeEventListener('ended', handlePauseOrEnded);
+                };
             }
             prevIndexRef.current = index;
         }
         setMessageKey((prev) => prev + 1);
-    }, [index, enableAudio, scriptEntries]);
+    }, [index, enableAudio, scriptEntries, attachAudioAnalyser, cleanupCurrentAudioGraph]);
 
     useEffect(() => {
         if (currentAudioRef.current) {
@@ -323,7 +386,18 @@ export function NovelVisualizer<
             currentAudioRef.current = null;
             setIsAudioPlaying(false);
         }
-    }, [enableAudio]);
+        cleanupCurrentAudioGraph();
+    }, [enableAudio, cleanupCurrentAudioGraph]);
+
+    useEffect(() => {
+        return () => {
+            cleanupCurrentAudioGraph();
+            if (audioContextRef.current) {
+                void audioContextRef.current.close().catch(() => undefined);
+                audioContextRef.current = null;
+            }
+        };
+    }, [cleanupCurrentAudioGraph]);
 
     useEffect(() => {
         if (prevExternalLoadingRef.current !== externalLoading) {
@@ -520,6 +594,7 @@ export function NovelVisualizer<
                     speaker={isSpeaking}
                     highlightColor={isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor}
                     isAudioPlaying={isSpeaking && isAudioPlaying && enableTalkingAnimation}
+                    audioAnalyser={isSpeaking && isAudioPlaying && enableTalkingAnimation ? audioAnalyser : null}
                     filter={filterProps.filter}
                     filterColor={filterProps.filterColor}
                 />
@@ -550,6 +625,7 @@ export function NovelVisualizer<
                     highlightColor={isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor}
                     popInSide={popInSide}
                     isAudioPlaying={isAudioPlaying && enableTalkingAnimation}
+                    audioAnalyser={isAudioPlaying && enableTalkingAnimation ? audioAnalyser : null}
                     filter={filterProps.filter}
                     filterColor={filterProps.filterColor}
                 />
