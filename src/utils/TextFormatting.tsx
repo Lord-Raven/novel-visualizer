@@ -855,11 +855,20 @@ const renderPerCharacterSegment = (
     segmentKey: string
 ): React.ReactNode => {
     const characters = Array.from(segmentText);
+    const isWhitespaceCharacter = (character: string): boolean => /\s/.test(character);
 
     if (activeClass === 'sigh') {
         return (
             <span key={segmentKey} className={activeClass} style={{ ...resolvedStyle, textShadow: 'none' }}>
                 {characters.map((character, characterIndex) => {
+                    if (isWhitespaceCharacter(character)) {
+                        return (
+                            <React.Fragment key={`${segmentKey}-ws-${characterIndex}`}>
+                                {character}
+                            </React.Fragment>
+                        );
+                    }
+
                     const characterDelay = `${Math.min(characterIndex * 14, 140)}ms`;
                     return (
                         <span
@@ -904,18 +913,28 @@ const renderPerCharacterSegment = (
 
     return (
         <span key={segmentKey} className={activeClass} style={resolvedStyle}>
-            {characters.map((character, characterIndex) => (
-                <span
-                    key={`${segmentKey}-char-${characterIndex}`}
-                    style={getPerCharacterStyle(activeClass, characterIndex)}
-                >
-                    {activeClass === 'zalgo'
-                        ? toZalgoCharacter(character, characterIndex)
-                        : activeClass === 'arcane'
-                            ? toArcaneCharacter(character, characterIndex)
-                            : character}
-                </span>
-            ))}
+            {characters.map((character, characterIndex) => {
+                if (isWhitespaceCharacter(character)) {
+                    return (
+                        <React.Fragment key={`${segmentKey}-ws-${characterIndex}`}>
+                            {character}
+                        </React.Fragment>
+                    );
+                }
+
+                return (
+                    <span
+                        key={`${segmentKey}-char-${characterIndex}`}
+                        style={getPerCharacterStyle(activeClass, characterIndex)}
+                    >
+                        {activeClass === 'zalgo'
+                            ? toZalgoCharacter(character, characterIndex)
+                            : activeClass === 'arcane'
+                                ? toArcaneCharacter(character, characterIndex)
+                                : character}
+                    </span>
+                );
+            })}
         </span>
     );
 };

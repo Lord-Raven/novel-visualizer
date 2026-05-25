@@ -1649,8 +1649,12 @@ var getPerCharacterStyle = (activeClass, characterIndex) => {
 };
 var renderPerCharacterSegment = (segmentText, activeClass, resolvedStyle, segmentKey) => {
   const characters = Array.from(segmentText);
+  const isWhitespaceCharacter = (character) => /\s/.test(character);
   if (activeClass === "sigh") {
     return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: activeClass, style: { ...resolvedStyle, textShadow: "none" }, children: characters.map((character, characterIndex) => {
+      if (isWhitespaceCharacter(character)) {
+        return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react4.default.Fragment, { children: character }, `${segmentKey}-ws-${characterIndex}`);
+      }
       const characterDelay = `${Math.min(characterIndex * 14, 140)}ms`;
       return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
         "span",
@@ -1696,14 +1700,19 @@ var renderPerCharacterSegment = (segmentText, activeClass, resolvedStyle, segmen
       );
     }) }, segmentKey);
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: activeClass, style: resolvedStyle, children: characters.map((character, characterIndex) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
-    "span",
-    {
-      style: getPerCharacterStyle(activeClass, characterIndex),
-      children: activeClass === "zalgo" ? toZalgoCharacter(character, characterIndex) : activeClass === "arcane" ? toArcaneCharacter(character, characterIndex) : character
-    },
-    `${segmentKey}-char-${characterIndex}`
-  )) }, segmentKey);
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: activeClass, style: resolvedStyle, children: characters.map((character, characterIndex) => {
+    if (isWhitespaceCharacter(character)) {
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react4.default.Fragment, { children: character }, `${segmentKey}-ws-${characterIndex}`);
+    }
+    return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+      "span",
+      {
+        style: getPerCharacterStyle(activeClass, characterIndex),
+        children: activeClass === "zalgo" ? toZalgoCharacter(character, characterIndex) : activeClass === "arcane" ? toArcaneCharacter(character, characterIndex) : character
+      },
+      `${segmentKey}-char-${characterIndex}`
+    );
+  }) }, segmentKey);
 };
 var renderBurnSegment = (segmentText, resolvedStyle, segmentKey, formatText) => {
   if (!/\S/.test(segmentText)) {
