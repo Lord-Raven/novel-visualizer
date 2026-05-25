@@ -179,7 +179,7 @@ var ActorImage = ({
     };
   }, [baseX, baseY, yPosition, zIndex, heightMultiplier, popInSide]);
   const scaleYMotionValue = (0, import_framer_motion.useMotionValue)(1);
-  const springScaleY = (0, import_framer_motion.useSpring)(scaleYMotionValue, { stiffness: 320, damping: 36 });
+  const springScaleY = (0, import_framer_motion.useSpring)(scaleYMotionValue, { stiffness: 360, damping: 40 });
   const [animationParams, setAnimationParams] = (0, import_react.useState)(() => {
     const seed = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const random1 = Math.abs(Math.sin(seed) * 1e4 % 1);
@@ -190,7 +190,7 @@ var ActorImage = ({
     return { squish, stretch, duration };
   });
   (0, import_react.useEffect)(() => {
-    if (!audioAnalyser || !speaker) {
+    if (!audioAnalyser || !speaker || !isAudioPlaying) {
       scaleYMotionValue.set(1);
       return;
     }
@@ -198,7 +198,8 @@ var ActorImage = ({
     const dataArray = new Float32Array(bufferLength);
     let rafId;
     const startTime = performance.now();
-    const SILENCE_THRESHOLD = 0.01;
+    const SILENCE_THRESHOLD = 0.025;
+    const MAX_EXPECTED_RMS = 0.2;
     const analyse = () => {
       audioAnalyser.getFloatTimeDomainData(dataArray);
       let sumSquares = 0;
@@ -209,8 +210,12 @@ var ActorImage = ({
       if (rms < SILENCE_THRESHOLD) {
         scaleYMotionValue.set(1);
       } else {
-        const magnitude = Math.min(rms * 10, 0.08);
-        const frequency = 8 + rms * 14;
+        const normalized = Math.min(
+          Math.max((rms - SILENCE_THRESHOLD) / (MAX_EXPECTED_RMS - SILENCE_THRESHOLD), 0),
+          1
+        );
+        const magnitude = Math.pow(normalized, 1.15) * 0.1;
+        const frequency = 7 + normalized * 15;
         const elapsed = (performance.now() - startTime) / 1e3;
         const oscillation = Math.sin(elapsed * frequency * Math.PI * 2);
         scaleYMotionValue.set(1 + magnitude * oscillation);
@@ -222,7 +227,7 @@ var ActorImage = ({
       cancelAnimationFrame(rafId);
       scaleYMotionValue.set(1);
     };
-  }, [audioAnalyser, speaker, scaleYMotionValue]);
+  }, [audioAnalyser, speaker, isAudioPlaying, scaleYMotionValue]);
   (0, import_react.useEffect)(() => {
     if (!isAudioPlaying || !speaker || audioAnalyser) {
       return;
@@ -275,6 +280,7 @@ var ActorImage = ({
     }
     return speaker ? "talking" : "idle";
   }, [speaker, isAudioPlaying, audioAnalyser, variants, popInSide, animationParams]);
+  const scaleYStyle = speaker && isAudioPlaying ? springScaleY : 1;
   const tintFilterId = `tint-${id}`;
   const ghostTintFilterId = `ghost-tint-${id}`;
   const auraGlowFilterId = `aura-glow-${id}`;
@@ -395,7 +401,7 @@ var ActorImage = ({
           const baseTransform = generatedTransform?.trim() || "";
           return baseTransform ? `${baseTransform} translateX(-50%)` : "translateX(-50%)";
         },
-        style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center", scaleY: springScaleY },
+        style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center", scaleY: scaleYStyle },
         children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_framer_motion.AnimatePresence, { children: displayedImageUrl && imageFilter === "aura" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
             import_framer_motion.motion.img,

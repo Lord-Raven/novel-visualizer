@@ -170,9 +170,9 @@ const ActorImage: FC<ActorImageProps> = ({
     // Motion value for scaleY – driven by the audio analyser (RAF loop) when available,
     // or left at 1 when using the fallback interval approach (scaleY goes into animate then).
     const scaleYMotionValue = useMotionValue(1);
-    // Damping is set near critical (2 * sqrt(stiffness) ≈ 35.8) to prevent the spring
-    // from ringing after the RAF loop ends, which was causing visible animation in silence.
-    const springScaleY = useSpring(scaleYMotionValue, { stiffness: 320, damping: 36 });
+    // Keep damping close to critical so speech motion is smooth, but settles quickly
+    // when audio stops.
+    const springScaleY = useSpring(scaleYMotionValue, { stiffness: 360, damping: 40 });
 
     // Dynamic animation parameters that vary over time
     const [animationParams, setAnimationParams] = useState(() => {
@@ -194,7 +194,7 @@ const ActorImage: FC<ActorImageProps> = ({
     // to a real-time scaleY oscillation. Silence → no movement; louder speech → larger and
     // slightly faster squish/stretch. The spring smooths abrupt amplitude changes.
     useEffect(() => {
-        if (!audioAnalyser || !speaker) {
+        if (!audioAnalyser || !speaker || !isAudioPlaying) {
             scaleYMotionValue.set(1);
             return;
         }
@@ -205,8 +205,10 @@ const ActorImage: FC<ActorImageProps> = ({
         const startTime = performance.now();
 
         // Below this RMS level the audio is considered silent and the character stays still.
-        // This prevents the noise floor of the analyser from driving visible oscillation.
-        const SILENCE_THRESHOLD = 0.01;
+        // This deadzone prevents analyser noise from causing idle wobble.
+        const SILENCE_THRESHOLD = 0.025;
+        // Typical spoken RMS values usually stay below ~0.2 in this pipeline.
+        const MAX_EXPECTED_RMS = 0.2;
 
         const analyse = () => {
             audioAnalyser.getFloatTimeDomainData(dataArray);
@@ -223,11 +225,20 @@ const ActorImage: FC<ActorImageProps> = ({
                 // spring settles without oscillating.
                 scaleYMotionValue.set(1);
             } else {
-                // Map RMS → oscillation magnitude (cap at ±8% scale change).
-                const magnitude = Math.min(rms * 10, 0.08);
+                // Remove the silence floor, then normalize so very quiet audio does not
+                // permanently animate the actor. This avoids a "baseline springiness"
+                // and preserves headroom for stronger speech peaks.
+                const normalized = Math.min(
+                    Math.max((rms - SILENCE_THRESHOLD) / (MAX_EXPECTED_RMS - SILENCE_THRESHOLD), 0),
+                    1
+                );
 
-                // Oscillation frequency scales with loudness: quiet speech ~8 Hz, loud ~22 Hz.
-                const frequency = 8 + rms * 14;
+                // Non-linear response: small speech stays subtle, louder speech gains
+                // noticeably more movement.
+                const magnitude = Math.pow(normalized, 1.15) * 0.1;
+
+                // Oscillation frequency scales with loudness: quiet speech ~7 Hz, loud ~22 Hz.
+                const frequency = 7 + normalized * 15;
 
                 const elapsed = (performance.now() - startTime) / 1000;
                 const oscillation = Math.sin(elapsed * frequency * Math.PI * 2);
@@ -243,7 +254,7 @@ const ActorImage: FC<ActorImageProps> = ({
             cancelAnimationFrame(rafId);
             scaleYMotionValue.set(1);
         };
-    }, [audioAnalyser, speaker, scaleYMotionValue]);
+    }, [audioAnalyser, speaker, isAudioPlaying, scaleYMotionValue]);
 
     // Fallback: continuously vary animation parameters via interval when no analyser is
     // available but isAudioPlaying is true. Ignored when audioAnalyser is provided.
@@ -324,6 +335,9 @@ const ActorImage: FC<ActorImageProps> = ({
         }
         return speaker ? 'talking' : 'idle';
     }, [speaker, isAudioPlaying, audioAnalyser, variants, popInSide, animationParams]);
+
+    // Use a hard rest scale when audio is inactive so there is no residual spring motion.
+    const scaleYStyle = speaker && isAudioPlaying ? springScaleY : 1;
 
     const tintFilterId = `tint-${id}`;
     const ghostTintFilterId = `ghost-tint-${id}`;
@@ -461,7 +475,7 @@ const ActorImage: FC<ActorImageProps> = ({
                     ? `${baseTransform} translateX(-50%)`
                     : 'translateX(-50%)';
             }}
-            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center', scaleY: springScaleY}}>
+            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center', scaleY: scaleYStyle}}>
             <AnimatePresence>
                 {/* Aura should render only as edge glow and never recolor the character layer. */}
                 {displayedImageUrl && imageFilter === 'aura' && (
