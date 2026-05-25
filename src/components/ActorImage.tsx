@@ -205,10 +205,11 @@ const ActorImage: FC<ActorImageProps> = ({
         const startTime = performance.now();
 
         // Below this RMS level the audio is considered silent and the character stays still.
-        // This deadzone prevents analyser noise from causing idle wobble.
-        const SILENCE_THRESHOLD = 0.025;
-        // Typical spoken RMS values usually stay below ~0.2 in this pipeline.
-        const MAX_EXPECTED_RMS = 0.2;
+        // Keep this low enough so quieter speech still animates.
+        const SILENCE_THRESHOLD = 0.01;
+        // Expected upper bound for spoken RMS in this pipeline.
+        // Lowering this increases sensitivity for quieter voices.
+        const MAX_EXPECTED_RMS = 0.16;
 
         const analyse = () => {
             audioAnalyser.getFloatTimeDomainData(dataArray);
@@ -233,9 +234,9 @@ const ActorImage: FC<ActorImageProps> = ({
                     1
                 );
 
-                // Non-linear response: small speech stays subtle, louder speech gains
-                // noticeably more movement.
-                const magnitude = Math.pow(normalized, 1.15) * 0.1;
+                // Non-linear response biased toward quieter speech so lower-energy
+                // lines are still visibly animated.
+                const magnitude = Math.pow(normalized, 0.9) * 0.1;
 
                 // Oscillation frequency scales with loudness: quiet speech ~7 Hz, loud ~22 Hz.
                 const frequency = 7 + normalized * 15;

@@ -198,8 +198,8 @@ var ActorImage = ({
     const dataArray = new Float32Array(bufferLength);
     let rafId;
     const startTime = performance.now();
-    const SILENCE_THRESHOLD = 0.025;
-    const MAX_EXPECTED_RMS = 0.2;
+    const SILENCE_THRESHOLD = 0.01;
+    const MAX_EXPECTED_RMS = 0.16;
     const analyse = () => {
       audioAnalyser.getFloatTimeDomainData(dataArray);
       let sumSquares = 0;
@@ -214,7 +214,7 @@ var ActorImage = ({
           Math.max((rms - SILENCE_THRESHOLD) / (MAX_EXPECTED_RMS - SILENCE_THRESHOLD), 0),
           1
         );
-        const magnitude = Math.pow(normalized, 1.15) * 0.1;
+        const magnitude = Math.pow(normalized, 0.9) * 0.1;
         const frequency = 7 + normalized * 15;
         const elapsed = (performance.now() - startTime) / 1e3;
         const oscillation = Math.sin(elapsed * frequency * Math.PI * 2);
