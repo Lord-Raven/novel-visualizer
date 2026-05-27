@@ -2495,7 +2495,7 @@ function NovelVisualizer(props) {
       children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
         "div",
         {
-          style: { position: "relative", width: "100vw", height: "100vh" },
+          style: { position: "relative", width: "100%", height: "100%" },
           onMouseMove: handleMouseMove,
           onMouseLeave: () => setMousePosition(null),
           children: [
