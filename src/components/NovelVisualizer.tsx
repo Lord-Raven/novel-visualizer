@@ -315,7 +315,7 @@ export function NovelVisualizer<
         // start at index and work back to last speaker Id that is in actors:
         for (let i = Math.min(index, scriptEntries.length - 1); i >= 0; i--) {
             const speakerId = scriptEntries[i].speakerId;
-            if (speakerId && actors[speakerId]) {
+            if (speakerId && actors[speakerId] && playerActorId !== speakerId) {
                 return actors[speakerId];
             }
         }
