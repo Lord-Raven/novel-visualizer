@@ -1272,7 +1272,6 @@ var defaultInlineClassStyles = {
   // Futuristic readout look with scanline drift, neon bloom, and slight transparency.
   hologram: ({ baseColor, baseTextShadow }) => ({
     color: baseColor ?? "#8ff8ff",
-    display: "inline-block",
     opacity: 0.9,
     letterSpacing: "0.02em",
     animation: "nvInlineHologramPulse 6.8s ease-in-out infinite, nvInlineHologramScanlines 2.7s linear infinite",
@@ -1311,7 +1310,6 @@ var defaultInlineClassStyles = {
   // Text drifts downward slightly, or elongates vertically, maybe with a subtle blur or shadow effect, to evoke a sense of sadness, exhaustion, or resignation
   sigh: ({ baseColor, baseTextShadow }) => ({
     color: baseColor,
-    display: "inline-block",
     fontStyle: "italic",
     opacity: 0.78,
     transformOrigin: "center bottom",
@@ -1361,13 +1359,10 @@ var defaultInlineClassStyles = {
   }),
   quake: ({ baseColor, baseTextShadow }) => ({
     color: baseColor,
-    display: "inline-block",
-    animation: "nvInlineQuake 110ms steps(2, end) infinite",
     textShadow: baseTextShadow ? `${baseTextShadow}, 0 0 2px currentColor` : "0 0 2px currentColor"
   }),
   whisper: ({ baseColor, baseTextShadow, baseFontFamily }) => ({
     color: getMutedInlineColor(baseColor, 0.22),
-    display: "inline-block",
     fontFamily: baseFontFamily,
     fontStyle: "italic",
     letterSpacing: "0.05em",
@@ -1474,7 +1469,7 @@ var ARCANE_RUNIC_MARKS = [
   "\u0366",
   "\u0367"
 ];
-var PER_CHARACTER_INLINE_CLASSES = /* @__PURE__ */ new Set(["glitch", "flutter", "sigh", "zalgo", "arcane", "spooky"]);
+var PER_CHARACTER_INLINE_CLASSES = /* @__PURE__ */ new Set(["glitch", "flutter", "sigh", "zalgo", "arcane", "spooky", "quake", "whisper"]);
 var MARKDOWN_INLINE_PATTERN = /(\*\*[^*]+\*\*|\*(?!\*)[^*]+\*|_[^_]+_|~~[^~]+~~|__[^_]+__|~[^~]+~|#{1,6} [^\n]+)/;
 var BURNING_SPARK_HORIZONTAL_OFFSETS = [8, 22, 36, 51, 68, 84];
 var BURNING_SPARK_X_DRIFTS = [-2.5, 1.5, -1, 2.2, -1.8, 1.2];
@@ -1595,6 +1590,24 @@ var getPerCharacterStyle = (activeClass, characterIndex) => {
       animation: "nvInlineArcaneChar 1.9s ease-in-out infinite",
       animationDelay: `-${characterIndex * 83 % 920}ms`,
       willChange: "transform, text-shadow, opacity"
+    };
+  }
+  if (activeClass === "quake") {
+    return {
+      ...cssIndex,
+      display: "inline-block",
+      transformOrigin: "center",
+      animation: "nvInlineQuake 110ms steps(2, end) infinite",
+      animationDelay: `-${characterIndex * 37 % 200}ms`,
+      willChange: "transform"
+    };
+  }
+  if (activeClass === "whisper") {
+    return {
+      ...cssIndex,
+      display: "inline-block",
+      transformOrigin: "center",
+      transform: "skewX(-5deg)"
     };
   }
   return {
