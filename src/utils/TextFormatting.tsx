@@ -869,56 +869,71 @@ const renderPerCharacterSegment = (
     resolvedStyle: React.CSSProperties,
     segmentKey: string
 ): React.ReactNode => {
-    const characters = Array.from(segmentText);
     const isWhitespaceCharacter = (character: string): boolean => /\s/.test(character);
+    const tokens = segmentText.split(/(\s+)/g).filter((token) => token.length > 0);
 
     if (activeClass === 'sigh') {
         return (
             <span key={segmentKey} className={activeClass} style={{ ...resolvedStyle, textShadow: 'none' }}>
-                {characters.map((character, characterIndex) => {
-                    if (isWhitespaceCharacter(character)) {
+                {tokens.map((token, tokenIndex) => {
+                    if (/^\s+$/.test(token)) {
                         return (
-                            <React.Fragment key={`${segmentKey}-ws-${characterIndex}`}>
-                                {character}
+                            <React.Fragment key={`${segmentKey}-ws-${tokenIndex}`}>
+                                {token}
                             </React.Fragment>
                         );
                     }
 
-                    const characterDelay = `${Math.min(characterIndex * 14, 140)}ms`;
+                    const characters = Array.from(token);
                     return (
-                        <span
-                            key={`${segmentKey}-char-${characterIndex}`}
-                            style={{
-                                display: 'inline-block',
-                                position: 'relative',
-                                transformOrigin: 'center bottom'
-                            }}
-                        >
-                            <span
-                                aria-hidden="true"
-                                style={{
-                                    position: 'absolute',
-                                    left: 0,
-                                    top: 0,
-                                    color: 'transparent',
-                                    pointerEvents: 'none',
-                                    animation: 'nvInlineSighShadow 620ms cubic-bezier(0.2, 0.7, 0.22, 1) 1 both',
-                                    animationDelay: characterDelay,
-                                    willChange: 'filter, opacity, text-shadow'
-                                }}
-                            >
-                                {character}
-                            </span>
-                            <span
-                                style={{
-                                    ...getPerCharacterStyle(activeClass, characterIndex),
-                                    position: 'relative',
-                                    zIndex: 1,
-                                    textShadow: 'none'
-                                }}
-                            >
-                                {character}
-                            </span>
+                        <span key={`${segmentKey}-word-${tokenIndex}`} style={{ display: 'inline-block' }}>
+                            {characters.map((character, characterIndex) => {
+                                if (isWhitespaceCharacter(character)) {
+                                    return (
+                                        <React.Fragment key={`${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`}>
+                                            {character}
+                                        </React.Fragment>
+                                    );
+                                }
+
+                                const characterDelay = `${Math.min(characterIndex * 14, 140)}ms`;
+                                return (
+                                    <span
+                                        key={`${segmentKey}-char-${tokenIndex}-${characterIndex}`}
+                                        style={{
+                                            display: 'inline-block',
+                                            position: 'relative',
+                                            transformOrigin: 'center bottom'
+                                        }}
+                                    >
+                                        <span
+                                            aria-hidden="true"
+                                            style={{
+                                                position: 'absolute',
+                                                left: 0,
+                                                top: 0,
+                                                color: 'transparent',
+                                                pointerEvents: 'none',
+                                                animation: 'nvInlineSighShadow 620ms cubic-bezier(0.2, 0.7, 0.22, 1) 1 both',
+                                                animationDelay: characterDelay,
+                                                willChange: 'filter, opacity, text-shadow'
+                                            }}
+                                        >
+                                            {character}
+                                        </span>
+                                        <span
+                                            style={{
+                                                ...getPerCharacterStyle(activeClass, characterIndex),
+                                                position: 'relative',
+                                                zIndex: 1,
+                                                textShadow: 'none'
+                                            }}
+                                        >
+                                            {character}
+                                        </span>
+                                    </span>
+                                );
+                            })}
                         </span>
                     );
                 })}
@@ -928,25 +943,40 @@ const renderPerCharacterSegment = (
 
     return (
         <span key={segmentKey} className={activeClass} style={resolvedStyle}>
-            {characters.map((character, characterIndex) => {
-                if (isWhitespaceCharacter(character)) {
+            {tokens.map((token, tokenIndex) => {
+                if (/^\s+$/.test(token)) {
                     return (
-                        <React.Fragment key={`${segmentKey}-ws-${characterIndex}`}>
-                            {character}
+                        <React.Fragment key={`${segmentKey}-ws-${tokenIndex}`}>
+                            {token}
                         </React.Fragment>
                     );
                 }
 
+                const characters = Array.from(token);
                 return (
-                    <span
-                        key={`${segmentKey}-char-${characterIndex}`}
-                        style={getPerCharacterStyle(activeClass, characterIndex)}
-                    >
-                        {activeClass === 'zalgo'
-                            ? toZalgoCharacter(character, characterIndex)
-                            : activeClass === 'arcane'
-                                ? toArcaneCharacter(character, characterIndex)
-                                : character}
+                    <span key={`${segmentKey}-word-${tokenIndex}`} style={{ display: 'inline-block' }}>
+                        {characters.map((character, characterIndex) => {
+                            if (isWhitespaceCharacter(character)) {
+                                return (
+                                    <React.Fragment key={`${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`}>
+                                        {character}
+                                    </React.Fragment>
+                                );
+                            }
+
+                            return (
+                                <span
+                                    key={`${segmentKey}-char-${tokenIndex}-${characterIndex}`}
+                                    style={getPerCharacterStyle(activeClass, characterIndex)}
+                                >
+                                    {activeClass === 'zalgo'
+                                        ? toZalgoCharacter(character, characterIndex)
+                                        : activeClass === 'arcane'
+                                            ? toArcaneCharacter(character, characterIndex)
+                                            : character}
+                                </span>
+                            );
+                        })}
                     </span>
                 );
             })}

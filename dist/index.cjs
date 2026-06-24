@@ -1661,70 +1661,82 @@ var getPerCharacterStyle = (activeClass, characterIndex) => {
   };
 };
 var renderPerCharacterSegment = (segmentText, activeClass, resolvedStyle, segmentKey) => {
-  const characters = Array.from(segmentText);
   const isWhitespaceCharacter = (character) => /\s/.test(character);
+  const tokens = segmentText.split(/(\s+)/g).filter((token) => token.length > 0);
   if (activeClass === "sigh") {
-    return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: activeClass, style: { ...resolvedStyle, textShadow: "none" }, children: characters.map((character, characterIndex) => {
-      if (isWhitespaceCharacter(character)) {
-        return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react4.default.Fragment, { children: character }, `${segmentKey}-ws-${characterIndex}`);
+    return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: activeClass, style: { ...resolvedStyle, textShadow: "none" }, children: tokens.map((token, tokenIndex) => {
+      if (/^\s+$/.test(token)) {
+        return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react4.default.Fragment, { children: token }, `${segmentKey}-ws-${tokenIndex}`);
       }
-      const characterDelay = `${Math.min(characterIndex * 14, 140)}ms`;
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
-        "span",
-        {
-          style: {
-            display: "inline-block",
-            position: "relative",
-            transformOrigin: "center bottom"
+      const characters = Array.from(token);
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: { display: "inline-block" }, children: characters.map((character, characterIndex) => {
+        if (isWhitespaceCharacter(character)) {
+          return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react4.default.Fragment, { children: character }, `${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`);
+        }
+        const characterDelay = `${Math.min(characterIndex * 14, 140)}ms`;
+        return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
+          "span",
+          {
+            style: {
+              display: "inline-block",
+              position: "relative",
+              transformOrigin: "center bottom"
+            },
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+                "span",
+                {
+                  "aria-hidden": "true",
+                  style: {
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    color: "transparent",
+                    pointerEvents: "none",
+                    animation: "nvInlineSighShadow 620ms cubic-bezier(0.2, 0.7, 0.22, 1) 1 both",
+                    animationDelay: characterDelay,
+                    willChange: "filter, opacity, text-shadow"
+                  },
+                  children: character
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+                "span",
+                {
+                  style: {
+                    ...getPerCharacterStyle(activeClass, characterIndex),
+                    position: "relative",
+                    zIndex: 1,
+                    textShadow: "none"
+                  },
+                  children: character
+                }
+              )
+            ]
           },
-          children: [
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
-              "span",
-              {
-                "aria-hidden": "true",
-                style: {
-                  position: "absolute",
-                  left: 0,
-                  top: 0,
-                  color: "transparent",
-                  pointerEvents: "none",
-                  animation: "nvInlineSighShadow 620ms cubic-bezier(0.2, 0.7, 0.22, 1) 1 both",
-                  animationDelay: characterDelay,
-                  willChange: "filter, opacity, text-shadow"
-                },
-                children: character
-              }
-            ),
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
-              "span",
-              {
-                style: {
-                  ...getPerCharacterStyle(activeClass, characterIndex),
-                  position: "relative",
-                  zIndex: 1,
-                  textShadow: "none"
-                },
-                children: character
-              }
-            )
-          ]
-        },
-        `${segmentKey}-char-${characterIndex}`
-      );
+          `${segmentKey}-char-${tokenIndex}-${characterIndex}`
+        );
+      }) }, `${segmentKey}-word-${tokenIndex}`);
     }) }, segmentKey);
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: activeClass, style: resolvedStyle, children: characters.map((character, characterIndex) => {
-    if (isWhitespaceCharacter(character)) {
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react4.default.Fragment, { children: character }, `${segmentKey}-ws-${characterIndex}`);
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: activeClass, style: resolvedStyle, children: tokens.map((token, tokenIndex) => {
+    if (/^\s+$/.test(token)) {
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react4.default.Fragment, { children: token }, `${segmentKey}-ws-${tokenIndex}`);
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
-      "span",
-      {
-        style: getPerCharacterStyle(activeClass, characterIndex),
-        children: activeClass === "zalgo" ? toZalgoCharacter(character, characterIndex) : activeClass === "arcane" ? toArcaneCharacter(character, characterIndex) : character
-      },
-      `${segmentKey}-char-${characterIndex}`
-    );
+    const characters = Array.from(token);
+    return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: { display: "inline-block" }, children: characters.map((character, characterIndex) => {
+      if (isWhitespaceCharacter(character)) {
+        return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react4.default.Fragment, { children: character }, `${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`);
+      }
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+        "span",
+        {
+          style: getPerCharacterStyle(activeClass, characterIndex),
+          children: activeClass === "zalgo" ? toZalgoCharacter(character, characterIndex) : activeClass === "arcane" ? toArcaneCharacter(character, characterIndex) : character
+        },
+        `${segmentKey}-char-${tokenIndex}-${characterIndex}`
+      );
+    }) }, `${segmentKey}-word-${tokenIndex}`);
   }) }, segmentKey);
 };
 var renderBurnSegment = (segmentText, resolvedStyle, segmentKey, formatText) => {
@@ -2242,7 +2254,7 @@ function NovelVisualizer(props) {
     let closestActor = null;
     let closestDistance = Infinity;
     actorPositions.forEach(({ actor, xPosition }) => {
-      const actualXPosition = actor === speakerActor && actorsAtIndex.includes(actor) ? 50 : xPosition;
+      const actualXPosition = (actor === speakerActor || actor === focusActor) && actorsAtIndex.includes(actor) ? 50 : xPosition;
       const distance = Math.abs(mousePosition.x - actualXPosition);
       if (distance < closestDistance && distance <= HOVER_RANGE) {
         closestDistance = distance;
@@ -2250,7 +2262,7 @@ function NovelVisualizer(props) {
       }
     });
     setHoveredActor(closestActor);
-  }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enablePopInSpeakers]);
+  }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enablePopInSpeakers, focusActor]);
   (0, import_react5.useEffect)(() => {
     const handleKeyDown = (e) => {
       const target = e.target;

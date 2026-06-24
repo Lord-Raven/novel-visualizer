@@ -467,7 +467,7 @@ export function NovelVisualizer<
         let closestDistance = Infinity;
 
         actorPositions.forEach(({ actor, xPosition }) => {
-            const actualXPosition = actor === speakerActor && actorsAtIndex.includes(actor) ? 50 : xPosition;
+            const actualXPosition = (actor === speakerActor || actor === focusActor) && actorsAtIndex.includes(actor) ? 50 : xPosition;
             const distance = Math.abs(mousePosition.x - actualXPosition);
             if (distance < closestDistance && distance <= HOVER_RANGE) {
                 closestDistance = distance;
@@ -476,7 +476,7 @@ export function NovelVisualizer<
         });
 
         setHoveredActor(closestActor);
-    }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enablePopInSpeakers]);
+    }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enablePopInSpeakers, focusActor]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
