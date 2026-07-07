@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useMemo, useRef, useState } from 'react';
+import React, { FC, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from '@mui/material';
 import { alpha, darken, lighten, useTheme } from '@mui/material/styles';
 import type { SxProps, Theme } from '@mui/material/styles';
@@ -187,6 +187,7 @@ export function NovelVisualizer<
 
     const [index, setIndex] = useState<number>(skit?.currentIndex ?? -1);
     const prevIndexRef = useRef<number>(index);
+    const prevTypingIndexRef = useRef<number>(index);
     const prevExternalLoadingRef = useRef<boolean>(externalLoading);
 
     const accentMain = theme.palette.primary.main;
@@ -361,9 +362,18 @@ export function NovelVisualizer<
         return formatMessage(message, speakerActor, messageTokens);
     }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage]);
 
+    useLayoutEffect(() => {
+        if (prevTypingIndexRef.current !== index) {
+            // Clear skip state synchronously so a newly mounted TypeOut does not
+            // see stale finishTyping=true for one layout pass.
+            setFinishTyping(false);
+            setMessageKey((prev) => prev + 1);
+            prevTypingIndexRef.current = index;
+        }
+    }, [index]);
+
     useEffect(() => {
         if (prevIndexRef.current !== index) {
-            setFinishTyping(false);
             if (isEditingMessage) {
                 setIsEditingMessage(false);
                 setOriginalMessage('');
@@ -431,7 +441,6 @@ export function NovelVisualizer<
             }
             prevIndexRef.current = index;
         }
-        setMessageKey((prev) => prev + 1);
     }, [index, enableAudio, scriptEntries, attachAudioAnalyser, cleanupCurrentAudioGraph]);
 
     useEffect(() => {

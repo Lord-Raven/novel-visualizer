@@ -109,7 +109,7 @@ export const TypeOut: React.FC<TypeOutProps> = ({
         onTypingCompleteRef.current = onTypingComplete;
     }, [onTypingComplete]);
     
-    React.useEffect(() => {
+    React.useLayoutEffect(() => {
         // Only reset if the actual text content has changed
         if (textContent !== prevTextContentRef.current) {
             prevTextContentRef.current = textContent;
