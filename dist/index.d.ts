@@ -116,6 +116,7 @@ interface NovelVisualizerProps<TActor extends NovelActor, TSkit extends NovelSki
     enableTalkingAnimation?: boolean;
     enableReroll?: boolean;
     narratorLabel?: string;
+    allowFontEffects?: boolean;
     inlineStyleOptions?: FormatInlineStylesOptions;
     /**
      * Optional sx overrides for the main message display Paper.

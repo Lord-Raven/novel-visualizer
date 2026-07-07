@@ -348,6 +348,22 @@ const ActorImage: FC<ActorImageProps> = ({
     const isHologram = imageFilter === 'hologram';
     const backingOpacity = isGhost ? 0.6 : isHologram ? 0.6 : 1;
     const mainOpacity = isGhost ? 0.4 : isHologram ? 0.4 : 0.75;
+    const ghostFloatAnimation = useMemo(() => {
+        if (!isGhost) {
+            return null;
+        }
+
+        // x = sin(2t), y = sin(t): subtle lemniscate drift that is taller than it is wide.
+        return {
+            x: [0, 1.2, 0, -1.2, 0, 1.2, 0, -1.2, 0],
+            y: [0, -4.2, -6, -4.2, 0, 4.2, 6, 4.2, 0],
+            transition: {
+                duration: 11,
+                ease: 'linear',
+                repeat: Infinity
+            }
+        };
+    }, [isGhost]);
     const hologramAlphaMaskStyle = useMemo(() => {
         const hasBottomMask = Boolean(bottomMaskStyle.maskImage && bottomMaskStyle.WebkitMaskImage);
 
@@ -477,6 +493,12 @@ const ActorImage: FC<ActorImageProps> = ({
                     : 'translateX(-50%)';
             }}
             style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center', scaleY: scaleYStyle}}>
+            <motion.div
+                initial={false}
+                animate={ghostFloatAnimation ? { x: ghostFloatAnimation.x, y: ghostFloatAnimation.y } : { x: 0, y: 0 }}
+                transition={ghostFloatAnimation?.transition}
+                style={{ position: 'absolute', top: 0, width: '100%', height: '100%' }}
+            >
             <AnimatePresence>
                 {/* Aura should render only as edge glow and never recolor the character layer. */}
                 {displayedImageUrl && imageFilter === 'aura' && (
@@ -653,6 +675,7 @@ const ActorImage: FC<ActorImageProps> = ({
                     />
                 )}
             </AnimatePresence>
+            </motion.div>
         </motion.div>
         </>
     ) : <></>;

@@ -31,6 +31,25 @@ const calculateActorXPosition = (actorIndex: number, totalActors: number, anySpe
     return xPosition;
 };
 
+const applyPopInSideSkew = (
+    xPosition: number,
+    popInSide: 'left' | 'right' | null
+): number => {
+    if (!popInSide) {
+        return xPosition;
+    }
+
+    const MAX_SKEW = 6;
+
+    if (popInSide === 'right') {
+        const proximityToRight = Math.max(0, Math.min(1, (xPosition - 50) / 50));
+        return Math.round((xPosition - proximityToRight * MAX_SKEW) * 10) / 10;
+    }
+
+    const proximityToLeft = Math.max(0, Math.min(1, (50 - xPosition) / 50));
+    return Math.round((xPosition + proximityToLeft * MAX_SKEW) * 10) / 10;
+};
+
 /**
  * Props for the NovelVisualizer component.
  * @template TScript - The script type
@@ -93,6 +112,7 @@ export interface NovelVisualizerProps<
     enableTalkingAnimation?: boolean;
     enableReroll?: boolean;
     narratorLabel?: string;
+    allowFontEffects?: boolean;
     inlineStyleOptions?: FormatInlineStylesOptions;
     /**
      * Optional sx overrides for the main message display Paper.
@@ -138,6 +158,7 @@ export function NovelVisualizer<
         enableTalkingAnimation = true,
         enableReroll = true,
         narratorLabel = '',
+        allowFontEffects = true,
         inlineStyleOptions,
         messageWindowSx
     } = props;
@@ -259,6 +280,7 @@ export function NovelVisualizer<
             speakerThemeFontFamily: speakerActor?.themeFontFamily,
             proseColor: theme.palette.text.primary,
             tokens,
+            allowFontEffects,
             inlineStyleOptions
         });
     };
@@ -325,6 +347,14 @@ export function NovelVisualizer<
     const speakerActor = useMemo(() => {
         return index >= 0 && index < scriptEntries.length && scriptEntries[index].speakerId ? actors[scriptEntries[index].speakerId] : null;
     }, [scriptEntries, index, actors]);
+
+    const popInSpeakerSide = useMemo<'left' | 'right' | null>(() => {
+        if (!enablePopInSpeakers || !speakerActor || actorsAtIndex.includes(speakerActor)) {
+            return null;
+        }
+
+        return speakerActor.id.charCodeAt(0) % 2 === 0 ? 'left' : 'right';
+    }, [enablePopInSpeakers, speakerActor, actorsAtIndex]);
 
     const displayMessage = useMemo(() => {
         const message = index >= 0 && index < scriptEntries.length ? scriptEntries[index].message ?? '' : '';
@@ -448,17 +478,19 @@ export function NovelVisualizer<
             return;
         }
 
-        const actorPositions = actorsAtIndex.map((actor, i) => ({
-            actor,
-            xPosition: calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor))
-        }));
+        const actorPositions = actorsAtIndex.map((actor, i) => {
+            const baseXPosition = actor === focusActor ? 50 : calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
+            return {
+                actor,
+                xPosition: applyPopInSideSkew(baseXPosition, popInSpeakerSide)
+            };
+        });
 
         // Add pop-in speaker to hover detection if present
-        if (enablePopInSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
-            const popInSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? 'left' : 'right';
+        if (popInSpeakerSide && speakerActor) {
             actorPositions.push({
                 actor: speakerActor,
-                xPosition: popInSide === 'left' ? 10 : 90
+                xPosition: popInSpeakerSide === 'left' ? 10 : 90
             });
         }
 
@@ -476,7 +508,7 @@ export function NovelVisualizer<
         });
 
         setHoveredActor(closestActor);
-    }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enablePopInSpeakers, focusActor]);
+    }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enablePopInSpeakers, focusActor, popInSpeakerSide]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -597,7 +629,8 @@ export function NovelVisualizer<
         const sceneActorScale = Math.max(0.7, 1 - Math.max(0, actorsAtIndex.length - 1) * scalePerActor);
 
         const actorElements = actorsAtIndex.map((actor, i) => {
-            const xPosition = actor === focusActor ? 50 : calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
+            const baseXPosition = actor === focusActor ? 50 : calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
+            const xPosition = applyPopInSideSkew(baseXPosition, popInSpeakerSide);
             const isSpeaking = actor === speakerActor;
             const isHovered = actor === hoveredActor;
             const yPosition = isVerticalLayout ? 15 : 0;
@@ -627,11 +660,9 @@ export function NovelVisualizer<
         });
 
         // Check if we should render a pop-in speaker
-        if (enablePopInSpeakers && speakerActor && !actorsAtIndex.includes(speakerActor)) {
+        if (popInSpeakerSide && speakerActor) {
             const yPosition = isVerticalLayout ? 20 : 0;
             const isHovered = speakerActor === hoveredActor;
-            // Alternate sides based on actor ID for consistency
-            const popInSide = speakerActor.id.charCodeAt(0) % 2 === 0 ? 'left' : 'right';
             const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(speakerActor, activeScript, index) : "#ffffff";
             const filterProps = getActorFilter ? getActorFilter(speakerActor, activeScript, index) : {filter: speakerActor.filter, filterColor: speakerActor.filterColor || '#ffffff'};
             
@@ -642,13 +673,13 @@ export function NovelVisualizer<
                     resolveImageUrl={() => {
                         return getActorImageUrl(speakerActor, activeScript, index);
                     }}
-                    xPosition={popInSide === 'left' ? 10 : 90}
+                    xPosition={popInSpeakerSide === 'left' ? 10 : 90}
                     yPosition={yPosition}
                     zIndex={45}
                     heightMultiplier={(isVerticalLayout ? 0.7 : 0.9) * (speakerActor.heightMultiplier ?? 1)}
                     speaker={true}
                     highlightColor={isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor}
-                    popInSide={popInSide}
+                    popInSide={popInSpeakerSide}
                     isAudioPlaying={isAudioPlaying && enableTalkingAnimation}
                     audioAnalyser={isAudioPlaying && enableTalkingAnimation ? audioAnalyser : null}
                     filter={filterProps.filter}

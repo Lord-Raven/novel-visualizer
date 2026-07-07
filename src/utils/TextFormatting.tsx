@@ -29,6 +29,7 @@ export interface FormatMessageWithStylesOptions {
     speakerThemeFontFamily?: string;
     proseColor: string;
     tokens: MessageFormatTokens;
+    allowFontEffects?: boolean;
     inlineStyleOptions?: FormatInlineStylesOptions;
 }
 
@@ -1312,25 +1313,28 @@ export const formatMessageWithStyles = (
     };
 
     let activeInlineClass: string | null = null;
+    const allowFontEffects = options.allowFontEffects ?? true;
 
     return (
         <>
             {dialogueParts.map((part, index) => {
                 const isDialoguePart = part.startsWith('"') && part.endsWith('"');
                 const baseStyle = isDialoguePart ? dialogueStyle : proseStyle;
-                const formattedPart = formatInlineStyles(
-                    part,
-                    {
-                        ...options.inlineStyleOptions,
-                        styleContext: {
-                            ...(options.inlineStyleOptions?.styleContext ?? {}),
-                            baseColor: baseStyle.color,
-                            baseTextShadow: baseStyle.textShadow,
-                            baseFontFamily: baseStyle.fontFamily
-                        }
-                    },
-                    activeInlineClass
-                );
+                const formattedPart = allowFontEffects
+                    ? formatInlineStyles(
+                        part,
+                        {
+                            ...options.inlineStyleOptions,
+                            styleContext: {
+                                ...(options.inlineStyleOptions?.styleContext ?? {}),
+                                baseColor: baseStyle.color,
+                                baseTextShadow: baseStyle.textShadow,
+                                baseFontFamily: baseStyle.fontFamily
+                            }
+                        },
+                        activeInlineClass
+                    )
+                    : part;
 
                 activeInlineClass = resolveEndingInlineClass(part, activeInlineClass);
 

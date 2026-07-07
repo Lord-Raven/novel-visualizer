@@ -109,7 +109,7 @@ export const TypeOut: React.FC<TypeOutProps> = ({
         onTypingCompleteRef.current = onTypingComplete;
     }, [onTypingComplete]);
     
-    React.useEffect(() => {
+    React.useLayoutEffect(() => {
         // Only reset if the actual text content has changed
         if (textContent !== prevTextContentRef.current) {
             prevTextContentRef.current = textContent;
@@ -117,6 +117,13 @@ export const TypeOut: React.FC<TypeOutProps> = ({
             setFinished(false);
 
             if (!textContent) {
+                setFinished(true);
+                onTypingCompleteRef.current?.();
+                return;
+            }
+
+            if (speed <= 0) {
+                setDisplayLength(textContent.length);
                 setFinished(true);
                 onTypingCompleteRef.current?.();
                 return;
@@ -170,13 +177,13 @@ export const TypeOut: React.FC<TypeOutProps> = ({
         }
         
         // If finished naturally or forced, show complete content
-        if (finished || (finishTyping && displayLength >= textContent.length)) {
+        if (finished || (finishTyping && displayLength >= textContent.length) || speed <= 0) {
             return children;
         }
         
         // Truncate React children based on character count
         return truncateReactContent(children, displayLength);
-    }, [children, displayLength, finished, finishTyping, textContent.length]);
+    }, [children, displayLength, finished, finishTyping, textContent.length, speed]);
 
     return (
         <span
