@@ -778,7 +778,7 @@ var TypeOut = ({
   import_react3.default.useEffect(() => {
     onTypingCompleteRef.current = onTypingComplete;
   }, [onTypingComplete]);
-  import_react3.default.useEffect(() => {
+  import_react3.default.useLayoutEffect(() => {
     if (textContent !== prevTextContentRef.current) {
       prevTextContentRef.current = textContent;
       setDisplayLength(0);
@@ -2061,6 +2061,7 @@ function NovelVisualizer(props) {
   const scriptEntries = (0, import_react5.useMemo)(() => localSkit?.script ?? [], [localSkit]);
   const [index, setIndex] = (0, import_react5.useState)(skit?.currentIndex ?? -1);
   const prevIndexRef = (0, import_react5.useRef)(index);
+  const prevTypingIndexRef = (0, import_react5.useRef)(index);
   const prevExternalLoadingRef = (0, import_react5.useRef)(externalLoading);
   const accentMain = theme.palette.primary.main;
   const accentLight = theme.palette.primary.light;
@@ -2198,9 +2199,15 @@ function NovelVisualizer(props) {
     const message = index >= 0 && index < scriptEntries.length ? scriptEntries[index].message ?? "" : "";
     return formatMessage(message, speakerActor, messageTokens);
   }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage]);
+  (0, import_react5.useLayoutEffect)(() => {
+    if (prevTypingIndexRef.current !== index) {
+      setFinishTyping(false);
+      setMessageKey((prev2) => prev2 + 1);
+      prevTypingIndexRef.current = index;
+    }
+  }, [index]);
   (0, import_react5.useEffect)(() => {
     if (prevIndexRef.current !== index) {
-      setFinishTyping(false);
       if (isEditingMessage) {
         setIsEditingMessage(false);
         setOriginalMessage("");
@@ -2249,7 +2256,6 @@ function NovelVisualizer(props) {
       }
       prevIndexRef.current = index;
     }
-    setMessageKey((prev2) => prev2 + 1);
   }, [index, enableAudio, scriptEntries, attachAudioAnalyser, cleanupCurrentAudioGraph]);
   (0, import_react5.useEffect)(() => {
     if (currentAudioRef.current) {

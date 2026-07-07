@@ -1,5 +1,5 @@
 // src/components/NovelVisualizer.tsx
-import React4, { useEffect as useEffect3, useMemo as useMemo2, useRef, useState as useState3 } from "react";
+import React4, { useEffect as useEffect3, useLayoutEffect, useMemo as useMemo2, useRef, useState as useState3 } from "react";
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from "@mui/material";
 import { alpha, darken as darken2, lighten as lighten2, useTheme } from "@mui/material/styles";
 import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, Computer, Warning } from "@mui/icons-material";
@@ -737,7 +737,7 @@ var TypeOut = ({
   React2.useEffect(() => {
     onTypingCompleteRef.current = onTypingComplete;
   }, [onTypingComplete]);
-  React2.useEffect(() => {
+  React2.useLayoutEffect(() => {
     if (textContent !== prevTextContentRef.current) {
       prevTextContentRef.current = textContent;
       setDisplayLength(0);
@@ -2020,6 +2020,7 @@ function NovelVisualizer(props) {
   const scriptEntries = useMemo2(() => localSkit?.script ?? [], [localSkit]);
   const [index, setIndex] = useState3(skit?.currentIndex ?? -1);
   const prevIndexRef = useRef(index);
+  const prevTypingIndexRef = useRef(index);
   const prevExternalLoadingRef = useRef(externalLoading);
   const accentMain = theme.palette.primary.main;
   const accentLight = theme.palette.primary.light;
@@ -2157,9 +2158,15 @@ function NovelVisualizer(props) {
     const message = index >= 0 && index < scriptEntries.length ? scriptEntries[index].message ?? "" : "";
     return formatMessage(message, speakerActor, messageTokens);
   }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage]);
+  useLayoutEffect(() => {
+    if (prevTypingIndexRef.current !== index) {
+      setFinishTyping(false);
+      setMessageKey((prev2) => prev2 + 1);
+      prevTypingIndexRef.current = index;
+    }
+  }, [index]);
   useEffect3(() => {
     if (prevIndexRef.current !== index) {
-      setFinishTyping(false);
       if (isEditingMessage) {
         setIsEditingMessage(false);
         setOriginalMessage("");
@@ -2208,7 +2215,6 @@ function NovelVisualizer(props) {
       }
       prevIndexRef.current = index;
     }
-    setMessageKey((prev2) => prev2 + 1);
   }, [index, enableAudio, scriptEntries, attachAudioAnalyser, cleanupCurrentAudioGraph]);
   useEffect3(() => {
     if (currentAudioRef.current) {
