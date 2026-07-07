@@ -778,7 +778,7 @@ var TypeOut = ({
   import_react3.default.useEffect(() => {
     onTypingCompleteRef.current = onTypingComplete;
   }, [onTypingComplete]);
-  import_react3.default.useLayoutEffect(() => {
+  import_react3.default.useEffect(() => {
     if (textContent !== prevTextContentRef.current) {
       prevTextContentRef.current = textContent;
       setDisplayLength(0);

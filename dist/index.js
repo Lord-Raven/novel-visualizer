@@ -737,7 +737,7 @@ var TypeOut = ({
   React2.useEffect(() => {
     onTypingCompleteRef.current = onTypingComplete;
   }, [onTypingComplete]);
-  React2.useLayoutEffect(() => {
+  React2.useEffect(() => {
     if (textContent !== prevTextContentRef.current) {
       prevTextContentRef.current = textContent;
       setDisplayLength(0);
