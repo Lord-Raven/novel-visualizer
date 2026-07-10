@@ -350,12 +350,9 @@ export function NovelVisualizer<
     }, [scriptEntries, index, actors]);
 
     const popInSpeakerSide = useMemo<'left' | 'right' | null>(() => {
-        if (!enablePopInSpeakers || !speakerActor || actorsAtIndex.includes(speakerActor)) {
-            console.log(`No pop-in speaker`);
+        if (!enablePopInSpeakers || !speakerActor || actorsAtIndex.includes(speakerActor) || speakerActor.id === playerActorId) {
             return null;
         }
-
-        console.log(`Pop-in speaker ${speakerActor.id} is not present in actorsAtIndex, determining side...`);
         return speakerActor.id.charCodeAt(0) % 2 === 0 ? 'left' : 'right';
     }, [enablePopInSpeakers, speakerActor, actorsAtIndex]);
 
