@@ -396,8 +396,10 @@ const ActorImage: FC<ActorImageProps> = ({
         };
     }, [bottomMaskStyle.WebkitMaskImage, bottomMaskStyle.maskImage, displayedImageUrl]);
     const hologramLayerTransform = useMemo(() => {
-        if (popInSide !== 'none') {
+        if (popInSide === 'left') {
             return 'translate3d(0.35%, -0.25%, 0) scale(1.005)';
+        } else if (popInSide === 'right') {
+            return 'translate3d(-0.35%, -0.25%, 0) scale(1.005)';
         }
 
         return 'translate3d(0.8%, -0.6%, 0) scale(1.01)';

@@ -43,6 +43,7 @@ const applyPopInSideSkew = (
 
     if (popInSide === 'right') {
         const proximityToRight = Math.max(0, Math.min(1, (xPosition - 50) / 50));
+        console.log(`xPosition: ${xPosition}, proximityToRight: ${proximityToRight}, skewedX: ${Math.round((xPosition - proximityToRight * MAX_SKEW) * 10) / 10}`);
         return Math.round((xPosition - proximityToRight * MAX_SKEW) * 10) / 10;
     }
 

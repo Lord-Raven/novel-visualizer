@@ -292,8 +292,10 @@ var ActorImage = ({
     };
   }, [bottomMaskStyle.WebkitMaskImage, bottomMaskStyle.maskImage, displayedImageUrl]);
   const hologramLayerTransform = useMemo(() => {
-    if (popInSide !== "none") {
+    if (popInSide === "left") {
       return "translate3d(0.35%, -0.25%, 0) scale(1.005)";
+    } else if (popInSide === "right") {
+      return "translate3d(-0.35%, -0.25%, 0) scale(1.005)";
     }
     return "translate3d(0.8%, -0.6%, 0) scale(1.01)";
   }, [popInSide]);
@@ -1957,6 +1959,7 @@ var applyPopInSideSkew = (xPosition, popInSide) => {
   const MAX_SKEW = 6;
   if (popInSide === "right") {
     const proximityToRight = Math.max(0, Math.min(1, (xPosition - 50) / 50));
+    console.log(`xPosition: ${xPosition}, proximityToRight: ${proximityToRight}, skewedX: ${Math.round((xPosition - proximityToRight * MAX_SKEW) * 10) / 10}`);
     return Math.round((xPosition - proximityToRight * MAX_SKEW) * 10) / 10;
   }
   const proximityToLeft = Math.max(0, Math.min(1, (50 - xPosition) / 50));
