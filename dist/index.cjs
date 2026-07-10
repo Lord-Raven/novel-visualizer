@@ -100,7 +100,7 @@ var ActorImage = ({
     };
   }, [displayedImageUrl, imageUrl, isLoaded]);
   const baseX = speaker ? 50 : xPosition;
-  const baseY = yPosition;
+  const baseY = popInSide === "right" ? yPosition + 5 : yPosition;
   const variants = (0, import_react.useMemo)(() => {
     if (popInSide !== "none") {
       const popInX = popInSide === "left" ? 10 : 90;
@@ -1957,11 +1957,11 @@ var formatMessageWithStyles = (text, options) => {
     textShadow: options.tokens.baseTextShadow
   };
   let activeInlineClass = null;
-  const allowFontEffects = options.allowFontEffects ?? true;
+  const enableFontEffects = options.enableFontEffects ?? true;
   return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_jsx_runtime4.Fragment, { children: dialogueParts.map((part, index) => {
     const isDialoguePart = part.startsWith('"') && part.endsWith('"');
     const baseStyle = isDialoguePart ? dialogueStyle : proseStyle;
-    const formattedPart = allowFontEffects ? formatInlineStyles(
+    const formattedPart = enableFontEffects ? formatInlineStyles(
       part,
       {
         ...options.inlineStyleOptions,
@@ -1999,11 +1999,10 @@ var applyPopInSideSkew = (xPosition, popInSide) => {
   }
   const MAX_SKEW = 6;
   if (popInSide === "right") {
-    const proximityToRight = Math.max(0, Math.min(1, (xPosition - 50) / 50));
-    console.log(`xPosition: ${xPosition}, proximityToRight: ${proximityToRight}, skewedX: ${Math.round((xPosition - proximityToRight * MAX_SKEW) * 10) / 10}`);
+    const proximityToRight = Math.max(0, Math.min(1, xPosition / 100));
     return Math.round((xPosition - proximityToRight * MAX_SKEW) * 10) / 10;
   }
-  const proximityToLeft = Math.max(0, Math.min(1, (50 - xPosition) / 50));
+  const proximityToLeft = Math.max(0, Math.min(1, (100 - xPosition) / 100));
   return Math.round((xPosition + proximityToLeft * MAX_SKEW) * 10) / 10;
 };
 function NovelVisualizer(props) {
@@ -2038,7 +2037,7 @@ function NovelVisualizer(props) {
     enableTalkingAnimation = true,
     enableReroll = true,
     narratorLabel = "",
-    allowFontEffects = true,
+    enableFontEffects = true,
     inlineStyleOptions,
     messageWindowSx
   } = props;
@@ -2138,7 +2137,7 @@ function NovelVisualizer(props) {
       speakerThemeFontFamily: speakerActor2?.themeFontFamily,
       proseColor: theme.palette.text.primary,
       tokens,
-      allowFontEffects,
+      enableFontEffects,
       inlineStyleOptions
     });
   };

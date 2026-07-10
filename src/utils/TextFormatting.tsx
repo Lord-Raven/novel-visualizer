@@ -29,7 +29,7 @@ export interface FormatMessageWithStylesOptions {
     speakerThemeFontFamily?: string;
     proseColor: string;
     tokens: MessageFormatTokens;
-    allowFontEffects?: boolean;
+    enableFontEffects?: boolean;
     inlineStyleOptions?: FormatInlineStylesOptions;
 }
 
@@ -1313,14 +1313,14 @@ export const formatMessageWithStyles = (
     };
 
     let activeInlineClass: string | null = null;
-    const allowFontEffects = options.allowFontEffects ?? true;
+    const enableFontEffects = options.enableFontEffects ?? true;
 
     return (
         <>
             {dialogueParts.map((part, index) => {
                 const isDialoguePart = part.startsWith('"') && part.endsWith('"');
                 const baseStyle = isDialoguePart ? dialogueStyle : proseStyle;
-                const formattedPart = allowFontEffects
+                const formattedPart = enableFontEffects
                     ? formatInlineStyles(
                         part,
                         {

@@ -42,12 +42,11 @@ const applyPopInSideSkew = (
     const MAX_SKEW = 6;
 
     if (popInSide === 'right') {
-        const proximityToRight = Math.max(0, Math.min(1, (xPosition - 50) / 50));
-        console.log(`xPosition: ${xPosition}, proximityToRight: ${proximityToRight}, skewedX: ${Math.round((xPosition - proximityToRight * MAX_SKEW) * 10) / 10}`);
+        const proximityToRight = Math.max(0, Math.min(1, (xPosition) / 100));
         return Math.round((xPosition - proximityToRight * MAX_SKEW) * 10) / 10;
     }
 
-    const proximityToLeft = Math.max(0, Math.min(1, (50 - xPosition) / 50));
+    const proximityToLeft = Math.max(0, Math.min(1, (100 - xPosition) / 100));
     return Math.round((xPosition + proximityToLeft * MAX_SKEW) * 10) / 10;
 };
 
@@ -113,7 +112,7 @@ export interface NovelVisualizerProps<
     enableTalkingAnimation?: boolean;
     enableReroll?: boolean;
     narratorLabel?: string;
-    allowFontEffects?: boolean;
+    enableFontEffects?: boolean;
     inlineStyleOptions?: FormatInlineStylesOptions;
     /**
      * Optional sx overrides for the main message display Paper.
@@ -159,7 +158,7 @@ export function NovelVisualizer<
         enableTalkingAnimation = true,
         enableReroll = true,
         narratorLabel = '',
-        allowFontEffects = true,
+        enableFontEffects: enableFontEffects = true,
         inlineStyleOptions,
         messageWindowSx
     } = props;
@@ -282,7 +281,7 @@ export function NovelVisualizer<
             speakerThemeFontFamily: speakerActor?.themeFontFamily,
             proseColor: theme.palette.text.primary,
             tokens,
-            allowFontEffects,
+            enableFontEffects,
             inlineStyleOptions
         });
     };
