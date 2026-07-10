@@ -1334,7 +1334,8 @@ export const formatMessageWithStyles = (
                         },
                         activeInlineClass
                     )
-                    : part;
+                    // Otherwise, strip all bracketed formatting tags: "[text]" or "[]"
+                    : part.replace(/\[[^\]]*\]/g, '');
 
                 activeInlineClass = resolveEndingInlineClass(part, activeInlineClass);
 

@@ -1932,7 +1932,7 @@ var formatMessageWithStyles = (text, options) => {
         }
       },
       activeInlineClass
-    ) : part;
+    ) : part.replace(/\[[^\]]*\]/g, "");
     activeInlineClass = resolveEndingInlineClass(part, activeInlineClass);
     return /* @__PURE__ */ jsx4("span", { style: baseStyle, children: formattedPart }, index);
   }) });

@@ -1973,7 +1973,7 @@ var formatMessageWithStyles = (text, options) => {
         }
       },
       activeInlineClass
-    ) : part;
+    ) : part.replace(/\[[^\]]*\]/g, "");
     activeInlineClass = resolveEndingInlineClass(part, activeInlineClass);
     return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: baseStyle, children: formattedPart }, index);
   }) });
