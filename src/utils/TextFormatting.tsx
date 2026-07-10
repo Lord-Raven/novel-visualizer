@@ -1320,9 +1320,8 @@ export const formatMessageWithStyles = (
             {dialogueParts.map((part, index) => {
                 const isDialoguePart = part.startsWith('"') && part.endsWith('"');
                 const baseStyle = isDialoguePart ? dialogueStyle : proseStyle;
-                const formattedPart = enableFontEffects
-                    ? formatInlineStyles(
-                        part,
+                const formattedPart = formatInlineStyles(
+                        enableFontEffects ? part : part.replace(/\[[^\]]*\]/g, ''),
                         {
                             ...options.inlineStyleOptions,
                             styleContext: {
@@ -1333,9 +1332,7 @@ export const formatMessageWithStyles = (
                             }
                         },
                         activeInlineClass
-                    )
-                    // Otherwise, strip all bracketed formatting tags: "[text]" or "[]"
-                    : part.replace(/\[[^\]]*\]/g, '');
+                    );
 
                 activeInlineClass = resolveEndingInlineClass(part, activeInlineClass);
 

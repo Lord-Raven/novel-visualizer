@@ -100,7 +100,7 @@ var ActorImage = ({
     };
   }, [displayedImageUrl, imageUrl, isLoaded]);
   const baseX = speaker ? 50 : xPosition;
-  const baseY = popInSide === "right" ? yPosition + 5 : yPosition;
+  const baseY = popInSide === "right" ? yPosition + 8 : yPosition;
   const variants = (0, import_react.useMemo)(() => {
     if (popInSide !== "none") {
       const popInX = popInSide === "left" ? 10 : 90;
@@ -1961,8 +1961,8 @@ var formatMessageWithStyles = (text, options) => {
   return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_jsx_runtime4.Fragment, { children: dialogueParts.map((part, index) => {
     const isDialoguePart = part.startsWith('"') && part.endsWith('"');
     const baseStyle = isDialoguePart ? dialogueStyle : proseStyle;
-    const formattedPart = enableFontEffects ? formatInlineStyles(
-      part,
+    const formattedPart = formatInlineStyles(
+      enableFontEffects ? part : part.replace(/\[[^\]]*\]/g, ""),
       {
         ...options.inlineStyleOptions,
         styleContext: {
@@ -1973,7 +1973,7 @@ var formatMessageWithStyles = (text, options) => {
         }
       },
       activeInlineClass
-    ) : part.replace(/\[[^\]]*\]/g, "");
+    );
     activeInlineClass = resolveEndingInlineClass(part, activeInlineClass);
     return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: baseStyle, children: formattedPart }, index);
   }) });
@@ -2193,8 +2193,10 @@ function NovelVisualizer(props) {
   }, [scriptEntries, index, actors]);
   const popInSpeakerSide = (0, import_react5.useMemo)(() => {
     if (!enablePopInSpeakers || !speakerActor || actorsAtIndex.includes(speakerActor)) {
+      console.log(`No pop-in speaker`);
       return null;
     }
+    console.log(`Pop-in speaker ${speakerActor.id} is not present in actorsAtIndex, determining side...`);
     return speakerActor.id.charCodeAt(0) % 2 === 0 ? "left" : "right";
   }, [enablePopInSpeakers, speakerActor, actorsAtIndex]);
   const displayMessage = (0, import_react5.useMemo)(() => {

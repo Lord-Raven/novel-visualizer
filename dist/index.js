@@ -59,7 +59,7 @@ var ActorImage = ({
     };
   }, [displayedImageUrl, imageUrl, isLoaded]);
   const baseX = speaker ? 50 : xPosition;
-  const baseY = popInSide === "right" ? yPosition + 5 : yPosition;
+  const baseY = popInSide === "right" ? yPosition + 8 : yPosition;
   const variants = useMemo(() => {
     if (popInSide !== "none") {
       const popInX = popInSide === "left" ? 10 : 90;
@@ -1920,8 +1920,8 @@ var formatMessageWithStyles = (text, options) => {
   return /* @__PURE__ */ jsx4(Fragment2, { children: dialogueParts.map((part, index) => {
     const isDialoguePart = part.startsWith('"') && part.endsWith('"');
     const baseStyle = isDialoguePart ? dialogueStyle : proseStyle;
-    const formattedPart = enableFontEffects ? formatInlineStyles(
-      part,
+    const formattedPart = formatInlineStyles(
+      enableFontEffects ? part : part.replace(/\[[^\]]*\]/g, ""),
       {
         ...options.inlineStyleOptions,
         styleContext: {
@@ -1932,7 +1932,7 @@ var formatMessageWithStyles = (text, options) => {
         }
       },
       activeInlineClass
-    ) : part.replace(/\[[^\]]*\]/g, "");
+    );
     activeInlineClass = resolveEndingInlineClass(part, activeInlineClass);
     return /* @__PURE__ */ jsx4("span", { style: baseStyle, children: formattedPart }, index);
   }) });
@@ -2152,8 +2152,10 @@ function NovelVisualizer(props) {
   }, [scriptEntries, index, actors]);
   const popInSpeakerSide = useMemo2(() => {
     if (!enablePopInSpeakers || !speakerActor || actorsAtIndex.includes(speakerActor)) {
+      console.log(`No pop-in speaker`);
       return null;
     }
+    console.log(`Pop-in speaker ${speakerActor.id} is not present in actorsAtIndex, determining side...`);
     return speakerActor.id.charCodeAt(0) % 2 === 0 ? "left" : "right";
   }, [enablePopInSpeakers, speakerActor, actorsAtIndex]);
   const displayMessage = useMemo2(() => {

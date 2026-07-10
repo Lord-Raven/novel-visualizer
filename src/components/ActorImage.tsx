@@ -84,7 +84,7 @@ const ActorImage: FC<ActorImageProps> = ({
     // Calculate final parallax position
     const baseX = speaker ? 50 : xPosition;
     // Gross way to counter the way the shift is applied before rotation, so right pop-ins end up lower down on the screen; give them a little boost.
-    const baseY = popInSide === 'right' ? (yPosition + 5) : yPosition;
+    const baseY = popInSide === 'right' ? (yPosition + 8) : yPosition;
 
     const variants: Variants = useMemo(() => {
         if (popInSide !== 'none') {
