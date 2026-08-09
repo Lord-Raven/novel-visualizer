@@ -1,5 +1,5 @@
 import React from 'react';
-import { darken, lighten } from '@mui/material/styles';
+import { safeDarken, safeLighten } from './safeColor';
 
 export interface InlineStyleContext {
     baseColor?: string;
@@ -481,12 +481,7 @@ const getMutedInlineColor = (color?: string, amount = 0.2): string | undefined =
         return color;
     }
 
-    try {
-        return darken(color, amount);
-    } catch {
-        // Keep the original color when the value cannot be parsed (for example CSS vars).
-        return color;
-    }
+    return safeDarken(color, amount);
 };
 
 export const defaultInlineClassStyles: Record<string, InlineClassStyle> = {
@@ -1296,14 +1291,14 @@ export const formatMessageWithStyles = (
     const normalizedText = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
     const dialogueParts = normalizedText.split(/(\"[^\"]*\")/g);
     const brightenedColor = options.speakerThemeColor
-        ? lighten(options.speakerThemeColor, 0.5)
+        ? safeLighten(options.speakerThemeColor, 0.5)
         : options.tokens.defaultDialogueColor;
 
     const dialogueStyle: React.CSSProperties = {
         color: brightenedColor,
         fontFamily: options.speakerThemeFontFamily || options.tokens.fallbackFontFamily,
         textShadow: options.speakerThemeColor
-            ? `2px 2px 2px ${darken(options.speakerThemeColor, 0.3)}`
+            ? `2px 2px 2px ${safeDarken(options.speakerThemeColor, 0.3)}`
             : options.tokens.defaultDialogueShadow
     };
     const proseStyle: React.CSSProperties = {

@@ -1,6 +1,7 @@
 import React, { FC, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from '@mui/material';
-import { alpha, darken, lighten, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
+import { safeAlpha, safeDarken, safeGetContrastText, safeLighten } from '../utils/safeColor';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, CardGiftcard, SvgIconComponent, Computer, Warning } from '@mui/icons-material';
 import { AnimatePresence } from 'framer-motion';
@@ -207,14 +208,14 @@ export function NovelVisualizer<
         return schemeMap[colorScheme] || theme.palette.primary.main;
     };
     const baseTextShadow = useMemo(
-        () => `2px 2px 2px ${alpha(theme.palette.common.black, 0.8)}`,
+        () => `2px 2px 2px ${safeAlpha(theme.palette.common.black, 0.8)}`,
         [theme]
     );
     const messageTokens = useMemo(
         () => ({
             baseTextShadow,
             defaultDialogueColor: theme.palette.info.light,
-            defaultDialogueShadow: `2px 2px 2px ${alpha(theme.palette.info.dark, 0.5)}`,
+            defaultDialogueShadow: `2px 2px 2px ${safeAlpha(theme.palette.info.dark, 0.5)}`,
             fallbackFontFamily: theme.typography.fontFamily as string
         }),
         [baseTextShadow, theme]
@@ -658,7 +659,7 @@ export function NovelVisualizer<
                     zIndex={zIndex}
                     heightMultiplier={(isSpeaking ? 1 : sceneActorScale) * (actor.heightMultiplier ?? 1)}
                     speaker={isSpeaking}
-                    highlightColor={isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor}
+                    highlightColor={isHovered ? safeLighten(baseHighlightColor, 0.2) : baseHighlightColor}
                     isAudioPlaying={isSpeaking && isAudioPlaying && enableTalkingAnimation}
                     audioAnalyser={isSpeaking && isAudioPlaying && enableTalkingAnimation ? audioAnalyser : null}
                     filter={filterProps.filter}
@@ -686,7 +687,7 @@ export function NovelVisualizer<
                     zIndex={45}
                     heightMultiplier={(isVerticalLayout ? 0.7 : 0.9) * (speakerActor.heightMultiplier ?? 1)}
                     speaker={true}
-                    highlightColor={isHovered ? lighten(baseHighlightColor, 0.2) : baseHighlightColor}
+                    highlightColor={isHovered ? safeLighten(baseHighlightColor, 0.2) : baseHighlightColor}
                     popInSide={popInSpeakerSide}
                     isAudioPlaying={isAudioPlaying && enableTalkingAnimation}
                     audioAnalyser={isAudioPlaying && enableTalkingAnimation ? audioAnalyser : null}
@@ -845,8 +846,8 @@ export function NovelVisualizer<
                             left: `${responsiveOverlaySides}%`,
                             right: `${responsiveOverlaySides}%`,
                             bottom: `${responsiveOverlayBottomGap}%`,
-                            background: alpha(theme.palette.background.paper, 0.92),
-                            border: `2px solid ${alpha(theme.palette.divider, 0.3)}`,
+                            background: safeAlpha(theme.palette.background.paper, 0.92),
+                            border: `2px solid ${safeAlpha(theme.palette.divider, 0.3)}`,
                             borderRadius: 3,
                             p: 2,
                             color: theme.palette.text.primary,
@@ -869,7 +870,7 @@ export function NovelVisualizer<
                                 size="small"
                                 sx={{
                                     color: theme.palette.text.secondary,
-                                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+                                    border: `1px solid ${safeAlpha(theme.palette.divider, 0.2)}`,
                                     padding: isVerticalLayout ? '4px' : undefined,
                                     minWidth: isVerticalLayout ? '28px' : undefined,
                                     '&:disabled': { color: theme.palette.text.disabled }
@@ -906,7 +907,7 @@ export function NovelVisualizer<
                                     fontSize: isVerticalLayout ? '0.7rem' : undefined,
                                     fontWeight: 700,
                                     color: theme.palette.primary.light,
-                                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+                                    border: `1px solid ${safeAlpha(theme.palette.divider, 0.2)}`,
                                     transition: 'all 0.3s ease',
                                     '& .MuiChip-label': {
                                         display: 'flex',
@@ -923,7 +924,7 @@ export function NovelVisualizer<
                                 size="small"
                                 sx={{
                                     color: theme.palette.text.secondary,
-                                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+                                    border: `1px solid ${safeAlpha(theme.palette.divider, 0.2)}`,
                                     padding: isVerticalLayout ? '4px' : undefined,
                                     minWidth: isVerticalLayout ? '28px' : undefined,
                                     '&:disabled': { color: theme.palette.text.disabled }
@@ -956,7 +957,7 @@ export function NovelVisualizer<
                                         size="small"
                                         sx={{
                                             color: accentMain,
-                                            border: `1px solid ${alpha(accentMain, 0.25)}`,
+                                            border: `1px solid ${safeAlpha(accentMain, 0.25)}`,
                                             padding: isVerticalLayout ? '4px' : undefined,
                                             minWidth: isVerticalLayout ? '28px' : undefined,
                                             opacity: 1,
@@ -968,7 +969,7 @@ export function NovelVisualizer<
                                                 to: { opacity: 1, transform: 'scale(1)' }
                                             },
                                             '&:hover': {
-                                                borderColor: alpha(accentMain, 0.4),
+                                                borderColor: safeAlpha(accentMain, 0.4),
                                                 color: accentLight
                                             },
                                             '&:disabled': { color: theme.palette.text.disabled }
@@ -985,7 +986,7 @@ export function NovelVisualizer<
                                             size="small"
                                             sx={{
                                                 color: accentMain,
-                                                border: `1px solid ${alpha(accentMain, 0.25)}`,
+                                                border: `1px solid ${safeAlpha(accentMain, 0.25)}`,
                                                 padding: isVerticalLayout ? '4px' : undefined,
                                                 minWidth: isVerticalLayout ? '28px' : undefined,
                                                 opacity: 1,
@@ -997,7 +998,7 @@ export function NovelVisualizer<
                                                     to: { opacity: 1, transform: 'scale(1)' }
                                                 },
                                                 '&:hover': {
-                                                    borderColor: alpha(accentMain, 0.4),
+                                                    borderColor: safeAlpha(accentMain, 0.4),
                                                     color: accentLight
                                                 }
                                             }}
@@ -1011,7 +1012,7 @@ export function NovelVisualizer<
                                             size="small"
                                             sx={{
                                                 color: errorMain,
-                                                border: `1px solid ${alpha(errorMain, 0.25)}`,
+                                                border: `1px solid ${safeAlpha(errorMain, 0.25)}`,
                                                 padding: isVerticalLayout ? '4px' : undefined,
                                                 minWidth: isVerticalLayout ? '28px' : undefined,
                                                 opacity: 1,
@@ -1023,7 +1024,7 @@ export function NovelVisualizer<
                                                     to: { opacity: 1, transform: 'scale(1)' }
                                                 },
                                                 '&:hover': {
-                                                    borderColor: alpha(errorMain, 0.4),
+                                                    borderColor: safeAlpha(errorMain, 0.4),
                                                     color: errorLight
                                                 }
                                             }}
@@ -1042,12 +1043,12 @@ export function NovelVisualizer<
                                         size="small"
                                         sx={{
                                             color: accentMain,
-                                            border: `1px solid ${alpha(accentMain, 0.25)}`,
+                                            border: `1px solid ${safeAlpha(accentMain, 0.25)}`,
                                             padding: isVerticalLayout ? '4px' : undefined,
                                             minWidth: isVerticalLayout ? '28px' : undefined,
                                             transition: 'all 0.3s ease',
                                             '&:hover': {
-                                                borderColor: alpha(accentMain, 0.4),
+                                                borderColor: safeAlpha(accentMain, 0.4),
                                                 color: accentLight,
                                                 transform: 'rotate(180deg)'
                                             },
@@ -1104,7 +1105,7 @@ export function NovelVisualizer<
                                         lineHeight: 1.55,
                                         fontFamily: theme.typography.fontFamily,
                                         color: theme.palette.text.primary,
-                                        backgroundColor: alpha(theme.palette.action.selected, 0.5),
+                                        backgroundColor: safeAlpha(theme.palette.action.selected, 0.5),
                                         padding: '8px'
                                     },
                                     '& .MuiInputBase-input': {
@@ -1164,7 +1165,7 @@ export function NovelVisualizer<
                                             borderColor: theme.palette.divider
                                         },
                                         '&:hover fieldset': {
-                                            borderColor: alpha(theme.palette.divider, 0.8)
+                                            borderColor: safeAlpha(theme.palette.divider, 0.8)
                                         },
                                         '&.Mui-focused fieldset': {
                                             borderColor: accentMain
@@ -1172,7 +1173,7 @@ export function NovelVisualizer<
                                         '&.Mui-disabled': {
                                             color: theme.palette.text.disabled,
                                             '& fieldset': {
-                                                borderColor: alpha(theme.palette.divider, 0.5)
+                                                borderColor: safeAlpha(theme.palette.divider, 0.5)
                                             }
                                         }
                                     },
@@ -1180,17 +1181,17 @@ export function NovelVisualizer<
                                         padding: isVerticalLayout ? '6px 8px' : undefined
                                     },
                                     '& .MuiInputBase-input::placeholder': {
-                                        color: alpha(theme.palette.text.primary, 0.55),
+                                        color: safeAlpha(theme.palette.text.primary, 0.55),
                                         opacity: 1,
                                         fontSize: isVerticalLayout ? '0.75rem' : undefined
                                     },
                                     '& .MuiInputBase-input.Mui-disabled::placeholder': {
-                                        color: alpha(theme.palette.text.primary, 0.4),
+                                        color: safeAlpha(theme.palette.text.primary, 0.4),
                                         opacity: 1
                                     },
                                     '& .MuiInputBase-input.Mui-disabled': {
-                                        color: alpha(theme.palette.text.primary, 0.45),
-                                        WebkitTextFillColor: alpha(theme.palette.text.primary, 0.45)
+                                        color: safeAlpha(theme.palette.text.primary, 0.45),
+                                        WebkitTextFillColor: safeAlpha(theme.palette.text.primary, 0.45)
                                     }
                                 }}
                             />
@@ -1218,14 +1219,18 @@ export function NovelVisualizer<
                                             ? localSkit ? getSubmitButtonConfig(localSkit, index, inputText).colorScheme : 'primary'
                                             : (sceneEnded && !inputText.trim() ? 'error' : 'primary');
                                         const baseColor = getColorFromScheme(colorScheme ?? 'primary');
-                                        return `linear-gradient(90deg, ${lighten(baseColor, 0.12)}, ${darken(baseColor, 0.2)})`;
+                                        return `linear-gradient(90deg, ${safeLighten(baseColor, 0.12)}, ${safeDarken(baseColor, 0.2)})`;
                                     })(),
                                     color: (() => {
                                         const colorScheme = getSubmitButtonConfig 
                                             ? localSkit ? getSubmitButtonConfig(localSkit, index, inputText).colorScheme : 'primary'
                                             : (sceneEnded && !inputText.trim() ? 'error' : 'primary');
                                         const baseColor = getColorFromScheme(colorScheme ?? 'primary');
-                                        return theme.palette.getContrastText(baseColor);
+                                        return safeGetContrastText(
+                                            theme.palette.getContrastText,
+                                            baseColor,
+                                            theme.palette.primary.contrastText
+                                        );
                                     })(),
                                     fontWeight: 800,
                                     fontSize: isVerticalLayout ? 'clamp(0.6rem, 2vw, 0.875rem)' : undefined,
@@ -1237,7 +1242,7 @@ export function NovelVisualizer<
                                                 ? localSkit ? getSubmitButtonConfig(localSkit, index, inputText).colorScheme : 'primary'
                                                 : (sceneEnded && !inputText.trim() ? 'error' : 'primary');
                                             const baseColor = getColorFromScheme(colorScheme ?? 'primary');
-                                            return `linear-gradient(90deg, ${lighten(baseColor, 0.2)}, ${darken(baseColor, 0.28)})`;
+                                            return `linear-gradient(90deg, ${safeLighten(baseColor, 0.2)}, ${safeDarken(baseColor, 0.28)})`;
                                         })()
                                     },
                                     '&:disabled': {
