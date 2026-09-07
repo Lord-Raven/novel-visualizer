@@ -648,7 +648,7 @@ export function NovelVisualizer<
             const zIndex = 50 - Math.abs(xPosition - 50);
             const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(actor, activeScript, index) : "#ffffff";
             const filterProps = getActorFilter ? getActorFilter(actor, activeScript, index) : {filter: actor.filter, filterColor: actor.filterColor || '#ffffff'};
-            const scaleOffset = getActorScaleOffset ? getActorScaleOffset(actor, activeScript, index) : { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 };
+            const scaleOffset = getActorScaleOffset ? getActorScaleOffset(actor, activeScript, index) : { scale: 1, offsetX: 0, offsetY: 0 };
 
 
             return (
@@ -661,8 +661,7 @@ export function NovelVisualizer<
                     xPosition={xPosition}
                     yPosition={yPosition}
                     zIndex={zIndex}
-                    scaleX={scaleOffset?.scaleX ?? 1}
-                    scaleY={(isSpeaking ? 1 : sceneActorScale) * (scaleOffset?.scaleY ?? 1)}
+                    scale={(isSpeaking ? 1 : sceneActorScale) * (scaleOffset?.scale ?? 1)}
                     offsetX={scaleOffset?.offsetX ?? 0}
                     offsetY={scaleOffset?.offsetY ?? 0}
                     speaker={isSpeaking}
@@ -681,7 +680,8 @@ export function NovelVisualizer<
             const isHovered = speakerActor === hoveredActor;
             const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(speakerActor, activeScript, index) : "#ffffff";
             const filterProps = getActorFilter ? getActorFilter(speakerActor, activeScript, index) : {filter: speakerActor.filter, filterColor: speakerActor.filterColor || '#ffffff'};
-            const popInScaleOffset = getActorScaleOffset ? getActorScaleOffset(speakerActor, activeScript, index) : { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 };
+            const popInScaleOffset = getActorScaleOffset ? getActorScaleOffset(speakerActor, activeScript, index) : { scale: 1, offsetX: 0, offsetY: 0 };
+            const popInScale = (isVerticalLayout ? 0.7 : 0.9) * (popInScaleOffset?.scale ?? 1);
 
             actorElements.push(
                 <ActorImage
@@ -693,8 +693,7 @@ export function NovelVisualizer<
                     xPosition={popInSpeakerSide === 'left' ? 10 : 90}
                     yPosition={yPosition}
                     zIndex={45}
-                    scaleX={popInScaleOffset?.scaleX ?? 1}
-                    scaleY={(isVerticalLayout ? 0.7 : 0.9) * (popInScaleOffset?.scaleY ?? 1)}
+                    scale={popInScale}
                     offsetX={popInScaleOffset?.offsetX ?? 0}
                     offsetY={popInScaleOffset?.offsetY ?? 0}
                     speaker={true}

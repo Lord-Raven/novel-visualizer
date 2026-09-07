@@ -31,8 +31,7 @@ export interface NovelSkit<TEntry extends NovelScriptEntry = NovelScriptEntry> {
 }
 
 export interface NovelScaleOffset {
-    scaleX?: number;
-    scaleY?: number;
+    scale?: number;
     offsetX?: number;
     offsetY?: number;
 }

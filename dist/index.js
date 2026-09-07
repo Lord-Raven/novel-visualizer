@@ -55,8 +55,7 @@ var ActorImage = ({
   xPosition,
   yPosition,
   zIndex,
-  scaleY,
-  scaleX,
+  scale,
   offsetY,
   offsetX,
   speaker,
@@ -111,7 +110,7 @@ var ActorImage = ({
           opacity: 0,
           x: `${offscreenX}vw`,
           bottom: `${baseY}vh`,
-          height: `${SPEAKING_HEIGHT * scaleY * 0.8}vh`,
+          height: `${SPEAKING_HEIGHT * scale * 0.8}vh`,
           filter: "brightness(0.7)",
           rotate: tiltRotate * 1.5,
           transition: {
@@ -125,7 +124,7 @@ var ActorImage = ({
           opacity: 0.85,
           x: `${popInX}vw`,
           bottom: `${baseY}vh`,
-          height: `${SPEAKING_HEIGHT * scaleY * 0.8}vh`,
+          height: `${SPEAKING_HEIGHT * scale * 0.8}vh`,
           filter: "brightness(0.9)",
           rotate: tiltRotate,
           transition: {
@@ -139,7 +138,7 @@ var ActorImage = ({
           opacity: 0.85,
           x: `${popInX}vw`,
           bottom: `${baseY}vh`,
-          height: `${IDLE_HEIGHT * scaleY * 0.8}vh`,
+          height: `${IDLE_HEIGHT * scale * 0.8}vh`,
           filter: "brightness(0.7)",
           rotate: tiltRotate,
           transition: {
@@ -156,7 +155,7 @@ var ActorImage = ({
         opacity: 0,
         x: `150vw`,
         bottom: `${baseY}vh`,
-        height: `${IDLE_HEIGHT * scaleY}vh`,
+        height: `${IDLE_HEIGHT * scale}vh`,
         filter: "brightness(0.8)",
         transition: { x: { ease: easeIn, duration: 0.5 }, bottom: { duration: 0.5 }, opacity: { ease: easeOut, duration: 0.5 } }
       },
@@ -164,7 +163,7 @@ var ActorImage = ({
         opacity: 1,
         x: `${baseX}vw`,
         bottom: `${baseY}vh`,
-        height: `${SPEAKING_HEIGHT * scaleY}vh`,
+        height: `${SPEAKING_HEIGHT * scale}vh`,
         filter: "brightness(1)",
         transition: { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } }
       },
@@ -172,12 +171,12 @@ var ActorImage = ({
         opacity: 1,
         x: `${baseX}vw`,
         bottom: `${baseY}vh`,
-        height: `${IDLE_HEIGHT * scaleY}vh`,
+        height: `${IDLE_HEIGHT * scale}vh`,
         filter: "brightness(0.8)",
         transition: { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } }
       }
     };
-  }, [baseX, baseY, yPosition, zIndex, scaleY, popInSide]);
+  }, [baseX, baseY, yPosition, zIndex, scale, popInSide]);
   const scaleYMotionValue = useMotionValue(1);
   const springScaleY = useSpring(scaleYMotionValue, { stiffness: 360, damping: 40 });
   const [animationParams, setAnimationParams] = useState(() => {
@@ -280,7 +279,7 @@ var ActorImage = ({
     }
     return speaker ? "talking" : "idle";
   }, [speaker, isAudioPlaying, audioAnalyser, variants, popInSide, animationParams]);
-  const scaleYStyle = speaker && isAudioPlaying ? springScaleY : 1;
+  const scaleYStyle = speaker && isAudioPlaying ? springScaleY : scale;
   const tintFilterId = `tint-${id}`;
   const ghostTintFilterId = `ghost-tint-${id}`;
   const auraGlowFilterId = `aura-glow-${id}`;
@@ -418,7 +417,7 @@ var ActorImage = ({
           const positionOffset = `translate(${offsetX}%, ${offsetY}%)`;
           return baseTransform ? `${baseTransform} translateX(-50%) ${positionOffset}` : `translateX(-50%) ${positionOffset}`;
         },
-        style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center", scaleX, scaleY: scaleYStyle },
+        style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center", scale, scaleY: scaleYStyle },
         children: /* @__PURE__ */ jsxs(
           motion.div,
           {
@@ -2430,7 +2429,7 @@ function NovelVisualizer(props) {
       const zIndex = 50 - Math.abs(xPosition - 50);
       const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(actor, activeScript, index) : "#ffffff";
       const filterProps = getActorFilter ? getActorFilter(actor, activeScript, index) : { filter: actor.filter, filterColor: actor.filterColor || "#ffffff" };
-      const scaleOffset = getActorScaleOffset ? getActorScaleOffset(actor, activeScript, index) : { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 };
+      const scaleOffset = getActorScaleOffset ? getActorScaleOffset(actor, activeScript, index) : { scale: 1, offsetX: 0, offsetY: 0 };
       return /* @__PURE__ */ jsx5(
         ActorImage_default,
         {
@@ -2441,8 +2440,7 @@ function NovelVisualizer(props) {
           xPosition,
           yPosition,
           zIndex,
-          scaleX: scaleOffset?.scaleX ?? 1,
-          scaleY: (isSpeaking ? 1 : sceneActorScale) * (scaleOffset?.scaleY ?? 1),
+          scale: (isSpeaking ? 1 : sceneActorScale) * (scaleOffset?.scale ?? 1),
           offsetX: scaleOffset?.offsetX ?? 0,
           offsetY: scaleOffset?.offsetY ?? 0,
           speaker: isSpeaking,
@@ -2460,7 +2458,8 @@ function NovelVisualizer(props) {
       const isHovered = speakerActor === hoveredActor;
       const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(speakerActor, activeScript, index) : "#ffffff";
       const filterProps = getActorFilter ? getActorFilter(speakerActor, activeScript, index) : { filter: speakerActor.filter, filterColor: speakerActor.filterColor || "#ffffff" };
-      const popInScaleOffset = getActorScaleOffset ? getActorScaleOffset(speakerActor, activeScript, index) : { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 };
+      const popInScaleOffset = getActorScaleOffset ? getActorScaleOffset(speakerActor, activeScript, index) : { scale: 1, offsetX: 0, offsetY: 0 };
+      const popInScale = (isVerticalLayout ? 0.7 : 0.9) * (popInScaleOffset?.scale ?? 1);
       actorElements.push(
         /* @__PURE__ */ jsx5(
           ActorImage_default,
@@ -2472,8 +2471,7 @@ function NovelVisualizer(props) {
             xPosition: popInSpeakerSide === "left" ? 10 : 90,
             yPosition,
             zIndex: 45,
-            scaleX: popInScaleOffset?.scaleX ?? 1,
-            scaleY: (isVerticalLayout ? 0.7 : 0.9) * (popInScaleOffset?.scaleY ?? 1),
+            scale: popInScale,
             offsetX: popInScaleOffset?.offsetX ?? 0,
             offsetY: popInScaleOffset?.offsetY ?? 0,
             speaker: true,

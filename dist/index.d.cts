@@ -46,8 +46,7 @@ interface NovelSkit<TEntry extends NovelScriptEntry = NovelScriptEntry> {
     script: TEntry[];
 }
 interface NovelScaleOffset {
-    scaleX?: number;
-    scaleY?: number;
+    scale?: number;
     offsetX?: number;
     offsetY?: number;
 }
@@ -138,8 +137,7 @@ interface ActorImageProps {
     xPosition: number;
     yPosition: number;
     zIndex: number;
-    scaleY: number;
-    scaleX: number;
+    scale: number;
     offsetY: number;
     offsetX: number;
     speaker?: boolean;
