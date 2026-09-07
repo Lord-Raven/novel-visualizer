@@ -10,7 +10,7 @@ import { BlurredBackground } from './BlurredBackground';
 import TypeOut from './TypeOut';
 import { formatMessageWithStyles } from '../utils/TextFormatting';
 import type { FormatInlineStylesOptions, MessageFormatTokens } from '../utils/TextFormatting';
-import type { NovelActor, NovelSkit, NovelScriptEntry } from '../types';
+import type { NovelActor, NovelSkit, NovelScriptEntry, NovelScaleOffset } from '../types';
 
 export interface SubmitButtonConfig {
     label: string;

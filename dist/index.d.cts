@@ -23,10 +23,6 @@ interface NovelActor {
     themeColor?: string;
     themeFontFamily?: string;
     defaultImageUrl?: string;
-    scaleX?: number | (() => number);
-    scaleY?: number | (() => number);
-    offsetX?: number | (() => number);
-    offsetY?: number | (() => number);
     filter?: 'ghost' | 'aura' | 'hologram';
     filterColor?: string;
 }
@@ -48,6 +44,12 @@ interface NovelSkit<TEntry extends NovelScriptEntry = NovelScriptEntry> {
     id?: string;
     currentIndex?: number;
     script: TEntry[];
+}
+interface NovelScaleOffset {
+    scaleX?: number;
+    scaleY?: number;
+    offsetX?: number;
+    offsetY?: number;
 }
 
 interface SubmitButtonConfig {
@@ -81,6 +83,7 @@ interface NovelVisualizerProps<TActor extends NovelActor, TSkit extends NovelSki
     getPresentActors: (skit: TSkit, index: number) => TActor[];
     getActorImageUrl: (actor: TActor, skit: TSkit, index: number) => string;
     getActorImageColorMultiplier?: (actor: TActor, skit: TSkit, index: number) => string;
+    getActorScaleOffset?: (actor: TActor, skit: TSkit, index: number) => NovelScaleOffset;
     getActorFilter?: (actor: TActor, skit: TSkit, index: number) => {
         filter?: 'ghost' | 'aura' | 'hologram';
         filterColor?: string;
