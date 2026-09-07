@@ -2001,6 +2001,9 @@ var applyPopInSideSkew = (xPosition, popInSide) => {
   const proximityToLeft = Math.max(0, Math.min(1, (100 - xPosition) / 100));
   return Math.round((xPosition + proximityToLeft * MAX_SKEW) * 10) / 10;
 };
+var resolveActorNumber = (value, fallback) => {
+  return typeof value === "function" ? value() : value ?? fallback;
+};
 function NovelVisualizer(props) {
   const theme = useTheme();
   const {
@@ -2439,10 +2442,10 @@ function NovelVisualizer(props) {
           xPosition,
           yPosition,
           zIndex,
-          scaleY: (isSpeaking ? 1 : sceneActorScale) * (actor.scaleY ?? 1),
-          scaleX: actor.scaleX ?? 1,
-          offsetY: actor.offsetY ?? 0,
-          offsetX: actor.offsetX ?? 0,
+          scaleY: (isSpeaking ? 1 : sceneActorScale) * resolveActorNumber(actor.scaleY, 1),
+          scaleX: resolveActorNumber(actor.scaleX, 1),
+          offsetY: resolveActorNumber(actor.offsetY, 0),
+          offsetX: resolveActorNumber(actor.offsetX, 0),
           speaker: isSpeaking,
           highlightColor: isHovered ? safeLighten(baseHighlightColor, 0.2) : baseHighlightColor,
           isAudioPlaying: isSpeaking && isAudioPlaying && enableTalkingAnimation,
@@ -2469,10 +2472,10 @@ function NovelVisualizer(props) {
             xPosition: popInSpeakerSide === "left" ? 10 : 90,
             yPosition,
             zIndex: 45,
-            scaleY: (isVerticalLayout ? 0.7 : 0.9) * (speakerActor.scaleY ?? 1),
-            scaleX: speakerActor.scaleX ?? 1,
-            offsetY: speakerActor.offsetY ?? 0,
-            offsetX: speakerActor.offsetX ?? 0,
+            scaleY: (isVerticalLayout ? 0.7 : 0.9) * resolveActorNumber(speakerActor.scaleY, 1),
+            scaleX: resolveActorNumber(speakerActor.scaleX, 1),
+            offsetY: resolveActorNumber(speakerActor.offsetY, 0),
+            offsetX: resolveActorNumber(speakerActor.offsetX, 0),
             speaker: true,
             highlightColor: isHovered ? safeLighten(baseHighlightColor, 0.2) : baseHighlightColor,
             popInSide: popInSpeakerSide,
