@@ -500,7 +500,7 @@ const ActorImage: FC<ActorImageProps> = ({
                     ? `${baseTransform} translateX(-50%) ${positionOffset}`
                     : `translateX(-50%) ${positionOffset}`;
             }}
-            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center', scale: scale, scaleY: scaleYStyle}}>
+            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center', scaleY: scaleYStyle}}>
             <motion.div
                 initial={false}
                 animate={ghostFloatAnimation ? { x: ghostFloatAnimation.x, y: ghostFloatAnimation.y } : { x: 0, y: 0 }}

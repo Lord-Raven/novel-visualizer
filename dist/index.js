@@ -417,7 +417,7 @@ var ActorImage = ({
           const positionOffset = `translate(${offsetX}%, ${offsetY}%)`;
           return baseTransform ? `${baseTransform} translateX(-50%) ${positionOffset}` : `translateX(-50%) ${positionOffset}`;
         },
-        style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center", scale, scaleY: scaleYStyle },
+        style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center", scaleY: scaleYStyle },
         children: /* @__PURE__ */ jsxs(
           motion.div,
           {
