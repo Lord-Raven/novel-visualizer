@@ -497,7 +497,7 @@ const ActorImage: FC<ActorImageProps> = ({
             animate={animateProps}
             transformTemplate={(_, generatedTransform) => {
                 const baseTransform = generatedTransform?.trim() || '';
-                const positionOffset = `translate(${offsetX}%, ${-offsetY}%)`;
+                const positionOffset = `translate(${offsetX}%, ${offsetY}%)`;
                 return baseTransform
                     ? `${baseTransform} translateX(-50%) ${positionOffset}`
                     : `translateX(-50%) ${positionOffset}`;

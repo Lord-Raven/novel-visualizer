@@ -415,7 +415,7 @@ var ActorImage = ({
         animate: animateProps,
         transformTemplate: (_, generatedTransform) => {
           const baseTransform = generatedTransform?.trim() || "";
-          const positionOffset = `translate(${offsetX}%, ${-offsetY}%)`;
+          const positionOffset = `translate(${offsetX}%, ${offsetY}%)`;
           return baseTransform ? `${baseTransform} translateX(-50%) ${positionOffset}` : `translateX(-50%) ${positionOffset}`;
         },
         style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center", scaleX, scaleY: scaleYStyle },
