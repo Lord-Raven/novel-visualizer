@@ -5,7 +5,10 @@ export interface NovelActor {
     themeColor?: string;
     themeFontFamily?: string;
     defaultImageUrl?: string;
-    heightMultiplier?: number;
+    scaleX?: number;
+    scaleY?: number;
+    offsetX?: number;
+    offsetY?: number;
     filter?: 'ghost' | 'aura' | 'hologram';
     filterColor?: string;
 }

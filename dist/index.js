@@ -55,7 +55,10 @@ var ActorImage = ({
   xPosition,
   yPosition,
   zIndex,
-  heightMultiplier,
+  scaleY,
+  scaleX,
+  offsetY,
+  offsetX,
   speaker,
   highlightColor,
   onMouseEnter,
@@ -108,7 +111,7 @@ var ActorImage = ({
           opacity: 0,
           x: `${offscreenX}vw`,
           bottom: `${baseY}vh`,
-          height: `${SPEAKING_HEIGHT * heightMultiplier * 0.8}vh`,
+          height: `${SPEAKING_HEIGHT * scaleY * 0.8}vh`,
           filter: "brightness(0.7)",
           rotate: tiltRotate * 1.5,
           transition: {
@@ -122,7 +125,7 @@ var ActorImage = ({
           opacity: 0.85,
           x: `${popInX}vw`,
           bottom: `${baseY}vh`,
-          height: `${SPEAKING_HEIGHT * heightMultiplier * 0.8}vh`,
+          height: `${SPEAKING_HEIGHT * scaleY * 0.8}vh`,
           filter: "brightness(0.9)",
           rotate: tiltRotate,
           transition: {
@@ -136,7 +139,7 @@ var ActorImage = ({
           opacity: 0.85,
           x: `${popInX}vw`,
           bottom: `${baseY}vh`,
-          height: `${IDLE_HEIGHT * heightMultiplier * 0.8}vh`,
+          height: `${IDLE_HEIGHT * scaleY * 0.8}vh`,
           filter: "brightness(0.7)",
           rotate: tiltRotate,
           transition: {
@@ -153,7 +156,7 @@ var ActorImage = ({
         opacity: 0,
         x: `150vw`,
         bottom: `${baseY}vh`,
-        height: `${IDLE_HEIGHT * heightMultiplier}vh`,
+        height: `${IDLE_HEIGHT * scaleY}vh`,
         filter: "brightness(0.8)",
         transition: { x: { ease: easeIn, duration: 0.5 }, bottom: { duration: 0.5 }, opacity: { ease: easeOut, duration: 0.5 } }
       },
@@ -161,7 +164,7 @@ var ActorImage = ({
         opacity: 1,
         x: `${baseX}vw`,
         bottom: `${baseY}vh`,
-        height: `${SPEAKING_HEIGHT * heightMultiplier}vh`,
+        height: `${SPEAKING_HEIGHT * scaleY}vh`,
         filter: "brightness(1)",
         transition: { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } }
       },
@@ -169,12 +172,12 @@ var ActorImage = ({
         opacity: 1,
         x: `${baseX}vw`,
         bottom: `${baseY}vh`,
-        height: `${IDLE_HEIGHT * heightMultiplier}vh`,
+        height: `${IDLE_HEIGHT * scaleY}vh`,
         filter: "brightness(0.8)",
         transition: { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } }
       }
     };
-  }, [baseX, baseY, yPosition, zIndex, heightMultiplier, popInSide]);
+  }, [baseX, baseY, yPosition, zIndex, scaleY, popInSide]);
   const scaleYMotionValue = useMotionValue(1);
   const springScaleY = useSpring(scaleYMotionValue, { stiffness: 360, damping: 40 });
   const [animationParams, setAnimationParams] = useState(() => {
@@ -412,9 +415,10 @@ var ActorImage = ({
         animate: animateProps,
         transformTemplate: (_, generatedTransform) => {
           const baseTransform = generatedTransform?.trim() || "";
-          return baseTransform ? `${baseTransform} translateX(-50%)` : "translateX(-50%)";
+          const positionOffset = `translate(${offsetX}%, ${-offsetY}%)`;
+          return baseTransform ? `${baseTransform} translateX(-50%) ${positionOffset}` : `translateX(-50%) ${positionOffset}`;
         },
-        style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center", scaleY: scaleYStyle },
+        style: { position: "absolute", width: "auto", aspectRatio, overflow: "visible", zIndex: speaker ? 100 : zIndex, transformOrigin: "bottom center", scaleX, scaleY: scaleYStyle },
         children: /* @__PURE__ */ jsxs(
           motion.div,
           {
@@ -2435,7 +2439,10 @@ function NovelVisualizer(props) {
           xPosition,
           yPosition,
           zIndex,
-          heightMultiplier: (isSpeaking ? 1 : sceneActorScale) * (actor.heightMultiplier ?? 1),
+          scaleY: (isSpeaking ? 1 : sceneActorScale) * (actor.scaleY ?? 1),
+          scaleX: actor.scaleX ?? 1,
+          offsetY: actor.offsetY ?? 0,
+          offsetX: actor.offsetX ?? 0,
           speaker: isSpeaking,
           highlightColor: isHovered ? safeLighten(baseHighlightColor, 0.2) : baseHighlightColor,
           isAudioPlaying: isSpeaking && isAudioPlaying && enableTalkingAnimation,
@@ -2462,7 +2469,10 @@ function NovelVisualizer(props) {
             xPosition: popInSpeakerSide === "left" ? 10 : 90,
             yPosition,
             zIndex: 45,
-            heightMultiplier: (isVerticalLayout ? 0.7 : 0.9) * (speakerActor.heightMultiplier ?? 1),
+            scaleY: (isVerticalLayout ? 0.7 : 0.9) * (speakerActor.scaleY ?? 1),
+            scaleX: speakerActor.scaleX ?? 1,
+            offsetY: speakerActor.offsetY ?? 0,
+            offsetX: speakerActor.offsetX ?? 0,
             speaker: true,
             highlightColor: isHovered ? safeLighten(baseHighlightColor, 0.2) : baseHighlightColor,
             popInSide: popInSpeakerSide,

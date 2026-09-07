@@ -23,7 +23,10 @@ interface NovelActor {
     themeColor?: string;
     themeFontFamily?: string;
     defaultImageUrl?: string;
-    heightMultiplier?: number;
+    scaleX?: number;
+    scaleY?: number;
+    offsetX?: number;
+    offsetY?: number;
     filter?: 'ghost' | 'aura' | 'hologram';
     filterColor?: string;
 }
@@ -132,7 +135,10 @@ interface ActorImageProps {
     xPosition: number;
     yPosition: number;
     zIndex: number;
-    heightMultiplier: number;
+    scaleY: number;
+    scaleX: number;
+    offsetY: number;
+    offsetX: number;
     speaker?: boolean;
     highlightColor: string;
     onMouseEnter?: () => void;

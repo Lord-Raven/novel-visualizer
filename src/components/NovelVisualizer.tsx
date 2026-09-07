@@ -657,7 +657,10 @@ export function NovelVisualizer<
                     xPosition={xPosition}
                     yPosition={yPosition}
                     zIndex={zIndex}
-                    heightMultiplier={(isSpeaking ? 1 : sceneActorScale) * (actor.heightMultiplier ?? 1)}
+                    scaleY={(isSpeaking ? 1 : sceneActorScale) * (actor.scaleY ?? 1)}
+                    scaleX={actor.scaleX ?? 1}
+                    offsetY={actor.offsetY ?? 0}
+                    offsetX={actor.offsetX ?? 0}
                     speaker={isSpeaking}
                     highlightColor={isHovered ? safeLighten(baseHighlightColor, 0.2) : baseHighlightColor}
                     isAudioPlaying={isSpeaking && isAudioPlaying && enableTalkingAnimation}
@@ -685,7 +688,10 @@ export function NovelVisualizer<
                     xPosition={popInSpeakerSide === 'left' ? 10 : 90}
                     yPosition={yPosition}
                     zIndex={45}
-                    heightMultiplier={(isVerticalLayout ? 0.7 : 0.9) * (speakerActor.heightMultiplier ?? 1)}
+                    scaleY={(isVerticalLayout ? 0.7 : 0.9) * (speakerActor.scaleY ?? 1)}
+                    scaleX={speakerActor.scaleX ?? 1}
+                    offsetY={speakerActor.offsetY ?? 0}
+                    offsetX={speakerActor.offsetX ?? 0}
                     speaker={true}
                     highlightColor={isHovered ? safeLighten(baseHighlightColor, 0.2) : baseHighlightColor}
                     popInSide={popInSpeakerSide}

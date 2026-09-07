@@ -10,7 +10,10 @@ interface ActorImageProps {
     xPosition: number;
     yPosition: number;
     zIndex: number;
-    heightMultiplier: number;
+    scaleY: number;
+    scaleX: number;
+    offsetY: number;
+    offsetX: number;
     // 'speaker' indicates whether this actor is currently speaking and should be emphasized
     speaker?: boolean;
     highlightColor: string;
@@ -34,7 +37,10 @@ const ActorImage: FC<ActorImageProps> = ({
     xPosition,
     yPosition,
     zIndex,
-    heightMultiplier,
+    scaleY,
+    scaleX,
+    offsetY,
+    offsetX,
     speaker,
     highlightColor,
     onMouseEnter,
@@ -98,7 +104,7 @@ const ActorImage: FC<ActorImageProps> = ({
                     opacity: 0,
                     x: `${offscreenX}vw`,
                     bottom: `${baseY}vh`,
-                    height: `${SPEAKING_HEIGHT * heightMultiplier * 0.8}vh`,
+                    height: `${SPEAKING_HEIGHT * scaleY * 0.8}vh`,
                     filter: 'brightness(0.7)',
                     rotate: tiltRotate * 1.5,
                     transition: { 
@@ -112,7 +118,7 @@ const ActorImage: FC<ActorImageProps> = ({
                     opacity: 0.85,
                     x: `${popInX}vw`,
                     bottom: `${baseY}vh`,
-                    height: `${SPEAKING_HEIGHT * heightMultiplier * 0.8}vh`,
+                    height: `${SPEAKING_HEIGHT * scaleY * 0.8}vh`,
                     filter: 'brightness(0.9)',
                     rotate: tiltRotate,
                     transition: { 
@@ -126,7 +132,7 @@ const ActorImage: FC<ActorImageProps> = ({
                     opacity: 0.85,
                     x: `${popInX}vw`,
                     bottom: `${baseY}vh`,
-                    height: `${IDLE_HEIGHT * heightMultiplier * 0.8}vh`,
+                    height: `${IDLE_HEIGHT * scaleY * 0.8}vh`,
                     filter: 'brightness(0.7)',
                     rotate: tiltRotate,
                     transition: { 
@@ -145,7 +151,7 @@ const ActorImage: FC<ActorImageProps> = ({
                 opacity: 0,
                 x: `150vw`,
                 bottom: `${baseY}vh`,
-                height: `${IDLE_HEIGHT * heightMultiplier}vh`,
+                height: `${IDLE_HEIGHT * scaleY}vh`,
                 filter: 'brightness(0.8)',
                 transition: { x: { ease: easeIn, duration: 0.5 }, bottom: { duration: 0.5 }, opacity: { ease: easeOut, duration: 0.5 } }
             },
@@ -153,7 +159,7 @@ const ActorImage: FC<ActorImageProps> = ({
                 opacity: 1,
                 x: `${baseX}vw`,
                 bottom: `${baseY}vh`,
-                height: `${(SPEAKING_HEIGHT * heightMultiplier)}vh`,
+                height: `${SPEAKING_HEIGHT * scaleY}vh`,
                 filter: 'brightness(1)',
                 transition: { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } }
             },
@@ -161,12 +167,12 @@ const ActorImage: FC<ActorImageProps> = ({
                 opacity: 1,
                 x: `${baseX}vw`,
                 bottom: `${baseY}vh`,
-                height: `${(IDLE_HEIGHT * heightMultiplier)}vh`,
+                height: `${IDLE_HEIGHT * scaleY}vh`,
                 filter: 'brightness(0.8)',
                 transition: { x: { ease: easeIn, duration: 0.3 }, bottom: { duration: 0.3 }, opacity: { ease: easeOut, duration: 0.3 } }
             }
         };
-    }, [baseX, baseY, yPosition, zIndex, heightMultiplier, popInSide]);
+    }, [baseX, baseY, yPosition, zIndex, scaleY, popInSide]);
 
     // Motion value for scaleY – driven by the audio analyser (RAF loop) when available,
     // or left at 1 when using the fallback interval approach (scaleY goes into animate then).
@@ -491,11 +497,12 @@ const ActorImage: FC<ActorImageProps> = ({
             animate={animateProps}
             transformTemplate={(_, generatedTransform) => {
                 const baseTransform = generatedTransform?.trim() || '';
+                const positionOffset = `translate(${offsetX}%, ${-offsetY}%)`;
                 return baseTransform
-                    ? `${baseTransform} translateX(-50%)`
-                    : 'translateX(-50%)';
+                    ? `${baseTransform} translateX(-50%) ${positionOffset}`
+                    : `translateX(-50%) ${positionOffset}`;
             }}
-            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center', scaleY: scaleYStyle}}>
+            style={{position: 'absolute', width: 'auto', aspectRatio, overflow: 'visible', zIndex: speaker ? 100 : zIndex, transformOrigin: 'bottom center', scaleX, scaleY: scaleYStyle}}>
             <motion.div
                 initial={false}
                 animate={ghostFloatAnimation ? { x: ghostFloatAnimation.x, y: ghostFloatAnimation.y } : { x: 0, y: 0 }}
