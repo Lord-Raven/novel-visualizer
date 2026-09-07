@@ -343,7 +343,7 @@ const ActorImage: FC<ActorImageProps> = ({
     }, [speaker, isAudioPlaying, audioAnalyser, variants, popInSide, animationParams]);
 
     // Use a hard rest scale when audio is inactive so there is no residual spring motion.
-    const scaleYStyle = speaker && isAudioPlaying ? springScaleY : scale;
+    const scaleYStyle = speaker && isAudioPlaying ? springScaleY : 1;
 
     const tintFilterId = `tint-${id}`;
     const ghostTintFilterId = `ghost-tint-${id}`;

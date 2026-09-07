@@ -279,7 +279,7 @@ var ActorImage = ({
     }
     return speaker ? "talking" : "idle";
   }, [speaker, isAudioPlaying, audioAnalyser, variants, popInSide, animationParams]);
-  const scaleYStyle = speaker && isAudioPlaying ? springScaleY : scale;
+  const scaleYStyle = speaker && isAudioPlaying ? springScaleY : 1;
   const tintFilterId = `tint-${id}`;
   const ghostTintFilterId = `ghost-tint-${id}`;
   const auraGlowFilterId = `aura-glow-${id}`;
