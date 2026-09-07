@@ -5,10 +5,6 @@ export interface NovelActor {
     themeColor?: string;
     themeFontFamily?: string;
     defaultImageUrl?: string;
-    scaleX?: number | (() => number);
-    scaleY?: number | (() => number);
-    offsetX?: number | (() => number);
-    offsetY?: number | (() => number);
     filter?: 'ghost' | 'aura' | 'hologram';
     filterColor?: string;
 }
@@ -34,3 +30,9 @@ export interface NovelSkit<TEntry extends NovelScriptEntry = NovelScriptEntry> {
     script: TEntry[];
 }
 
+export interface NovelScaleOffset {
+    scaleX?: number | (() => number);
+    scaleY?: number | (() => number);
+    offsetX?: number | (() => number);
+    offsetY?: number | (() => number);
+}

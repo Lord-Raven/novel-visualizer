@@ -2042,9 +2042,6 @@ var applyPopInSideSkew = (xPosition, popInSide) => {
   const proximityToLeft = Math.max(0, Math.min(1, (100 - xPosition) / 100));
   return Math.round((xPosition + proximityToLeft * MAX_SKEW) * 10) / 10;
 };
-var resolveActorNumber = (value, fallback) => {
-  return typeof value === "function" ? value() : value ?? fallback;
-};
 function NovelVisualizer(props) {
   const theme = (0, import_styles2.useTheme)();
   const {
@@ -2065,6 +2062,7 @@ function NovelVisualizer(props) {
     getActorImageUrl,
     getActorImageColorMultiplier,
     getActorFilter,
+    getActorScaleOffset,
     getPresentActors,
     backgroundElements,
     backgroundOptions,
@@ -2473,6 +2471,7 @@ function NovelVisualizer(props) {
       const zIndex = 50 - Math.abs(xPosition - 50);
       const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(actor, activeScript, index) : "#ffffff";
       const filterProps = getActorFilter ? getActorFilter(actor, activeScript, index) : { filter: actor.filter, filterColor: actor.filterColor || "#ffffff" };
+      const scaleOffset = getActorScaleOffset ? getActorScaleOffset(actor, activeScript, index) : { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 };
       return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
         ActorImage_default,
         {
@@ -2483,10 +2482,10 @@ function NovelVisualizer(props) {
           xPosition,
           yPosition,
           zIndex,
-          scaleY: (isSpeaking ? 1 : sceneActorScale) * resolveActorNumber(actor.scaleY, 1),
-          scaleX: resolveActorNumber(actor.scaleX, 1),
-          offsetY: resolveActorNumber(actor.offsetY, 0),
-          offsetX: resolveActorNumber(actor.offsetX, 0),
+          scaleX: scaleOffset?.scaleX ?? 1,
+          scaleY: (isSpeaking ? 1 : sceneActorScale) * (scaleOffset?.scaleY ?? 1),
+          offsetX: scaleOffset?.offsetX ?? 0,
+          offsetY: scaleOffset?.offsetY ?? 0,
           speaker: isSpeaking,
           highlightColor: isHovered ? safeLighten(baseHighlightColor, 0.2) : baseHighlightColor,
           isAudioPlaying: isSpeaking && isAudioPlaying && enableTalkingAnimation,
@@ -2502,6 +2501,7 @@ function NovelVisualizer(props) {
       const isHovered = speakerActor === hoveredActor;
       const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(speakerActor, activeScript, index) : "#ffffff";
       const filterProps = getActorFilter ? getActorFilter(speakerActor, activeScript, index) : { filter: speakerActor.filter, filterColor: speakerActor.filterColor || "#ffffff" };
+      const popInScaleOffset = getActorScaleOffset ? getActorScaleOffset(speakerActor, activeScript, index) : { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 };
       actorElements.push(
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
           ActorImage_default,
@@ -2513,10 +2513,10 @@ function NovelVisualizer(props) {
             xPosition: popInSpeakerSide === "left" ? 10 : 90,
             yPosition,
             zIndex: 45,
-            scaleY: (isVerticalLayout ? 0.7 : 0.9) * resolveActorNumber(speakerActor.scaleY, 1),
-            scaleX: resolveActorNumber(speakerActor.scaleX, 1),
-            offsetY: resolveActorNumber(speakerActor.offsetY, 0),
-            offsetX: resolveActorNumber(speakerActor.offsetX, 0),
+            scaleX: popInScaleOffset?.scaleX ?? 1,
+            scaleY: (isVerticalLayout ? 0.7 : 0.9) * (popInScaleOffset?.scaleY ?? 1),
+            offsetX: popInScaleOffset?.offsetX ?? 0,
+            offsetY: popInScaleOffset?.offsetY ?? 0,
             speaker: true,
             highlightColor: isHovered ? safeLighten(baseHighlightColor, 0.2) : baseHighlightColor,
             popInSide: popInSpeakerSide,

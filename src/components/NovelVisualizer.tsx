@@ -51,10 +51,6 @@ const applyPopInSideSkew = (
     return Math.round((xPosition + proximityToLeft * MAX_SKEW) * 10) / 10;
 };
 
-const resolveActorNumber = (value: number | (() => number) | undefined, fallback: number): number => {
-    return typeof value === 'function' ? value() : (value ?? fallback);
-};
-
 /**
  * Props for the NovelVisualizer component.
  * @template TScript - The script type
@@ -82,6 +78,7 @@ export interface NovelVisualizerProps<
     getPresentActors: (skit: TSkit, index: number) => TActor[];
     getActorImageUrl: (actor: TActor, skit: TSkit, index: number) => string;
     getActorImageColorMultiplier?: (actor: TActor, skit: TSkit, index: number) => string;
+    getActorScaleOffset?: (actor: TActor, skit: TSkit, index: number) => NovelScaleOffset;
     getActorFilter?: (actor: TActor, skit: TSkit, index: number) => { filter?: 'ghost' | 'aura' | 'hologram'; filterColor?: string };
     backgroundElements?: React.ReactNode | ((context: {
         skit: TSkit;
@@ -151,6 +148,7 @@ export function NovelVisualizer<
         getActorImageUrl,
         getActorImageColorMultiplier,
         getActorFilter,
+        getActorScaleOffset,
         getPresentActors,
         backgroundElements,
         backgroundOptions,
@@ -650,6 +648,8 @@ export function NovelVisualizer<
             const zIndex = 50 - Math.abs(xPosition - 50);
             const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(actor, activeScript, index) : "#ffffff";
             const filterProps = getActorFilter ? getActorFilter(actor, activeScript, index) : {filter: actor.filter, filterColor: actor.filterColor || '#ffffff'};
+            const scaleOffset = getActorScaleOffset ? getActorScaleOffset(actor, activeScript, index) : { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 };
+
 
             return (
                 <ActorImage
@@ -661,10 +661,10 @@ export function NovelVisualizer<
                     xPosition={xPosition}
                     yPosition={yPosition}
                     zIndex={zIndex}
-                    scaleY={(isSpeaking ? 1 : sceneActorScale) * (resolveActorNumber(actor.scaleY, 1))}
-                    scaleX={resolveActorNumber(actor.scaleX, 1)}
-                    offsetY={resolveActorNumber(actor.offsetY, 0)}
-                    offsetX={resolveActorNumber(actor.offsetX, 0)}
+                    scaleX={scaleOffset?.scaleX ?? 1}
+                    scaleY={(isSpeaking ? 1 : sceneActorScale) * (scaleOffset?.scaleY ?? 1)}
+                    offsetX={scaleOffset?.offsetX ?? 0}
+                    offsetY={scaleOffset?.offsetY ?? 0}
                     speaker={isSpeaking}
                     highlightColor={isHovered ? safeLighten(baseHighlightColor, 0.2) : baseHighlightColor}
                     isAudioPlaying={isSpeaking && isAudioPlaying && enableTalkingAnimation}
@@ -681,7 +681,8 @@ export function NovelVisualizer<
             const isHovered = speakerActor === hoveredActor;
             const baseHighlightColor = getActorImageColorMultiplier ? getActorImageColorMultiplier(speakerActor, activeScript, index) : "#ffffff";
             const filterProps = getActorFilter ? getActorFilter(speakerActor, activeScript, index) : {filter: speakerActor.filter, filterColor: speakerActor.filterColor || '#ffffff'};
-            
+            const popInScaleOffset = getActorScaleOffset ? getActorScaleOffset(speakerActor, activeScript, index) : { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 };
+
             actorElements.push(
                 <ActorImage
                     key={`pop-in-${speakerActor.id}`}
@@ -692,10 +693,10 @@ export function NovelVisualizer<
                     xPosition={popInSpeakerSide === 'left' ? 10 : 90}
                     yPosition={yPosition}
                     zIndex={45}
-                    scaleY={(isVerticalLayout ? 0.7 : 0.9) * resolveActorNumber(speakerActor.scaleY, 1)}
-                    scaleX={resolveActorNumber(speakerActor.scaleX, 1)}
-                    offsetY={resolveActorNumber(speakerActor.offsetY, 0)}
-                    offsetX={resolveActorNumber(speakerActor.offsetX, 0)}
+                    scaleX={popInScaleOffset?.scaleX ?? 1}
+                    scaleY={(isVerticalLayout ? 0.7 : 0.9) * (popInScaleOffset?.scaleY ?? 1)}
+                    offsetX={popInScaleOffset?.offsetX ?? 0}
+                    offsetY={popInScaleOffset?.offsetY ?? 0}
                     speaker={true}
                     highlightColor={isHovered ? safeLighten(baseHighlightColor, 0.2) : baseHighlightColor}
                     popInSide={popInSpeakerSide}
