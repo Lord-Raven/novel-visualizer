@@ -169,6 +169,12 @@ interface BlurredBackgroundProps {
  */
 declare const BlurredBackground: FC<BlurredBackgroundProps>;
 
+interface FontHandlerProps {
+    fontFamilies: string[];
+}
+declare const getFontSizeMultiplier: (fontStack?: string) => number;
+declare const FontHandler: FC<FontHandlerProps>;
+
 interface TypeOutProps {
     children: React__default.ReactNode;
     speed?: number;
@@ -178,4 +184,4 @@ interface TypeOutProps {
 }
 declare const TypeOut: React__default.FC<TypeOutProps>;
 
-export { _default as ActorImage, type NovelSkit as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, type FormatInlineStylesOptions, type InlineClassStyle, type InlineStyleContext, type NovelActor, NovelVisualizer, type NovelVisualizerProps, type SubmitButtonConfig, TypeOut, defaultInlineClassStyles, formatInlineStyles };
+export { _default as ActorImage, type NovelSkit as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, FontHandler, type FormatInlineStylesOptions, type InlineClassStyle, type InlineStyleContext, type NovelActor, NovelVisualizer, type NovelVisualizerProps, type SubmitButtonConfig, TypeOut, defaultInlineClassStyles, formatInlineStyles, getFontSizeMultiplier };

@@ -1,8 +1,7 @@
 import { FC, useEffect, useState } from 'react';
-import { Stage } from '../Stage';
 
 interface FontHandlerProps {
-	stage: () => Stage;
+	fontFamilies: string[];
 }
 
 const GOOGLE_FONT_LINK_ATTRIBUTE = 'data-agenda-google-font';
@@ -206,19 +205,7 @@ export const buildGoogleFontImportRules = (fontStacks: Array<string | undefined>
 		.join(' ');
 };
 
-const collectStageFontFamilies = (stageInstance: Stage): string[] => {
-	const uiSettings = stageInstance.getUiSettings();
-	const save = stageInstance.getSave();
-	const configuration = stageInstance.getConfiguration();
-	const fontStacks = [
-		uiSettings.primaryFontFamily,
-		uiSettings.secondaryFontFamily,
-		uiSettings.flavorFontFamily,
-		...Object.values(save.actors || {}).map(actor => actor.themeFontFamily),
-		...(configuration.actors || []).map(actor => actor.themeFontFamily),
-	];
-	return collectFontFamilies(fontStacks);
-};
+
 
 const ensureGoogleFontPreconnects = () => {
 	const existingPreconnects = document.head.querySelectorAll(`link[${GOOGLE_FONT_PRECONNECT_ATTRIBUTE}]`);
@@ -271,19 +258,19 @@ const syncGoogleFontLinks = (fontFamilies: string[]) => {
 	}
 };
 
-export const FontHandler: FC<FontHandlerProps> = ({ stage }) => {
+export const FontHandler: FC<FontHandlerProps> = ({ fontFamilies }) => {
 	const [fontSignature, setFontSignature] = useState('');
 
 	useEffect(() => {
 		const refreshFontSignature = () => {
-			setFontSignature(collectStageFontFamilies(stage()).join('\n'));
+			setFontSignature(fontFamilies.join('\n'));
 		};
 
 		refreshFontSignature();
 		const intervalId = window.setInterval(refreshFontSignature, FONT_REFRESH_INTERVAL_MS);
 
 		return () => window.clearInterval(intervalId);
-	}, [stage]);
+	}, [fontFamilies]);
 
 	useEffect(() => {
 		syncGoogleFontLinks(fontSignature ? fontSignature.split('\n') : []);
@@ -298,3 +285,5 @@ export const FontHandler: FC<FontHandlerProps> = ({ stage }) => {
 
 	return null;
 };
+
+export default FontHandler;

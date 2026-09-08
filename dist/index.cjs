@@ -32,10 +32,12 @@ var index_exports = {};
 __export(index_exports, {
   ActorImage: () => ActorImage_default,
   BlurredBackground: () => BlurredBackground_default,
+  FontHandler: () => FontHandler_default,
   NovelVisualizer: () => NovelVisualizer_default,
   TypeOut: () => TypeOut_default,
   defaultInlineClassStyles: () => defaultInlineClassStyles,
-  formatInlineStyles: () => formatInlineStyles
+  formatInlineStyles: () => formatInlineStyles,
+  getFontSizeMultiplier: () => getFontSizeMultiplier
 });
 module.exports = __toCommonJS(index_exports);
 
@@ -898,6 +900,10 @@ var import_react5 = __toESM(require("react"), 1);
 
 // src/components/FontHandler.tsx
 var import_react4 = require("react");
+var GOOGLE_FONT_LINK_ATTRIBUTE = "data-agenda-google-font";
+var GOOGLE_FONT_PRECONNECT_ATTRIBUTE = "data-agenda-google-font-preconnect";
+var GOOGLE_FONT_VARIANTS = ":ital,wght@0,400;0,700;1,400;1,700";
+var FONT_REFRESH_INTERVAL_MS = 500;
 var FONT_MEASUREMENT_SIZE_PX = 100;
 var TARGET_X_HEIGHT_RATIO = 0.52;
 var MIN_FONT_SIZE_MULTIPLIER = 0.88;
@@ -907,6 +913,10 @@ var normalizeFontFamily = (fontFamily) => {
   const trimmed = fontFamily.trim();
   const unquoted = trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'") ? trimmed.slice(1, -1) : trimmed;
   return unquoted.replace(/\\(["'])/g, "$1").replace(/\s+/g, " ").trim();
+};
+var buildGoogleFontHref = (fontFamily) => {
+  const encodedFamily = encodeURIComponent(fontFamily).replace(/%20/g, "+");
+  return `https://fonts.googleapis.com/css2?family=${encodedFamily}${GOOGLE_FONT_VARIANTS}&display=swap`;
 };
 var clampFontSizeMultiplier = (multiplier) => {
   return Math.max(MIN_FONT_SIZE_MULTIPLIER, Math.min(MAX_FONT_SIZE_MULTIPLIER, multiplier));
@@ -926,6 +936,9 @@ var measureFontXHeightRatio = (fontStack) => {
   const xHeight = (metrics.actualBoundingBoxAscent ?? 0) + (metrics.actualBoundingBoxDescent ?? 0);
   return xHeight > 0 ? xHeight / FONT_MEASUREMENT_SIZE_PX : null;
 };
+var clearFontSizeMultiplierCache = () => {
+  fontSizeMultiplierCache.clear();
+};
 var getFontSizeMultiplier = (fontStack) => {
   const trimmedFontStack = fontStack?.trim();
   if (!trimmedFontStack) {
@@ -941,6 +954,72 @@ var getFontSizeMultiplier = (fontStack) => {
   fontSizeMultiplierCache.set(cacheKey, multiplier);
   return multiplier;
 };
+var ensureGoogleFontPreconnects = () => {
+  const existingPreconnects = document.head.querySelectorAll(`link[${GOOGLE_FONT_PRECONNECT_ATTRIBUTE}]`);
+  if (existingPreconnects.length > 0) {
+    return;
+  }
+  [
+    { href: "https://fonts.googleapis.com" },
+    { href: "https://fonts.gstatic.com", crossOrigin: "anonymous" }
+  ].forEach(({ href, crossOrigin }) => {
+    const link = document.createElement("link");
+    link.rel = "preconnect";
+    link.href = href;
+    link.setAttribute(GOOGLE_FONT_PRECONNECT_ATTRIBUTE, "true");
+    if (crossOrigin) {
+      link.crossOrigin = crossOrigin;
+    }
+    document.head.appendChild(link);
+  });
+};
+var syncGoogleFontLinks = (fontFamilies) => {
+  ensureGoogleFontPreconnects();
+  const nextFontKeys = new Set(fontFamilies.map((fontFamily) => fontFamily.toLowerCase()));
+  document.head.querySelectorAll(`link[${GOOGLE_FONT_LINK_ATTRIBUTE}]`).forEach((link) => {
+    const fontKey = link.getAttribute(GOOGLE_FONT_LINK_ATTRIBUTE) || "";
+    if (!nextFontKeys.has(fontKey)) {
+      link.remove();
+    }
+  });
+  fontFamilies.forEach((fontFamily) => {
+    const fontKey = fontFamily.toLowerCase();
+    const existingLink = document.head.querySelector(`link[${GOOGLE_FONT_LINK_ATTRIBUTE}="${CSS.escape(fontKey)}"]`);
+    if (existingLink) {
+      return;
+    }
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = buildGoogleFontHref(fontFamily);
+    link.setAttribute(GOOGLE_FONT_LINK_ATTRIBUTE, fontKey);
+    document.head.appendChild(link);
+  });
+  if (document.fonts) {
+    document.fonts.ready.then(clearFontSizeMultiplierCache).catch(() => void 0);
+  }
+};
+var FontHandler = ({ fontFamilies }) => {
+  const [fontSignature, setFontSignature] = (0, import_react4.useState)("");
+  (0, import_react4.useEffect)(() => {
+    const refreshFontSignature = () => {
+      setFontSignature(fontFamilies.join("\n"));
+    };
+    refreshFontSignature();
+    const intervalId = window.setInterval(refreshFontSignature, FONT_REFRESH_INTERVAL_MS);
+    return () => window.clearInterval(intervalId);
+  }, [fontFamilies]);
+  (0, import_react4.useEffect)(() => {
+    syncGoogleFontLinks(fontSignature ? fontSignature.split("\n") : []);
+  }, [fontSignature]);
+  (0, import_react4.useEffect)(() => {
+    return () => {
+      document.head.querySelectorAll(`link[${GOOGLE_FONT_LINK_ATTRIBUTE}]`).forEach((link) => link.remove());
+      document.head.querySelectorAll(`link[${GOOGLE_FONT_PRECONNECT_ATTRIBUTE}]`).forEach((link) => link.remove());
+    };
+  }, []);
+  return null;
+};
+var FontHandler_default = FontHandler;
 
 // src/utils/TextFormatting.tsx
 var import_jsx_runtime4 = require("react/jsx-runtime");
@@ -3147,8 +3226,10 @@ var NovelVisualizer_default = NovelVisualizer;
 0 && (module.exports = {
   ActorImage,
   BlurredBackground,
+  FontHandler,
   NovelVisualizer,
   TypeOut,
   defaultInlineClassStyles,
-  formatInlineStyles
+  formatInlineStyles,
+  getFontSizeMultiplier
 });
