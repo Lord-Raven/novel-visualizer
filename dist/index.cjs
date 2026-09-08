@@ -40,7 +40,7 @@ __export(index_exports, {
 module.exports = __toCommonJS(index_exports);
 
 // src/components/NovelVisualizer.tsx
-var import_react5 = __toESM(require("react"), 1);
+var import_react6 = __toESM(require("react"), 1);
 var import_material = require("@mui/material");
 var import_styles2 = require("@mui/material/styles");
 
@@ -894,7 +894,55 @@ var TypeOut = ({
 var TypeOut_default = TypeOut;
 
 // src/utils/TextFormatting.tsx
-var import_react4 = __toESM(require("react"), 1);
+var import_react5 = __toESM(require("react"), 1);
+
+// src/components/FontHandler.tsx
+var import_react4 = require("react");
+var FONT_MEASUREMENT_SIZE_PX = 100;
+var TARGET_X_HEIGHT_RATIO = 0.52;
+var MIN_FONT_SIZE_MULTIPLIER = 0.88;
+var MAX_FONT_SIZE_MULTIPLIER = 1.18;
+var fontSizeMultiplierCache = /* @__PURE__ */ new Map();
+var normalizeFontFamily = (fontFamily) => {
+  const trimmed = fontFamily.trim();
+  const unquoted = trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'") ? trimmed.slice(1, -1) : trimmed;
+  return unquoted.replace(/\\(["'])/g, "$1").replace(/\s+/g, " ").trim();
+};
+var clampFontSizeMultiplier = (multiplier) => {
+  return Math.max(MIN_FONT_SIZE_MULTIPLIER, Math.min(MAX_FONT_SIZE_MULTIPLIER, multiplier));
+};
+var getFontCacheKey = (fontStack) => normalizeFontFamily(fontStack).toLowerCase();
+var measureFontXHeightRatio = (fontStack) => {
+  if (typeof document === "undefined") {
+    return null;
+  }
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return null;
+  }
+  context.font = `400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontStack}`;
+  const metrics = context.measureText("x");
+  const xHeight = (metrics.actualBoundingBoxAscent ?? 0) + (metrics.actualBoundingBoxDescent ?? 0);
+  return xHeight > 0 ? xHeight / FONT_MEASUREMENT_SIZE_PX : null;
+};
+var getFontSizeMultiplier = (fontStack) => {
+  const trimmedFontStack = fontStack?.trim();
+  if (!trimmedFontStack) {
+    return 1;
+  }
+  const cacheKey = getFontCacheKey(trimmedFontStack);
+  const cachedMultiplier = fontSizeMultiplierCache.get(cacheKey);
+  if (cachedMultiplier !== void 0) {
+    return cachedMultiplier;
+  }
+  const xHeightRatio = measureFontXHeightRatio(trimmedFontStack);
+  const multiplier = xHeightRatio ? clampFontSizeMultiplier(TARGET_X_HEIGHT_RATIO / xHeightRatio) : 1;
+  fontSizeMultiplierCache.set(cacheKey, multiplier);
+  return multiplier;
+};
+
+// src/utils/TextFormatting.tsx
 var import_jsx_runtime4 = require("react/jsx-runtime");
 var INLINE_STYLE_SHEET_ID = "novel-visualizer-inline-style-presets";
 var INLINE_STYLE_PRESET_CSS = `
@@ -1733,12 +1781,12 @@ var renderPerCharacterSegment = (segmentText, activeClass, resolvedStyle, segmen
   if (activeClass === "sigh") {
     return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: activeClass, style: { ...resolvedStyle, textShadow: "none" }, children: tokens.map((token, tokenIndex) => {
       if (/^\s+$/.test(token)) {
-        return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react4.default.Fragment, { children: token }, `${segmentKey}-ws-${tokenIndex}`);
+        return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.default.Fragment, { children: token }, `${segmentKey}-ws-${tokenIndex}`);
       }
       const characters = Array.from(token);
       return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: { display: "inline-block" }, children: characters.map((character, characterIndex) => {
         if (isWhitespaceCharacter(character)) {
-          return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react4.default.Fragment, { children: character }, `${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`);
+          return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.default.Fragment, { children: character }, `${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`);
         }
         const characterDelay = `${Math.min(characterIndex * 14, 140)}ms`;
         return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
@@ -1788,12 +1836,12 @@ var renderPerCharacterSegment = (segmentText, activeClass, resolvedStyle, segmen
   }
   return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: activeClass, style: resolvedStyle, children: tokens.map((token, tokenIndex) => {
     if (/^\s+$/.test(token)) {
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react4.default.Fragment, { children: token }, `${segmentKey}-ws-${tokenIndex}`);
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.default.Fragment, { children: token }, `${segmentKey}-ws-${tokenIndex}`);
     }
     const characters = Array.from(token);
     return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: { display: "inline-block" }, children: characters.map((character, characterIndex) => {
       if (isWhitespaceCharacter(character)) {
-        return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react4.default.Fragment, { children: character }, `${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`);
+        return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.default.Fragment, { children: character }, `${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`);
       }
       return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
         "span",
@@ -1932,11 +1980,11 @@ var formatInlineStyles = (text, options, initialActiveClass = null) => {
   const renderSegment = (segmentText, activeClass, segmentKey) => {
     if (!segmentText) return null;
     if (activeClass === null) {
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react4.default.Fragment, { children: formatHeaders(segmentText) }, segmentKey);
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.default.Fragment, { children: formatHeaders(segmentText) }, segmentKey);
     }
     const resolvedStyle = getResolvedClassStyle(classStyles[activeClass], styleContext);
     if (!resolvedStyle) {
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react4.default.Fragment, { children: formatHeaders(segmentText) }, segmentKey);
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.default.Fragment, { children: formatHeaders(segmentText) }, segmentKey);
     }
     if (PER_CHARACTER_INLINE_CLASSES.has(activeClass) && !MARKDOWN_INLINE_PATTERN.test(segmentText)) {
       return renderPerCharacterSegment(segmentText, activeClass, resolvedStyle, segmentKey);
@@ -1985,11 +2033,13 @@ var formatMessageWithStyles = (text, options) => {
   const dialogueStyle = {
     color: brightenedColor,
     fontFamily: options.speakerThemeFontFamily || options.tokens.fallbackFontFamily,
+    fontSize: `${getFontSizeMultiplier(options.speakerThemeFontFamily || options.tokens.fallbackFontFamily)}em`,
     textShadow: options.speakerThemeColor ? `2px 2px 2px ${safeDarken(options.speakerThemeColor, 0.3)}` : options.tokens.defaultDialogueShadow
   };
   const proseStyle = {
     color: options.proseColor,
     fontFamily: options.tokens.fallbackFontFamily,
+    fontSize: `${getFontSizeMultiplier(options.tokens.fallbackFontFamily)}em`,
     textShadow: options.tokens.baseTextShadow
   };
   let activeInlineClass = null;
@@ -2078,30 +2128,30 @@ function NovelVisualizer(props) {
     inlineStyleOptions,
     messageWindowSx
   } = props;
-  const [inputText, setInputText] = (0, import_react5.useState)("");
-  const [finishTyping, setFinishTyping] = (0, import_react5.useState)(false);
-  const [messageKey, setMessageKey] = import_react5.default.useState(0);
-  const [hoveredActor, setHoveredActor] = (0, import_react5.useState)(null);
-  const currentAudioRef = import_react5.default.useRef(null);
-  const audioContextRef = import_react5.default.useRef(null);
-  const currentAudioSourceRef = import_react5.default.useRef(null);
-  const currentAudioAnalyserRef = import_react5.default.useRef(null);
-  const [isAudioPlaying, setIsAudioPlaying] = import_react5.default.useState(false);
-  const [audioAnalyser, setAudioAnalyser] = import_react5.default.useState(null);
-  const [mousePosition, setMousePosition] = (0, import_react5.useState)(null);
-  const [messageBoxTopVh, setMessageBoxTopVh] = (0, import_react5.useState)(isVerticalLayout ? 50 : 60);
-  const [loading, setLoading] = (0, import_react5.useState)(false);
+  const [inputText, setInputText] = (0, import_react6.useState)("");
+  const [finishTyping, setFinishTyping] = (0, import_react6.useState)(false);
+  const [messageKey, setMessageKey] = import_react6.default.useState(0);
+  const [hoveredActor, setHoveredActor] = (0, import_react6.useState)(null);
+  const currentAudioRef = import_react6.default.useRef(null);
+  const audioContextRef = import_react6.default.useRef(null);
+  const currentAudioSourceRef = import_react6.default.useRef(null);
+  const currentAudioAnalyserRef = import_react6.default.useRef(null);
+  const [isAudioPlaying, setIsAudioPlaying] = import_react6.default.useState(false);
+  const [audioAnalyser, setAudioAnalyser] = import_react6.default.useState(null);
+  const [mousePosition, setMousePosition] = (0, import_react6.useState)(null);
+  const [messageBoxTopVh, setMessageBoxTopVh] = (0, import_react6.useState)(isVerticalLayout ? 50 : 60);
+  const [loading, setLoading] = (0, import_react6.useState)(false);
   const isLoading = loading || externalLoading;
-  const messageBoxRef = (0, import_react5.useRef)(null);
-  const [isEditingMessage, setIsEditingMessage] = (0, import_react5.useState)(false);
-  const [editedMessage, setEditedMessage] = (0, import_react5.useState)("");
-  const [originalMessage, setOriginalMessage] = (0, import_react5.useState)("");
-  const [localSkit, setLocalSkit] = (0, import_react5.useState)(skit);
-  const scriptEntries = (0, import_react5.useMemo)(() => localSkit?.script ?? [], [localSkit]);
-  const [index, setIndex] = (0, import_react5.useState)(skit?.currentIndex ?? -1);
-  const prevIndexRef = (0, import_react5.useRef)(index);
-  const prevTypingIndexRef = (0, import_react5.useRef)(index);
-  const prevExternalLoadingRef = (0, import_react5.useRef)(externalLoading);
+  const messageBoxRef = (0, import_react6.useRef)(null);
+  const [isEditingMessage, setIsEditingMessage] = (0, import_react6.useState)(false);
+  const [editedMessage, setEditedMessage] = (0, import_react6.useState)("");
+  const [originalMessage, setOriginalMessage] = (0, import_react6.useState)("");
+  const [localSkit, setLocalSkit] = (0, import_react6.useState)(skit);
+  const scriptEntries = (0, import_react6.useMemo)(() => localSkit?.script ?? [], [localSkit]);
+  const [index, setIndex] = (0, import_react6.useState)(skit?.currentIndex ?? -1);
+  const prevIndexRef = (0, import_react6.useRef)(index);
+  const prevTypingIndexRef = (0, import_react6.useRef)(index);
+  const prevExternalLoadingRef = (0, import_react6.useRef)(externalLoading);
   const accentMain = theme.palette.primary.main;
   const accentLight = theme.palette.primary.light;
   const errorMain = theme.palette.error.main;
@@ -2117,11 +2167,11 @@ function NovelVisualizer(props) {
     };
     return schemeMap[colorScheme] || theme.palette.primary.main;
   };
-  const baseTextShadow = (0, import_react5.useMemo)(
+  const baseTextShadow = (0, import_react6.useMemo)(
     () => `2px 2px 2px ${safeAlpha(theme.palette.common.black, 0.8)}`,
     [theme]
   );
-  const messageTokens = (0, import_react5.useMemo)(
+  const messageTokens = (0, import_react6.useMemo)(
     () => ({
       baseTextShadow,
       defaultDialogueColor: theme.palette.info.light,
@@ -2130,14 +2180,14 @@ function NovelVisualizer(props) {
     }),
     [baseTextShadow, theme]
   );
-  const cleanupCurrentAudioGraph = import_react5.default.useCallback(() => {
+  const cleanupCurrentAudioGraph = import_react6.default.useCallback(() => {
     currentAudioSourceRef.current?.disconnect();
     currentAudioAnalyserRef.current?.disconnect();
     currentAudioSourceRef.current = null;
     currentAudioAnalyserRef.current = null;
     setAudioAnalyser(null);
   }, []);
-  const attachAudioAnalyser = import_react5.default.useCallback((audio) => {
+  const attachAudioAnalyser = import_react6.default.useCallback((audio) => {
     if (typeof window === "undefined" || typeof window.AudioContext === "undefined") {
       cleanupCurrentAudioGraph();
       return null;
@@ -2178,12 +2228,12 @@ function NovelVisualizer(props) {
       inlineStyleOptions
     });
   };
-  (0, import_react5.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     if (skit != localSkit) {
       setLocalSkit(skit);
     }
   }, [skit, externalLoading]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     if (skit && localSkit) {
       skit.currentIndex = localSkit?.currentIndex ?? skit.currentIndex;
       skit.script = localSkit?.script ?? skit.script;
@@ -2192,7 +2242,7 @@ function NovelVisualizer(props) {
       }
     }
   }, [localSkit, onSkitChange]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     const el = messageBoxRef.current;
     if (!el) return;
     const measure = () => {
@@ -2210,13 +2260,13 @@ function NovelVisualizer(props) {
     const y = e.clientY / window.innerHeight * 100;
     setMousePosition({ x, y });
   };
-  const actorsAtIndex = (0, import_react5.useMemo)(() => {
+  const actorsAtIndex = (0, import_react6.useMemo)(() => {
     if (!localSkit || !Array.isArray(localSkit.script)) {
       return [];
     }
     return getPresentActors(localSkit, index);
   }, [localSkit, index, actors, getPresentActors]);
-  const focusActor = (0, import_react5.useMemo)(() => {
+  const focusActor = (0, import_react6.useMemo)(() => {
     for (let i = Math.min(index, scriptEntries.length - 1); i >= 0; i--) {
       const speakerId = scriptEntries[i].speakerId;
       if (speakerId && actors[speakerId] && playerActorId !== speakerId) {
@@ -2225,27 +2275,27 @@ function NovelVisualizer(props) {
     }
     return null;
   }, [scriptEntries, index, actors]);
-  const speakerActor = (0, import_react5.useMemo)(() => {
+  const speakerActor = (0, import_react6.useMemo)(() => {
     return index >= 0 && index < scriptEntries.length && scriptEntries[index].speakerId ? actors[scriptEntries[index].speakerId] : null;
   }, [scriptEntries, index, actors]);
-  const popInSpeakerSide = (0, import_react5.useMemo)(() => {
+  const popInSpeakerSide = (0, import_react6.useMemo)(() => {
     if (!enablePopInSpeakers || !speakerActor || actorsAtIndex.includes(speakerActor) || speakerActor.id === playerActorId) {
       return null;
     }
     return speakerActor.id.charCodeAt(0) % 2 === 0 ? "left" : "right";
   }, [enablePopInSpeakers, speakerActor, actorsAtIndex]);
-  const displayMessage = (0, import_react5.useMemo)(() => {
+  const displayMessage = (0, import_react6.useMemo)(() => {
     const message = index >= 0 && index < scriptEntries.length ? scriptEntries[index].message ?? "" : "";
     return formatMessage(message, speakerActor, messageTokens);
   }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage]);
-  (0, import_react5.useLayoutEffect)(() => {
+  (0, import_react6.useLayoutEffect)(() => {
     if (prevTypingIndexRef.current !== index) {
       setFinishTyping(false);
       setMessageKey((prev2) => prev2 + 1);
       prevTypingIndexRef.current = index;
     }
   }, [index]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     if (prevIndexRef.current !== index) {
       if (isEditingMessage) {
         setIsEditingMessage(false);
@@ -2296,7 +2346,7 @@ function NovelVisualizer(props) {
       prevIndexRef.current = index;
     }
   }, [index, enableAudio, scriptEntries, attachAudioAnalyser, cleanupCurrentAudioGraph]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current.currentTime = 0;
@@ -2305,7 +2355,7 @@ function NovelVisualizer(props) {
     }
     cleanupCurrentAudioGraph();
   }, [enableAudio, cleanupCurrentAudioGraph]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     return () => {
       cleanupCurrentAudioGraph();
       if (audioContextRef.current) {
@@ -2314,14 +2364,14 @@ function NovelVisualizer(props) {
       }
     };
   }, [cleanupCurrentAudioGraph]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     if (prevExternalLoadingRef.current !== externalLoading) {
       prevIndexRef.current = -1;
       setCurrentIndex(Math.min(Math.max(0, index), scriptEntries.length - 1));
       prevExternalLoadingRef.current = externalLoading;
     }
   }, [externalLoading, scriptEntries.length]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     if (!mousePosition) {
       setHoveredActor(null);
       return;
@@ -2360,7 +2410,7 @@ function NovelVisualizer(props) {
     });
     setHoveredActor(closestActor);
   }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enablePopInSpeakers, focusActor, popInSpeakerSide]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     const handleKeyDown = (e) => {
       const target = e.target;
       const isInputFocused = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
@@ -2428,7 +2478,7 @@ function NovelVisualizer(props) {
   };
   const sceneEnded = Boolean(index >= 0 && index < scriptEntries.length && scriptEntries[index]?.endScene);
   const progressLabel = `${scriptEntries.length === 0 ? 0 : index + 1} / ${scriptEntries.length}`;
-  const placeholderText = (0, import_react5.useMemo)(() => {
+  const placeholderText = (0, import_react6.useMemo)(() => {
     if (!localSkit || !Array.isArray(localSkit.script)) return "Type your next action...";
     if (typeof inputPlaceholder === "function") {
       return inputPlaceholder({ index, entry: index >= 0 && index < scriptEntries.length ? scriptEntries[index] : void 0 });
@@ -2591,11 +2641,11 @@ function NovelVisualizer(props) {
     }
   };
   const responsiveOverlayNode = responsiveOverlay ? responsiveOverlay(localSkit, hoveredActor) : null;
-  const backgroundImageUrl = (0, import_react5.useMemo)(
+  const backgroundImageUrl = (0, import_react6.useMemo)(
     () => getBackgroundImageUrl && localSkit ? getBackgroundImageUrl(localSkit, index) : void 0,
     [getBackgroundImageUrl, localSkit, index]
   );
-  const resolvedBackgroundElements = (0, import_react5.useMemo)(() => {
+  const resolvedBackgroundElements = (0, import_react6.useMemo)(() => {
     if (typeof backgroundElements === "function") {
       if (!localSkit) {
         return null;

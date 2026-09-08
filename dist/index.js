@@ -1,5 +1,5 @@
 // src/components/NovelVisualizer.tsx
-import React4, { useEffect as useEffect3, useLayoutEffect, useMemo as useMemo2, useRef, useState as useState3 } from "react";
+import React4, { useEffect as useEffect4, useLayoutEffect, useMemo as useMemo2, useRef, useState as useState4 } from "react";
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
@@ -854,6 +854,54 @@ var TypeOut_default = TypeOut;
 
 // src/utils/TextFormatting.tsx
 import React3 from "react";
+
+// src/components/FontHandler.tsx
+import { useEffect as useEffect3, useState as useState3 } from "react";
+var FONT_MEASUREMENT_SIZE_PX = 100;
+var TARGET_X_HEIGHT_RATIO = 0.52;
+var MIN_FONT_SIZE_MULTIPLIER = 0.88;
+var MAX_FONT_SIZE_MULTIPLIER = 1.18;
+var fontSizeMultiplierCache = /* @__PURE__ */ new Map();
+var normalizeFontFamily = (fontFamily) => {
+  const trimmed = fontFamily.trim();
+  const unquoted = trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'") ? trimmed.slice(1, -1) : trimmed;
+  return unquoted.replace(/\\(["'])/g, "$1").replace(/\s+/g, " ").trim();
+};
+var clampFontSizeMultiplier = (multiplier) => {
+  return Math.max(MIN_FONT_SIZE_MULTIPLIER, Math.min(MAX_FONT_SIZE_MULTIPLIER, multiplier));
+};
+var getFontCacheKey = (fontStack) => normalizeFontFamily(fontStack).toLowerCase();
+var measureFontXHeightRatio = (fontStack) => {
+  if (typeof document === "undefined") {
+    return null;
+  }
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return null;
+  }
+  context.font = `400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontStack}`;
+  const metrics = context.measureText("x");
+  const xHeight = (metrics.actualBoundingBoxAscent ?? 0) + (metrics.actualBoundingBoxDescent ?? 0);
+  return xHeight > 0 ? xHeight / FONT_MEASUREMENT_SIZE_PX : null;
+};
+var getFontSizeMultiplier = (fontStack) => {
+  const trimmedFontStack = fontStack?.trim();
+  if (!trimmedFontStack) {
+    return 1;
+  }
+  const cacheKey = getFontCacheKey(trimmedFontStack);
+  const cachedMultiplier = fontSizeMultiplierCache.get(cacheKey);
+  if (cachedMultiplier !== void 0) {
+    return cachedMultiplier;
+  }
+  const xHeightRatio = measureFontXHeightRatio(trimmedFontStack);
+  const multiplier = xHeightRatio ? clampFontSizeMultiplier(TARGET_X_HEIGHT_RATIO / xHeightRatio) : 1;
+  fontSizeMultiplierCache.set(cacheKey, multiplier);
+  return multiplier;
+};
+
+// src/utils/TextFormatting.tsx
 import { Fragment as Fragment2, jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
 var INLINE_STYLE_SHEET_ID = "novel-visualizer-inline-style-presets";
 var INLINE_STYLE_PRESET_CSS = `
@@ -1944,11 +1992,13 @@ var formatMessageWithStyles = (text, options) => {
   const dialogueStyle = {
     color: brightenedColor,
     fontFamily: options.speakerThemeFontFamily || options.tokens.fallbackFontFamily,
+    fontSize: `${getFontSizeMultiplier(options.speakerThemeFontFamily || options.tokens.fallbackFontFamily)}em`,
     textShadow: options.speakerThemeColor ? `2px 2px 2px ${safeDarken(options.speakerThemeColor, 0.3)}` : options.tokens.defaultDialogueShadow
   };
   const proseStyle = {
     color: options.proseColor,
     fontFamily: options.tokens.fallbackFontFamily,
+    fontSize: `${getFontSizeMultiplier(options.tokens.fallbackFontFamily)}em`,
     textShadow: options.tokens.baseTextShadow
   };
   let activeInlineClass = null;
@@ -2037,27 +2087,27 @@ function NovelVisualizer(props) {
     inlineStyleOptions,
     messageWindowSx
   } = props;
-  const [inputText, setInputText] = useState3("");
-  const [finishTyping, setFinishTyping] = useState3(false);
+  const [inputText, setInputText] = useState4("");
+  const [finishTyping, setFinishTyping] = useState4(false);
   const [messageKey, setMessageKey] = React4.useState(0);
-  const [hoveredActor, setHoveredActor] = useState3(null);
+  const [hoveredActor, setHoveredActor] = useState4(null);
   const currentAudioRef = React4.useRef(null);
   const audioContextRef = React4.useRef(null);
   const currentAudioSourceRef = React4.useRef(null);
   const currentAudioAnalyserRef = React4.useRef(null);
   const [isAudioPlaying, setIsAudioPlaying] = React4.useState(false);
   const [audioAnalyser, setAudioAnalyser] = React4.useState(null);
-  const [mousePosition, setMousePosition] = useState3(null);
-  const [messageBoxTopVh, setMessageBoxTopVh] = useState3(isVerticalLayout ? 50 : 60);
-  const [loading, setLoading] = useState3(false);
+  const [mousePosition, setMousePosition] = useState4(null);
+  const [messageBoxTopVh, setMessageBoxTopVh] = useState4(isVerticalLayout ? 50 : 60);
+  const [loading, setLoading] = useState4(false);
   const isLoading = loading || externalLoading;
   const messageBoxRef = useRef(null);
-  const [isEditingMessage, setIsEditingMessage] = useState3(false);
-  const [editedMessage, setEditedMessage] = useState3("");
-  const [originalMessage, setOriginalMessage] = useState3("");
-  const [localSkit, setLocalSkit] = useState3(skit);
+  const [isEditingMessage, setIsEditingMessage] = useState4(false);
+  const [editedMessage, setEditedMessage] = useState4("");
+  const [originalMessage, setOriginalMessage] = useState4("");
+  const [localSkit, setLocalSkit] = useState4(skit);
   const scriptEntries = useMemo2(() => localSkit?.script ?? [], [localSkit]);
-  const [index, setIndex] = useState3(skit?.currentIndex ?? -1);
+  const [index, setIndex] = useState4(skit?.currentIndex ?? -1);
   const prevIndexRef = useRef(index);
   const prevTypingIndexRef = useRef(index);
   const prevExternalLoadingRef = useRef(externalLoading);
@@ -2137,12 +2187,12 @@ function NovelVisualizer(props) {
       inlineStyleOptions
     });
   };
-  useEffect3(() => {
+  useEffect4(() => {
     if (skit != localSkit) {
       setLocalSkit(skit);
     }
   }, [skit, externalLoading]);
-  useEffect3(() => {
+  useEffect4(() => {
     if (skit && localSkit) {
       skit.currentIndex = localSkit?.currentIndex ?? skit.currentIndex;
       skit.script = localSkit?.script ?? skit.script;
@@ -2151,7 +2201,7 @@ function NovelVisualizer(props) {
       }
     }
   }, [localSkit, onSkitChange]);
-  useEffect3(() => {
+  useEffect4(() => {
     const el = messageBoxRef.current;
     if (!el) return;
     const measure = () => {
@@ -2204,7 +2254,7 @@ function NovelVisualizer(props) {
       prevTypingIndexRef.current = index;
     }
   }, [index]);
-  useEffect3(() => {
+  useEffect4(() => {
     if (prevIndexRef.current !== index) {
       if (isEditingMessage) {
         setIsEditingMessage(false);
@@ -2255,7 +2305,7 @@ function NovelVisualizer(props) {
       prevIndexRef.current = index;
     }
   }, [index, enableAudio, scriptEntries, attachAudioAnalyser, cleanupCurrentAudioGraph]);
-  useEffect3(() => {
+  useEffect4(() => {
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current.currentTime = 0;
@@ -2264,7 +2314,7 @@ function NovelVisualizer(props) {
     }
     cleanupCurrentAudioGraph();
   }, [enableAudio, cleanupCurrentAudioGraph]);
-  useEffect3(() => {
+  useEffect4(() => {
     return () => {
       cleanupCurrentAudioGraph();
       if (audioContextRef.current) {
@@ -2273,14 +2323,14 @@ function NovelVisualizer(props) {
       }
     };
   }, [cleanupCurrentAudioGraph]);
-  useEffect3(() => {
+  useEffect4(() => {
     if (prevExternalLoadingRef.current !== externalLoading) {
       prevIndexRef.current = -1;
       setCurrentIndex(Math.min(Math.max(0, index), scriptEntries.length - 1));
       prevExternalLoadingRef.current = externalLoading;
     }
   }, [externalLoading, scriptEntries.length]);
-  useEffect3(() => {
+  useEffect4(() => {
     if (!mousePosition) {
       setHoveredActor(null);
       return;
@@ -2319,7 +2369,7 @@ function NovelVisualizer(props) {
     });
     setHoveredActor(closestActor);
   }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enablePopInSpeakers, focusActor, popInSpeakerSide]);
-  useEffect3(() => {
+  useEffect4(() => {
     const handleKeyDown = (e) => {
       const target = e.target;
       const isInputFocused = target.tagName === "INPUT" || target.tagName === "TEXTAREA";

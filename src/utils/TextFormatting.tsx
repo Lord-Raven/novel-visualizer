@@ -1,4 +1,5 @@
 import React from 'react';
+import { getFontSizeMultiplier } from '../components/FontHandler';
 import { safeDarken, safeLighten } from './safeColor';
 
 export interface InlineStyleContext {
@@ -1297,6 +1298,7 @@ export const formatMessageWithStyles = (
     const dialogueStyle: React.CSSProperties = {
         color: brightenedColor,
         fontFamily: options.speakerThemeFontFamily || options.tokens.fallbackFontFamily,
+        fontSize: `${getFontSizeMultiplier(options.speakerThemeFontFamily || options.tokens.fallbackFontFamily)}em`,
         textShadow: options.speakerThemeColor
             ? `2px 2px 2px ${safeDarken(options.speakerThemeColor, 0.3)}`
             : options.tokens.defaultDialogueShadow
@@ -1304,6 +1306,7 @@ export const formatMessageWithStyles = (
     const proseStyle: React.CSSProperties = {
         color: options.proseColor,
         fontFamily: options.tokens.fallbackFontFamily,
+        fontSize: `${getFontSizeMultiplier(options.tokens.fallbackFontFamily)}em`,
         textShadow: options.tokens.baseTextShadow
     };
 
