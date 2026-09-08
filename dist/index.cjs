@@ -908,8 +908,8 @@ var GOOGLE_FONT_VARIANTS = ":ital,wght@0,400;0,700;1,400;1,700";
 var FONT_REFRESH_INTERVAL_MS = 500;
 var FONT_MEASUREMENT_SIZE_PX = 100;
 var TARGET_X_HEIGHT_RATIO = 0.52;
-var MIN_FONT_SIZE_MULTIPLIER = 0.88;
-var MAX_FONT_SIZE_MULTIPLIER = 1.18;
+var MIN_FONT_SIZE_MULTIPLIER = 0.8;
+var MAX_FONT_SIZE_MULTIPLIER = 1.25;
 var fontSizeMultiplierCache = /* @__PURE__ */ new Map();
 var CSS_VARIABLE_FUNCTION_PATTERN = /var\(\s*(--[-_a-zA-Z0-9]+)\s*(?:,\s*([^)]*))?\)/g;
 var CSS_VARIABLE_REFERENCE_PATTERN = /\bvar\(/i;
@@ -1059,6 +1059,7 @@ var measureFontXHeightRatio = (fontStack) => {
   context.font = measurementFont;
   const metrics = context.measureText("x");
   const xHeight = (metrics.actualBoundingBoxAscent ?? 0) + (metrics.actualBoundingBoxDescent ?? 0);
+  console.log(`Measured x-height for font "${fontStack}": ${xHeight}px`);
   return xHeight > 0 ? xHeight / FONT_MEASUREMENT_SIZE_PX : null;
 };
 var clearFontSizeMultiplierCache = () => {
