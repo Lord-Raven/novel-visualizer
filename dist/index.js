@@ -963,12 +963,16 @@ var measureFontXHeightRatio = (fontStack) => {
   if (typeof document === "undefined") {
     return null;
   }
+  const measurementFont = `400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontStack}`;
+  if (document.fonts && !document.fonts.check(measurementFont)) {
+    return null;
+  }
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
   if (!context) {
     return null;
   }
-  context.font = `400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontStack}`;
+  context.font = measurementFont;
   const metrics = context.measureText("x");
   const xHeight = (metrics.actualBoundingBoxAscent ?? 0) + (metrics.actualBoundingBoxDescent ?? 0);
   return xHeight > 0 ? xHeight / FONT_MEASUREMENT_SIZE_PX : null;
@@ -976,21 +980,35 @@ var measureFontXHeightRatio = (fontStack) => {
 var clearFontSizeMultiplierCache = () => {
   fontSizeMultiplierCache.clear();
 };
+var cacheFontSizeMultiplier = (fontStack) => {
+  const cacheKey = getFontCacheKey(fontStack);
+  const cachedMultiplier = fontSizeMultiplierCache.get(cacheKey);
+  if (cachedMultiplier !== void 0) {
+    return cachedMultiplier;
+  }
+  const xHeightRatio = measureFontXHeightRatio(fontStack);
+  const multiplier = xHeightRatio ? clampFontSizeMultiplier(TARGET_X_HEIGHT_RATIO / xHeightRatio) : 1;
+  fontSizeMultiplierCache.set(cacheKey, multiplier);
+  return multiplier;
+};
+var preloadFontSizeMultipliers = async (fontFamilies) => {
+  if (typeof document === "undefined") {
+    return;
+  }
+  if (document.fonts) {
+    await Promise.allSettled(
+      fontFamilies.map((fontFamily) => document.fonts.load(`400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontFamily}`))
+    );
+    await document.fonts.ready;
+  }
+  fontFamilies.forEach(cacheFontSizeMultiplier);
+};
 var getFontSizeMultiplier = (fontStack) => {
   const trimmedFontStack = fontStack?.trim();
   if (!trimmedFontStack) {
     return 1;
   }
-  const cacheKey = getFontCacheKey(trimmedFontStack);
-  const cachedMultiplier = fontSizeMultiplierCache.get(cacheKey);
-  if (cachedMultiplier !== void 0) {
-    return cachedMultiplier;
-  }
-  const xHeightRatio = measureFontXHeightRatio(trimmedFontStack);
-  console.log("xHeightRatio for", trimmedFontStack, ":", xHeightRatio);
-  const multiplier = xHeightRatio ? clampFontSizeMultiplier(TARGET_X_HEIGHT_RATIO / xHeightRatio) : 1;
-  fontSizeMultiplierCache.set(cacheKey, multiplier);
-  return multiplier;
+  return cacheFontSizeMultiplier(trimmedFontStack);
 };
 var buildGoogleFontImportRules = (fontStacks) => {
   const fontFamilies = collectFontFamilies(fontStacks);
@@ -1039,22 +1057,36 @@ var syncGoogleFontLinks = (fontFamilies) => {
     link.setAttribute(GOOGLE_FONT_LINK_ATTRIBUTE, fontKey);
     document.head.appendChild(link);
   });
-  if (document.fonts) {
-    document.fonts.ready.then(clearFontSizeMultiplierCache).catch(() => void 0);
-  }
+};
+var processFontFamilies = (fontFamilies) => {
+  const processedFontFamilies = /* @__PURE__ */ new Map();
+  fontFamilies.forEach((fontFamily) => {
+    const normalizedFontFamily = normalizeFontFamily(fontFamily);
+    if (!shouldImportFontFamily(normalizedFontFamily)) {
+      return;
+    }
+    const fontKey = normalizedFontFamily.toLowerCase();
+    if (!processedFontFamilies.has(fontKey)) {
+      processedFontFamilies.set(fontKey, normalizedFontFamily);
+    }
+  });
+  return Array.from(processedFontFamilies.values()).sort((left, right) => left.localeCompare(right));
 };
 var FontHandler = ({ fontFamilies }) => {
   const [fontSignature, setFontSignature] = useState3("");
   useEffect3(() => {
     const refreshFontSignature = () => {
-      setFontSignature(fontFamilies.join("\n"));
+      setFontSignature(processFontFamilies(fontFamilies).join("\n"));
     };
     refreshFontSignature();
     const intervalId = window.setInterval(refreshFontSignature, FONT_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(intervalId);
   }, [fontFamilies]);
   useEffect3(() => {
-    syncGoogleFontLinks(fontSignature ? fontSignature.split("\n") : []);
+    const processedFontFamilies = fontSignature ? fontSignature.split("\n") : [];
+    syncGoogleFontLinks(processedFontFamilies);
+    clearFontSizeMultiplierCache();
+    preloadFontSizeMultipliers(processedFontFamilies).catch(() => void 0);
   }, [fontSignature]);
   useEffect3(() => {
     return () => {
