@@ -911,6 +911,8 @@ var TARGET_X_HEIGHT_RATIO = 0.52;
 var MIN_FONT_SIZE_MULTIPLIER = 0.88;
 var MAX_FONT_SIZE_MULTIPLIER = 1.18;
 var fontSizeMultiplierCache = /* @__PURE__ */ new Map();
+var CSS_VARIABLE_FUNCTION_PATTERN = /var\(\s*(--[-_a-zA-Z0-9]+)\s*(?:,\s*([^)]*))?\)/g;
+var CSS_VARIABLE_REFERENCE_PATTERN = /\bvar\(/i;
 var GENERIC_FONT_FAMILIES = /* @__PURE__ */ new Set([
   "serif",
   "sans-serif",
@@ -976,12 +978,43 @@ var normalizeFontFamily = (fontFamily) => {
   const unquoted = trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'") ? trimmed.slice(1, -1) : trimmed;
   return unquoted.replace(/\\(["'])/g, "$1").replace(/\s+/g, " ").trim();
 };
+var resolveCssFontStack = (fontStack, depth = 0) => {
+  const trimmedFontStack = fontStack.trim();
+  if (!trimmedFontStack) {
+    return null;
+  }
+  if (!CSS_VARIABLE_REFERENCE_PATTERN.test(trimmedFontStack)) {
+    return trimmedFontStack;
+  }
+  if (typeof document === "undefined" || depth > 4) {
+    return null;
+  }
+  const rootStyles = window.getComputedStyle(document.documentElement);
+  const resolvedFontStack = trimmedFontStack.replace(
+    CSS_VARIABLE_FUNCTION_PATTERN,
+    (_match, propertyName, fallbackValue) => {
+      const resolvedValue = rootStyles.getPropertyValue(propertyName).trim();
+      if (resolvedValue) {
+        return resolvedValue;
+      }
+      return fallbackValue?.trim() ?? "";
+    }
+  ).trim();
+  if (!resolvedFontStack || resolvedFontStack === trimmedFontStack) {
+    return null;
+  }
+  return resolveCssFontStack(resolvedFontStack, depth + 1);
+};
 var shouldImportFontFamily = (fontFamily) => {
   const normalized = fontFamily.toLowerCase();
   return Boolean(fontFamily) && !GENERIC_FONT_FAMILIES.has(normalized) && !normalized.startsWith("var(") && !normalized.startsWith("local(");
 };
 var extractFontFamiliesFromStack = (fontStack) => {
-  return splitFontStack(fontStack).map(normalizeFontFamily).filter(shouldImportFontFamily);
+  const resolvedFontStack = resolveCssFontStack(fontStack);
+  if (!resolvedFontStack) {
+    return [];
+  }
+  return splitFontStack(resolvedFontStack).map(normalizeFontFamily).filter(shouldImportFontFamily);
 };
 var buildGoogleFontHref = (fontFamily) => {
   const encodedFamily = encodeURIComponent(fontFamily).replace(/%20/g, "+");
@@ -1009,8 +1042,14 @@ var measureFontXHeightRatio = (fontStack) => {
     return null;
   }
   const measurementFont = `400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontStack}`;
-  if (document.fonts && !document.fonts.check(measurementFont)) {
-    return null;
+  if (document.fonts) {
+    try {
+      if (!document.fonts.check(measurementFont)) {
+        return null;
+      }
+    } catch {
+      return null;
+    }
   }
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
@@ -1032,7 +1071,10 @@ var cacheFontSizeMultiplier = (fontStack) => {
     return cachedMultiplier;
   }
   const xHeightRatio = measureFontXHeightRatio(fontStack);
-  const multiplier = xHeightRatio ? clampFontSizeMultiplier(TARGET_X_HEIGHT_RATIO / xHeightRatio) : 1;
+  if (!xHeightRatio) {
+    return 1;
+  }
+  const multiplier = clampFontSizeMultiplier(TARGET_X_HEIGHT_RATIO / xHeightRatio);
   fontSizeMultiplierCache.set(cacheKey, multiplier);
   return multiplier;
 };
@@ -1042,7 +1084,13 @@ var preloadFontSizeMultipliers = async (fontFamilies) => {
   }
   if (document.fonts) {
     await Promise.allSettled(
-      fontFamilies.map((fontFamily) => document.fonts.load(`400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontFamily}`))
+      fontFamilies.map((fontFamily) => {
+        try {
+          return document.fonts.load(`400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontFamily}`);
+        } catch {
+          return Promise.resolve([]);
+        }
+      })
     );
     await document.fonts.ready;
   }
@@ -1053,7 +1101,8 @@ var getFontSizeMultiplier = (fontStack) => {
   if (!trimmedFontStack) {
     return 1;
   }
-  return cacheFontSizeMultiplier(trimmedFontStack);
+  const resolvedFontStack = resolveCssFontStack(trimmedFontStack);
+  return resolvedFontStack ? cacheFontSizeMultiplier(resolvedFontStack) : 1;
 };
 var buildGoogleFontImportRules = (fontStacks) => {
   const fontFamilies = collectFontFamilies(fontStacks);
@@ -1106,14 +1155,16 @@ var syncGoogleFontLinks = (fontFamilies) => {
 var processFontFamilies = (fontFamilies) => {
   const processedFontFamilies = /* @__PURE__ */ new Map();
   fontFamilies.forEach((fontFamily) => {
-    const normalizedFontFamily = normalizeFontFamily(fontFamily);
-    if (!shouldImportFontFamily(normalizedFontFamily)) {
+    const extractedFontFamilies = extractFontFamiliesFromStack(fontFamily);
+    if (extractedFontFamilies.length === 0) {
       return;
     }
-    const fontKey = normalizedFontFamily.toLowerCase();
-    if (!processedFontFamilies.has(fontKey)) {
-      processedFontFamilies.set(fontKey, normalizedFontFamily);
-    }
+    extractedFontFamilies.forEach((normalizedFontFamily) => {
+      const fontKey = normalizedFontFamily.toLowerCase();
+      if (!processedFontFamilies.has(fontKey)) {
+        processedFontFamilies.set(fontKey, normalizedFontFamily);
+      }
+    });
   });
   return Array.from(processedFontFamilies.values()).sort((left, right) => left.localeCompare(right));
 };
