@@ -866,14 +866,94 @@ var TARGET_X_HEIGHT_RATIO = 0.52;
 var MIN_FONT_SIZE_MULTIPLIER = 0.88;
 var MAX_FONT_SIZE_MULTIPLIER = 1.18;
 var fontSizeMultiplierCache = /* @__PURE__ */ new Map();
+var GENERIC_FONT_FAMILIES = /* @__PURE__ */ new Set([
+  "serif",
+  "sans-serif",
+  "monospace",
+  "cursive",
+  "fantasy",
+  "system-ui",
+  "ui-serif",
+  "ui-sans-serif",
+  "ui-monospace",
+  "ui-rounded",
+  "emoji",
+  "math",
+  "fangsong",
+  "inherit",
+  "initial",
+  "revert",
+  "revert-layer",
+  "unset"
+]);
+var splitFontStack = (fontStack) => {
+  const families = [];
+  let current = "";
+  let quote = null;
+  let isEscaped = false;
+  for (const character of fontStack) {
+    if (isEscaped) {
+      current += character;
+      isEscaped = false;
+      continue;
+    }
+    if (character === "\\") {
+      isEscaped = true;
+      current += character;
+      continue;
+    }
+    if (quote) {
+      if (character === quote) {
+        quote = null;
+      }
+      current += character;
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+      current += character;
+      continue;
+    }
+    if (character === ",") {
+      families.push(current);
+      current = "";
+      continue;
+    }
+    current += character;
+  }
+  if (current.trim()) {
+    families.push(current);
+  }
+  return families;
+};
 var normalizeFontFamily = (fontFamily) => {
   const trimmed = fontFamily.trim();
   const unquoted = trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'") ? trimmed.slice(1, -1) : trimmed;
   return unquoted.replace(/\\(["'])/g, "$1").replace(/\s+/g, " ").trim();
 };
+var shouldImportFontFamily = (fontFamily) => {
+  const normalized = fontFamily.toLowerCase();
+  return Boolean(fontFamily) && !GENERIC_FONT_FAMILIES.has(normalized) && !normalized.startsWith("var(") && !normalized.startsWith("local(");
+};
+var extractFontFamiliesFromStack = (fontStack) => {
+  return splitFontStack(fontStack).map(normalizeFontFamily).filter(shouldImportFontFamily);
+};
 var buildGoogleFontHref = (fontFamily) => {
   const encodedFamily = encodeURIComponent(fontFamily).replace(/%20/g, "+");
   return `https://fonts.googleapis.com/css2?family=${encodedFamily}${GOOGLE_FONT_VARIANTS}&display=swap`;
+};
+var collectFontFamilies = (fontStacks) => {
+  const fontFamilies = /* @__PURE__ */ new Map();
+  fontStacks.forEach((fontStack) => {
+    const [firstFontFamily] = extractFontFamiliesFromStack(fontStack || "");
+    if (firstFontFamily) {
+      const key = firstFontFamily.toLowerCase();
+      if (!fontFamilies.has(key)) {
+        fontFamilies.set(key, firstFontFamily);
+      }
+    }
+  });
+  return Array.from(fontFamilies.values()).sort((left, right) => left.localeCompare(right));
 };
 var clampFontSizeMultiplier = (multiplier) => {
   return Math.max(MIN_FONT_SIZE_MULTIPLIER, Math.min(MAX_FONT_SIZE_MULTIPLIER, multiplier));
@@ -3185,6 +3265,7 @@ export {
   FontHandler_default as FontHandler,
   NovelVisualizer_default as NovelVisualizer,
   TypeOut_default as TypeOut,
+  collectFontFamilies,
   defaultInlineClassStyles,
   formatInlineStyles,
   getFontSizeMultiplier

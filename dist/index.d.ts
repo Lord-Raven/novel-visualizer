@@ -172,6 +172,7 @@ declare const BlurredBackground: FC<BlurredBackgroundProps>;
 interface FontHandlerProps {
     fontFamilies: string[];
 }
+declare const collectFontFamilies: (fontStacks: Array<string | undefined>) => string[];
 declare const getFontSizeMultiplier: (fontStack?: string) => number;
 declare const FontHandler: FC<FontHandlerProps>;
 
@@ -184,4 +185,4 @@ interface TypeOutProps {
 }
 declare const TypeOut: React__default.FC<TypeOutProps>;
 
-export { _default as ActorImage, type NovelSkit as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, FontHandler, type FormatInlineStylesOptions, type InlineClassStyle, type InlineStyleContext, type NovelActor, NovelVisualizer, type NovelVisualizerProps, type SubmitButtonConfig, TypeOut, defaultInlineClassStyles, formatInlineStyles, getFontSizeMultiplier };
+export { _default as ActorImage, type NovelSkit as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, FontHandler, type FormatInlineStylesOptions, type InlineClassStyle, type InlineStyleContext, type NovelActor, NovelVisualizer, type NovelVisualizerProps, type SubmitButtonConfig, TypeOut, collectFontFamilies, defaultInlineClassStyles, formatInlineStyles, getFontSizeMultiplier };
