@@ -172,6 +172,7 @@ export const getFontSizeMultiplier = (fontStack?: string): number => {
 	}
 
 	const xHeightRatio = measureFontXHeightRatio(trimmedFontStack);
+	console.log('xHeightRatio for', trimmedFontStack, ':', xHeightRatio);
 	const multiplier = xHeightRatio
 		? clampFontSizeMultiplier(TARGET_X_HEIGHT_RATIO / xHeightRatio)
 		: 1;
