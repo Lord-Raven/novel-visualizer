@@ -991,6 +991,13 @@ var getFontSizeMultiplier = (fontStack) => {
   fontSizeMultiplierCache.set(cacheKey, multiplier);
   return multiplier;
 };
+var buildGoogleFontImportRules = (fontStacks) => {
+  const fontFamilies = collectFontFamilies(fontStacks);
+  if (fontFamilies.length === 0) {
+    return "";
+  }
+  return fontFamilies.map((fontFamily) => `@import url("${buildGoogleFontHref(fontFamily)}");`).join(" ");
+};
 var ensureGoogleFontPreconnects = () => {
   const existingPreconnects = document.head.querySelectorAll(`link[${GOOGLE_FONT_PRECONNECT_ATTRIBUTE}]`);
   if (existingPreconnects.length > 0) {
@@ -3265,6 +3272,7 @@ export {
   FontHandler_default as FontHandler,
   NovelVisualizer_default as NovelVisualizer,
   TypeOut_default as TypeOut,
+  buildGoogleFontImportRules,
   collectFontFamilies,
   defaultInlineClassStyles,
   formatInlineStyles,

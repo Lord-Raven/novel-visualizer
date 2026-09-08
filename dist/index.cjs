@@ -35,6 +35,7 @@ __export(index_exports, {
   FontHandler: () => FontHandler_default,
   NovelVisualizer: () => NovelVisualizer_default,
   TypeOut: () => TypeOut_default,
+  buildGoogleFontImportRules: () => buildGoogleFontImportRules,
   collectFontFamilies: () => collectFontFamilies,
   defaultInlineClassStyles: () => defaultInlineClassStyles,
   formatInlineStyles: () => formatInlineStyles,
@@ -1034,6 +1035,13 @@ var getFontSizeMultiplier = (fontStack) => {
   const multiplier = xHeightRatio ? clampFontSizeMultiplier(TARGET_X_HEIGHT_RATIO / xHeightRatio) : 1;
   fontSizeMultiplierCache.set(cacheKey, multiplier);
   return multiplier;
+};
+var buildGoogleFontImportRules = (fontStacks) => {
+  const fontFamilies = collectFontFamilies(fontStacks);
+  if (fontFamilies.length === 0) {
+    return "";
+  }
+  return fontFamilies.map((fontFamily) => `@import url("${buildGoogleFontHref(fontFamily)}");`).join(" ");
 };
 var ensureGoogleFontPreconnects = () => {
   const existingPreconnects = document.head.querySelectorAll(`link[${GOOGLE_FONT_PRECONNECT_ATTRIBUTE}]`);
@@ -3310,6 +3318,7 @@ var NovelVisualizer_default = NovelVisualizer;
   FontHandler,
   NovelVisualizer,
   TypeOut,
+  buildGoogleFontImportRules,
   collectFontFamilies,
   defaultInlineClassStyles,
   formatInlineStyles,
