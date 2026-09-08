@@ -10,8 +10,8 @@ const GOOGLE_FONT_VARIANTS = ':ital,wght@0,400;0,700;1,400;1,700';
 const FONT_REFRESH_INTERVAL_MS = 500;
 const FONT_MEASUREMENT_SIZE_PX = 100;
 const TARGET_X_HEIGHT_RATIO = 0.52;
-const MIN_FONT_SIZE_MULTIPLIER = 0.8;
-const MAX_FONT_SIZE_MULTIPLIER = 1.25;
+const MIN_FONT_SIZE_MULTIPLIER = 0.75;
+const MAX_FONT_SIZE_MULTIPLIER = 1.5;
 
 const fontSizeMultiplierCache = new Map<string, number>();
 const CSS_VARIABLE_FUNCTION_PATTERN = /var\(\s*(--[-_a-zA-Z0-9]+)\s*(?:,\s*([^)]*))?\)/g;
