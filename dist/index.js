@@ -2299,6 +2299,9 @@ var applyPopInSideSkew = (xPosition, popInSide) => {
   const proximityToLeft = Math.max(0, Math.min(1, (100 - xPosition) / 100));
   return Math.round((xPosition + proximityToLeft * MAX_SKEW) * 10) / 10;
 };
+var normalizeVoiceModulation = (voiceModulation) => {
+  return typeof voiceModulation === "number" && Number.isFinite(voiceModulation) && voiceModulation > 0 ? voiceModulation : 1;
+};
 function NovelVisualizer(props) {
   const theme = useTheme();
   const {
@@ -2320,6 +2323,7 @@ function NovelVisualizer(props) {
     getActorImageColorMultiplier,
     getActorFilter,
     getActorScaleOffset,
+    getActorVoiceModulation,
     getPresentActors,
     backgroundElements,
     backgroundOptions,
@@ -2486,6 +2490,9 @@ function NovelVisualizer(props) {
   const speakerActor = useMemo2(() => {
     return index >= 0 && index < scriptEntries.length && scriptEntries[index].speakerId ? actors[scriptEntries[index].speakerId] : null;
   }, [scriptEntries, index, actors]);
+  const currentVoiceModulation = useMemo2(() => {
+    return normalizeVoiceModulation(speakerActor ? getActorVoiceModulation?.(speakerActor) : void 0);
+  }, [speakerActor, getActorVoiceModulation]);
   const popInSpeakerSide = useMemo2(() => {
     if (!enablePopInSpeakers || !speakerActor || actorsAtIndex.includes(speakerActor) || speakerActor.id === playerActorId) {
       return null;
@@ -2517,6 +2524,7 @@ function NovelVisualizer(props) {
       }
       if (enableAudio && index >= 0 && index < scriptEntries.length && scriptEntries[index].speechUrl) {
         const audio = new Audio(scriptEntries[index].speechUrl);
+        audio.playbackRate = currentVoiceModulation;
         currentAudioRef.current = audio;
         audio.crossOrigin = "anonymous";
         const analyser = attachAudioAnalyser(audio);
@@ -2553,7 +2561,12 @@ function NovelVisualizer(props) {
       }
       prevIndexRef.current = index;
     }
-  }, [index, enableAudio, scriptEntries, attachAudioAnalyser, cleanupCurrentAudioGraph]);
+  }, [index, enableAudio, scriptEntries, currentVoiceModulation, attachAudioAnalyser, cleanupCurrentAudioGraph]);
+  useEffect4(() => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.playbackRate = currentVoiceModulation;
+    }
+  }, [currentVoiceModulation]);
   useEffect4(() => {
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();

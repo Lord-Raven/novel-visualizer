@@ -51,6 +51,12 @@ const applyPopInSideSkew = (
     return Math.round((xPosition + proximityToLeft * MAX_SKEW) * 10) / 10;
 };
 
+const normalizeVoiceModulation = (voiceModulation: number | undefined): number => {
+    return typeof voiceModulation === 'number' && Number.isFinite(voiceModulation) && voiceModulation > 0
+        ? voiceModulation
+        : 1;
+};
+
 /**
  * Props for the NovelVisualizer component.
  * @template TScript - The script type
@@ -79,6 +85,7 @@ export interface NovelVisualizerProps<
     getActorImageUrl: (actor: TActor, skit: TSkit, index: number) => string;
     getActorImageColorMultiplier?: (actor: TActor, skit: TSkit, index: number) => string;
     getActorScaleOffset?: (actor: TActor, skit: TSkit, index: number) => NovelScaleOffset;
+    getActorVoiceModulation?: (actor: TActor) => number | undefined;
     getActorFilter?: (actor: TActor, skit: TSkit, index: number) => { filter?: 'ghost' | 'aura' | 'hologram'; filterColor?: string };
     backgroundElements?: React.ReactNode | ((context: {
         skit: TSkit;
@@ -149,6 +156,7 @@ export function NovelVisualizer<
         getActorImageColorMultiplier,
         getActorFilter,
         getActorScaleOffset,
+        getActorVoiceModulation,
         getPresentActors,
         backgroundElements,
         backgroundOptions,
@@ -352,6 +360,10 @@ export function NovelVisualizer<
         return index >= 0 && index < scriptEntries.length && scriptEntries[index].speakerId ? actors[scriptEntries[index].speakerId] : null;
     }, [scriptEntries, index, actors]);
 
+    const currentVoiceModulation = useMemo(() => {
+        return normalizeVoiceModulation(speakerActor ? getActorVoiceModulation?.(speakerActor) : undefined);
+    }, [speakerActor, getActorVoiceModulation]);
+
     const popInSpeakerSide = useMemo<'left' | 'right' | null>(() => {
         if (!enablePopInSpeakers || !speakerActor || actorsAtIndex.includes(speakerActor) || speakerActor.id === playerActorId) {
             return null;
@@ -389,6 +401,7 @@ export function NovelVisualizer<
             }
             if (enableAudio && index >= 0 && index < scriptEntries.length && scriptEntries[index].speechUrl) {
                 const audio = new Audio(scriptEntries[index].speechUrl);
+                audio.playbackRate = currentVoiceModulation;
                 currentAudioRef.current = audio;
 
                 // Required for cross-origin waveform analysis when the remote server
@@ -443,7 +456,13 @@ export function NovelVisualizer<
             }
             prevIndexRef.current = index;
         }
-    }, [index, enableAudio, scriptEntries, attachAudioAnalyser, cleanupCurrentAudioGraph]);
+    }, [index, enableAudio, scriptEntries, currentVoiceModulation, attachAudioAnalyser, cleanupCurrentAudioGraph]);
+
+    useEffect(() => {
+        if (currentAudioRef.current) {
+            currentAudioRef.current.playbackRate = currentVoiceModulation;
+        }
+    }, [currentVoiceModulation]);
 
     useEffect(() => {
         if (currentAudioRef.current) {

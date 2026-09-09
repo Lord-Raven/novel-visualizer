@@ -83,6 +83,7 @@ interface NovelVisualizerProps<TActor extends NovelActor, TSkit extends NovelSki
     getActorImageUrl: (actor: TActor, skit: TSkit, index: number) => string;
     getActorImageColorMultiplier?: (actor: TActor, skit: TSkit, index: number) => string;
     getActorScaleOffset?: (actor: TActor, skit: TSkit, index: number) => NovelScaleOffset;
+    getActorVoiceModulation?: (actor: TActor) => number | undefined;
     getActorFilter?: (actor: TActor, skit: TSkit, index: number) => {
         filter?: 'ghost' | 'aura' | 'hologram';
         filterColor?: string;
