@@ -2,11 +2,14 @@
 export interface NovelActor {
     id: string;
     name: string;
-    themeColor?: string;
-    themeFontFamily?: string;
     defaultImageUrl?: string;
     filter?: 'ghost' | 'aura' | 'hologram';
     filterColor?: string;
+}
+
+export interface NovelActorTheme {
+    color?: string;
+    fontFamily?: string;
 }
 
 /**
@@ -34,4 +37,13 @@ export interface NovelScaleOffset {
     scale?: number;
     offsetX?: number;
     offsetY?: number;
+}
+
+export interface NovelVoiceModulation {
+    pitch?: number; // +/- semitones (0 is normal)
+    rate?: number; // multiplier (1 is normal)
+    volume?: number; // multiplier (1 is normal)
+    warmth?: number; // +/- dB (0 is normal)
+    brightness?: number; // +/- dB (0 is normal)
+    nasality?: number; // +/- dB (0 is normal)
 }

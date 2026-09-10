@@ -2,8 +2,11 @@ export { default as NovelVisualizer } from './components/NovelVisualizer';
 export type { NovelVisualizerProps, SubmitButtonConfig } from './components/NovelVisualizer';
 export type { 
     NovelActor,
+    NovelActorTheme,
     NovelSkit as BaseScript, 
-    NovelScriptEntry as BaseScriptEntry
+    NovelScriptEntry as BaseScriptEntry,
+    NovelScaleOffset,
+    NovelVoiceModulation
 } from './types';
 export { default as ActorImage } from './components/ActorImage';
 export { default as BlurredBackground } from './components/BlurredBackground';

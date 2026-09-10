@@ -1,5 +1,5 @@
 // src/components/NovelVisualizer.tsx
-import React4, { useEffect as useEffect4, useLayoutEffect, useMemo as useMemo2, useRef, useState as useState4 } from "react";
+import React4, { useEffect as useEffect5, useLayoutEffect, useMemo as useMemo3, useRef as useRef2, useState as useState5 } from "react";
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
@@ -2273,6 +2273,435 @@ var formatMessageWithStyles = (text, options) => {
   }) });
 };
 
+// src/utils/useVoiceAudio.ts
+import { useCallback, useEffect as useEffect4, useMemo as useMemo2, useRef, useState as useState4 } from "react";
+
+// src/utils/TimeStretch.tsx
+var BUFFER_SOURCE_PROCESSOR_NAME = "novel-visualizer-buffer-source";
+var BUFFER_SOURCE_PROCESSOR_SOURCE = `
+class BufferSourceProcessor extends AudioWorkletProcessor {
+    static get parameterDescriptors() {
+        return [{ name: 'rate', defaultValue: 1, minValue: 0.1, maxValue: 4, automationRate: 'k-rate' }];
+    }
+
+    constructor() {
+        super();
+        this.channels = null;
+        this.length = 0;
+        this.readPosition = 0;
+        this.ended = false;
+        this.port.onmessage = (event) => {
+            const data = event.data;
+            if (data && data.type === 'load') {
+                this.channels = data.channels.map((buffer) => new Float32Array(buffer));
+                this.length = this.channels[0] ? this.channels[0].length : 0;
+                this.readPosition = 0;
+                this.ended = false;
+            } else if (data && data.type === 'stop') {
+                this.ended = true;
+            }
+        };
+    }
+
+    process(inputs, outputs, parameters) {
+        const output = outputs[0];
+        const rate = parameters.rate[0];
+
+        if (!this.channels || this.ended) {
+            return !this.ended;
+        }
+
+        for (let i = 0; i < output[0].length; i++) {
+            if (this.readPosition >= this.length - 1) {
+                if (!this.ended) {
+                    this.ended = true;
+                    this.port.postMessage({ type: 'ended' });
+                }
+                for (let ch = 0; ch < output.length; ch++) {
+                    output[ch][i] = 0;
+                }
+                continue;
+            }
+
+            const idx = Math.floor(this.readPosition);
+            const frac = this.readPosition - idx;
+
+            for (let ch = 0; ch < output.length; ch++) {
+                const channelData = this.channels[Math.min(ch, this.channels.length - 1)];
+                const s0 = channelData[idx] || 0;
+                const s1 = channelData[idx + 1] || 0;
+                output[ch][i] = s0 + (s1 - s0) * frac;
+            }
+
+            this.readPosition += rate;
+        }
+
+        return true;
+    }
+}
+
+registerProcessor('${BUFFER_SOURCE_PROCESSOR_NAME}', BufferSourceProcessor);
+`;
+var registeredContexts = /* @__PURE__ */ new WeakSet();
+var ensureBufferSourceWorklet = async (audioContext) => {
+  if (registeredContexts.has(audioContext)) {
+    return;
+  }
+  const blob = new Blob([BUFFER_SOURCE_PROCESSOR_SOURCE], { type: "application/javascript" });
+  const url = URL.createObjectURL(blob);
+  try {
+    await audioContext.audioWorklet.addModule(url);
+    registeredContexts.add(audioContext);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+};
+var createBufferSourceNode = (audioContext, rate, channelCount) => {
+  return new AudioWorkletNode(audioContext, BUFFER_SOURCE_PROCESSOR_NAME, {
+    numberOfInputs: 0,
+    numberOfOutputs: 1,
+    channelCount,
+    channelCountMode: "explicit",
+    outputChannelCount: [channelCount],
+    parameterData: { rate }
+  });
+};
+var loadBufferSourceAudio = (node, audioBuffer) => {
+  const channels = [];
+  for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+    channels.push(audioBuffer.getChannelData(ch).slice().buffer);
+  }
+  node.port.postMessage({ type: "load", channels }, channels);
+};
+var stopBufferSourceNode = (node) => {
+  node.port.postMessage({ type: "stop" });
+};
+
+// src/utils/PitchShifter.tsx
+var PITCH_SHIFTER_PROCESSOR_NAME = "novel-visualizer-pitch-shifter";
+var PITCH_SHIFTER_PROCESSOR_SOURCE = `
+class PitchShifterProcessor extends AudioWorkletProcessor {
+    static get parameterDescriptors() {
+        return [{ name: 'pitchRatio', defaultValue: 1, minValue: 0.25, maxValue: 4, automationRate: 'k-rate' }];
+    }
+
+    constructor() {
+        super();
+        this.grainSize = 4096;
+        this.hop = Math.floor(this.grainSize / 4);
+        // Grains start reading this far behind the write head so that, even at
+        // the maximum supported pitch ratio, they never read past unwritten data.
+        this.delay = this.grainSize * 3;
+        this.bufferSize = this.grainSize * 6;
+        this.channelStates = [];
+        this.window = new Float32Array(this.grainSize);
+        for (let i = 0; i < this.grainSize; i++) {
+            this.window[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (this.grainSize - 1));
+        }
+    }
+
+    getChannelState(channelIndex) {
+        let state = this.channelStates[channelIndex];
+        if (!state) {
+            state = {
+                ringBuffer: new Float32Array(this.bufferSize),
+                writeIndex: 0,
+                samplesUntilNextGrain: 0,
+                grains: []
+            };
+            this.channelStates[channelIndex] = state;
+        }
+        return state;
+    }
+
+    readRing(ringBuffer, position) {
+        const size = this.bufferSize;
+        let idx = position % size;
+        if (idx < 0) idx += size;
+        const i0 = Math.floor(idx);
+        const i1 = (i0 + 1) % size;
+        const frac = idx - i0;
+        return ringBuffer[i0] * (1 - frac) + ringBuffer[i1] * frac;
+    }
+
+    processChannel(inputChannel, outputChannel, pitchRatio, state) {
+        const ringBuffer = state.ringBuffer;
+        const grains = state.grains;
+
+        for (let i = 0; i < outputChannel.length; i++) {
+            ringBuffer[state.writeIndex] = inputChannel ? (inputChannel[i] || 0) : 0;
+
+            if (state.samplesUntilNextGrain <= 0) {
+                state.samplesUntilNextGrain = this.hop;
+                grains.push({ readPos: state.writeIndex - this.delay, age: 0 });
+                if (grains.length > 6) {
+                    grains.shift();
+                }
+            }
+            state.samplesUntilNextGrain--;
+
+            let sample = 0;
+            for (let g = grains.length - 1; g >= 0; g--) {
+                const grain = grains[g];
+                if (grain.age >= this.grainSize) {
+                    grains.splice(g, 1);
+                    continue;
+                }
+                sample += this.readRing(ringBuffer, grain.readPos + grain.age * pitchRatio) * this.window[grain.age];
+                grain.age++;
+            }
+
+            outputChannel[i] = sample * 0.5;
+            state.writeIndex = (state.writeIndex + 1) % this.bufferSize;
+        }
+    }
+
+    process(inputs, outputs, parameters) {
+        const input = inputs[0];
+        const output = outputs[0];
+        const pitchRatio = parameters.pitchRatio[0];
+
+        for (let ch = 0; ch < output.length; ch++) {
+            const inputChannel = input && input[ch] ? input[ch] : null;
+            const state = this.getChannelState(ch);
+            this.processChannel(inputChannel, output[ch], pitchRatio, state);
+        }
+
+        return true;
+    }
+}
+
+registerProcessor('${PITCH_SHIFTER_PROCESSOR_NAME}', PitchShifterProcessor);
+`;
+var registeredContexts2 = /* @__PURE__ */ new WeakSet();
+var ensurePitchShifterWorklet = async (audioContext) => {
+  if (registeredContexts2.has(audioContext)) {
+    return;
+  }
+  const blob = new Blob([PITCH_SHIFTER_PROCESSOR_SOURCE], { type: "application/javascript" });
+  const url = URL.createObjectURL(blob);
+  try {
+    await audioContext.audioWorklet.addModule(url);
+    registeredContexts2.add(audioContext);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+};
+var createPitchShifterNode = (audioContext, pitchRatio, channelCount) => {
+  return new AudioWorkletNode(audioContext, PITCH_SHIFTER_PROCESSOR_NAME, {
+    numberOfInputs: 1,
+    numberOfOutputs: 1,
+    channelCount,
+    channelCountMode: "explicit",
+    outputChannelCount: [channelCount],
+    parameterData: { pitchRatio }
+  });
+};
+
+// src/utils/useVoiceAudio.ts
+var WARMTH_FREQUENCY = 300;
+var BRIGHTNESS_FREQUENCY = 3e3;
+var NASALITY_FREQUENCY = 1500;
+var NASALITY_Q = 1.2;
+var normalizeFiniteNumber = (value, fallback) => {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+};
+var normalizeVoiceModulation = (voiceModulation) => {
+  const rate = normalizeFiniteNumber(voiceModulation?.rate, 1);
+  const volume = normalizeFiniteNumber(voiceModulation?.volume, 1);
+  return {
+    pitch: normalizeFiniteNumber(voiceModulation?.pitch, 0),
+    rate: rate > 0 ? rate : 1,
+    volume: volume >= 0 ? volume : 1,
+    warmth: normalizeFiniteNumber(voiceModulation?.warmth, 0),
+    brightness: normalizeFiniteNumber(voiceModulation?.brightness, 0),
+    nasality: normalizeFiniteNumber(voiceModulation?.nasality, 0)
+  };
+};
+var semitonesToRatio = (semitones) => Math.pow(2, semitones / 12);
+var useVoiceAudio = (enabled, speechUrl, playbackKey, voiceModulation) => {
+  const audioContextRef = useRef(null);
+  const currentBufferSourceNodeRef = useRef(null);
+  const currentPitchShifterNodeRef = useRef(null);
+  const currentAudioAnalyserRef = useRef(null);
+  const currentAudioWarmthFilterRef = useRef(null);
+  const currentAudioBrightnessFilterRef = useRef(null);
+  const currentAudioNasalityFilterRef = useRef(null);
+  const currentAudioGainRef = useRef(null);
+  const audioLoadTokenRef = useRef(0);
+  const prevPlaybackKeyRef = useRef(playbackKey);
+  const [isAudioPlaying, setIsAudioPlaying] = useState4(false);
+  const [audioAnalyser, setAudioAnalyser] = useState4(null);
+  const normalizedModulation = useMemo2(() => normalizeVoiceModulation(voiceModulation), [voiceModulation]);
+  const pitchShifterRatio = useMemo2(
+    () => semitonesToRatio(normalizedModulation.pitch) / normalizedModulation.rate,
+    [normalizedModulation]
+  );
+  const cleanupAudioGraph = useCallback(() => {
+    if (currentBufferSourceNodeRef.current) {
+      stopBufferSourceNode(currentBufferSourceNodeRef.current);
+    }
+    currentBufferSourceNodeRef.current?.disconnect();
+    currentPitchShifterNodeRef.current?.disconnect();
+    currentAudioWarmthFilterRef.current?.disconnect();
+    currentAudioBrightnessFilterRef.current?.disconnect();
+    currentAudioNasalityFilterRef.current?.disconnect();
+    currentAudioGainRef.current?.disconnect();
+    currentAudioAnalyserRef.current?.disconnect();
+    currentBufferSourceNodeRef.current = null;
+    currentPitchShifterNodeRef.current = null;
+    currentAudioWarmthFilterRef.current = null;
+    currentAudioBrightnessFilterRef.current = null;
+    currentAudioNasalityFilterRef.current = null;
+    currentAudioGainRef.current = null;
+    currentAudioAnalyserRef.current = null;
+    setAudioAnalyser(null);
+  }, []);
+  const applyModulationToGraph = useCallback((modulation) => {
+    currentAudioGainRef.current && (currentAudioGainRef.current.gain.value = modulation.volume);
+    currentAudioWarmthFilterRef.current && (currentAudioWarmthFilterRef.current.gain.value = modulation.warmth);
+    currentAudioBrightnessFilterRef.current && (currentAudioBrightnessFilterRef.current.gain.value = modulation.brightness);
+    currentAudioNasalityFilterRef.current && (currentAudioNasalityFilterRef.current.gain.value = modulation.nasality);
+  }, []);
+  const buildAudioGraph = useCallback(async (audioBuffer, rate, pitchRatio, modulation) => {
+    if (typeof window === "undefined" || typeof window.AudioContext === "undefined") {
+      cleanupAudioGraph();
+      return null;
+    }
+    try {
+      const audioContext = audioContextRef.current ?? new window.AudioContext();
+      audioContextRef.current = audioContext;
+      await Promise.all([
+        ensureBufferSourceWorklet(audioContext),
+        ensurePitchShifterWorklet(audioContext)
+      ]);
+      cleanupAudioGraph();
+      const channelCount = audioBuffer.numberOfChannels;
+      const bufferSourceNode = createBufferSourceNode(audioContext, rate, channelCount);
+      const pitchShifterNode = createPitchShifterNode(audioContext, pitchRatio, channelCount);
+      const warmthFilter = audioContext.createBiquadFilter();
+      warmthFilter.type = "lowshelf";
+      warmthFilter.frequency.value = WARMTH_FREQUENCY;
+      warmthFilter.gain.value = modulation.warmth;
+      const brightnessFilter = audioContext.createBiquadFilter();
+      brightnessFilter.type = "highshelf";
+      brightnessFilter.frequency.value = BRIGHTNESS_FREQUENCY;
+      brightnessFilter.gain.value = modulation.brightness;
+      const nasalityFilter = audioContext.createBiquadFilter();
+      nasalityFilter.type = "peaking";
+      nasalityFilter.frequency.value = NASALITY_FREQUENCY;
+      nasalityFilter.Q.value = NASALITY_Q;
+      nasalityFilter.gain.value = modulation.nasality;
+      const gainNode = audioContext.createGain();
+      gainNode.gain.value = modulation.volume;
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.7;
+      bufferSourceNode.connect(pitchShifterNode);
+      pitchShifterNode.connect(warmthFilter);
+      warmthFilter.connect(brightnessFilter);
+      brightnessFilter.connect(nasalityFilter);
+      nasalityFilter.connect(gainNode);
+      gainNode.connect(analyser);
+      analyser.connect(audioContext.destination);
+      currentBufferSourceNodeRef.current = bufferSourceNode;
+      currentPitchShifterNodeRef.current = pitchShifterNode;
+      currentAudioWarmthFilterRef.current = warmthFilter;
+      currentAudioBrightnessFilterRef.current = brightnessFilter;
+      currentAudioNasalityFilterRef.current = nasalityFilter;
+      currentAudioGainRef.current = gainNode;
+      currentAudioAnalyserRef.current = analyser;
+      setAudioAnalyser(analyser);
+      if (audioContext.state === "suspended") {
+        await audioContext.resume().catch((error) => {
+          console.error("Error resuming audio context:", error);
+        });
+      }
+      loadBufferSourceAudio(bufferSourceNode, audioBuffer);
+      return analyser;
+    } catch (error) {
+      console.warn("Audio graph unavailable; continuing without playback.", error);
+      cleanupAudioGraph();
+      return null;
+    }
+  }, [cleanupAudioGraph]);
+  useEffect4(() => {
+    if (prevPlaybackKeyRef.current === playbackKey) {
+      return;
+    }
+    prevPlaybackKeyRef.current = playbackKey;
+    setIsAudioPlaying(false);
+    cleanupAudioGraph();
+    const loadToken = ++audioLoadTokenRef.current;
+    if (!enabled || !speechUrl) {
+      return;
+    }
+    const abortController = new AbortController();
+    (async () => {
+      try {
+        if (typeof window === "undefined" || typeof window.AudioContext === "undefined") {
+          return;
+        }
+        const audioContext = audioContextRef.current ?? new window.AudioContext();
+        audioContextRef.current = audioContext;
+        const response = await fetch(speechUrl, { signal: abortController.signal, mode: "cors" });
+        const arrayBuffer = await response.arrayBuffer();
+        if (loadToken !== audioLoadTokenRef.current) {
+          return;
+        }
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        if (loadToken !== audioLoadTokenRef.current) {
+          return;
+        }
+        const analyser = await buildAudioGraph(audioBuffer, normalizedModulation.rate, pitchShifterRatio, normalizedModulation);
+        if (loadToken !== audioLoadTokenRef.current) {
+          cleanupAudioGraph();
+          return;
+        }
+        setIsAudioPlaying(true);
+        const bufferSourceNode = currentBufferSourceNodeRef.current;
+        if (bufferSourceNode) {
+          bufferSourceNode.port.onmessage = (event) => {
+            if (event.data?.type === "ended" && loadToken === audioLoadTokenRef.current) {
+              setIsAudioPlaying(false);
+            }
+          };
+        }
+      } catch (error) {
+        if (error?.name !== "AbortError") {
+          console.error("Error loading audio:", error);
+        }
+        if (loadToken === audioLoadTokenRef.current) {
+          setIsAudioPlaying(false);
+        }
+      }
+    })();
+    return () => {
+      abortController.abort();
+    };
+  }, [playbackKey, enabled, speechUrl]);
+  useEffect4(() => {
+    const currentTime = audioContextRef.current?.currentTime ?? 0;
+    currentBufferSourceNodeRef.current?.parameters.get("rate")?.setValueAtTime(normalizedModulation.rate, currentTime);
+    currentPitchShifterNodeRef.current?.parameters.get("pitchRatio")?.setValueAtTime(pitchShifterRatio, currentTime);
+    applyModulationToGraph(normalizedModulation);
+  }, [normalizedModulation, pitchShifterRatio, applyModulationToGraph]);
+  useEffect4(() => {
+    setIsAudioPlaying(false);
+    cleanupAudioGraph();
+  }, [enabled, cleanupAudioGraph]);
+  useEffect4(() => {
+    return () => {
+      cleanupAudioGraph();
+      if (audioContextRef.current) {
+        void audioContextRef.current.close().catch(() => void 0);
+        audioContextRef.current = null;
+      }
+    };
+  }, [cleanupAudioGraph]);
+  return { isAudioPlaying, audioAnalyser };
+};
+
 // src/components/NovelVisualizer.tsx
 import { Fragment as Fragment3, jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
 var calculateActorXPosition = (actorIndex, totalActors, anySpeaker) => {
@@ -2299,9 +2728,6 @@ var applyPopInSideSkew = (xPosition, popInSide) => {
   const proximityToLeft = Math.max(0, Math.min(1, (100 - xPosition) / 100));
   return Math.round((xPosition + proximityToLeft * MAX_SKEW) * 10) / 10;
 };
-var normalizeVoiceModulation = (voiceModulation) => {
-  return typeof voiceModulation === "number" && Number.isFinite(voiceModulation) && voiceModulation > 0 ? voiceModulation : 1;
-};
 function NovelVisualizer(props) {
   const theme = useTheme();
   const {
@@ -2324,6 +2750,7 @@ function NovelVisualizer(props) {
     getActorFilter,
     getActorScaleOffset,
     getActorVoiceModulation,
+    getActorTheme,
     getPresentActors,
     backgroundElements,
     backgroundOptions,
@@ -2340,30 +2767,24 @@ function NovelVisualizer(props) {
     inlineStyleOptions,
     messageWindowSx
   } = props;
-  const [inputText, setInputText] = useState4("");
-  const [finishTyping, setFinishTyping] = useState4(false);
+  const [inputText, setInputText] = useState5("");
+  const [finishTyping, setFinishTyping] = useState5(false);
   const [messageKey, setMessageKey] = React4.useState(0);
-  const [hoveredActor, setHoveredActor] = useState4(null);
-  const currentAudioRef = React4.useRef(null);
-  const audioContextRef = React4.useRef(null);
-  const currentAudioSourceRef = React4.useRef(null);
-  const currentAudioAnalyserRef = React4.useRef(null);
-  const [isAudioPlaying, setIsAudioPlaying] = React4.useState(false);
-  const [audioAnalyser, setAudioAnalyser] = React4.useState(null);
-  const [mousePosition, setMousePosition] = useState4(null);
-  const [messageBoxTopVh, setMessageBoxTopVh] = useState4(isVerticalLayout ? 50 : 60);
-  const [loading, setLoading] = useState4(false);
+  const [hoveredActor, setHoveredActor] = useState5(null);
+  const [mousePosition, setMousePosition] = useState5(null);
+  const [messageBoxTopVh, setMessageBoxTopVh] = useState5(isVerticalLayout ? 50 : 60);
+  const [loading, setLoading] = useState5(false);
   const isLoading = loading || externalLoading;
-  const messageBoxRef = useRef(null);
-  const [isEditingMessage, setIsEditingMessage] = useState4(false);
-  const [editedMessage, setEditedMessage] = useState4("");
-  const [originalMessage, setOriginalMessage] = useState4("");
-  const [localSkit, setLocalSkit] = useState4(skit);
-  const scriptEntries = useMemo2(() => localSkit?.script ?? [], [localSkit]);
-  const [index, setIndex] = useState4(skit?.currentIndex ?? -1);
-  const prevIndexRef = useRef(index);
-  const prevTypingIndexRef = useRef(index);
-  const prevExternalLoadingRef = useRef(externalLoading);
+  const messageBoxRef = useRef2(null);
+  const [isEditingMessage, setIsEditingMessage] = useState5(false);
+  const [editedMessage, setEditedMessage] = useState5("");
+  const [originalMessage, setOriginalMessage] = useState5("");
+  const [localSkit, setLocalSkit] = useState5(skit);
+  const scriptEntries = useMemo3(() => localSkit?.script ?? [], [localSkit]);
+  const [index, setIndex] = useState5(skit?.currentIndex ?? -1);
+  const prevIndexRef = useRef2(index);
+  const prevTypingIndexRef = useRef2(index);
+  const prevExternalLoadingRef = useRef2(externalLoading);
   const accentMain = theme.palette.primary.main;
   const accentLight = theme.palette.primary.light;
   const errorMain = theme.palette.error.main;
@@ -2379,11 +2800,11 @@ function NovelVisualizer(props) {
     };
     return schemeMap[colorScheme] || theme.palette.primary.main;
   };
-  const baseTextShadow = useMemo2(
+  const baseTextShadow = useMemo3(
     () => `2px 2px 2px ${safeAlpha(theme.palette.common.black, 0.8)}`,
     [theme]
   );
-  const messageTokens = useMemo2(
+  const messageTokens = useMemo3(
     () => ({
       baseTextShadow,
       defaultDialogueColor: theme.palette.info.light,
@@ -2392,60 +2813,28 @@ function NovelVisualizer(props) {
     }),
     [baseTextShadow, theme]
   );
-  const cleanupCurrentAudioGraph = React4.useCallback(() => {
-    currentAudioSourceRef.current?.disconnect();
-    currentAudioAnalyserRef.current?.disconnect();
-    currentAudioSourceRef.current = null;
-    currentAudioAnalyserRef.current = null;
-    setAudioAnalyser(null);
-  }, []);
-  const attachAudioAnalyser = React4.useCallback((audio) => {
-    if (typeof window === "undefined" || typeof window.AudioContext === "undefined") {
-      cleanupCurrentAudioGraph();
-      return null;
-    }
-    try {
-      const audioContext = audioContextRef.current ?? new window.AudioContext();
-      audioContextRef.current = audioContext;
-      cleanupCurrentAudioGraph();
-      const source = audioContext.createMediaElementSource(audio);
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0.7;
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
-      currentAudioSourceRef.current = source;
-      currentAudioAnalyserRef.current = analyser;
-      setAudioAnalyser(analyser);
-      return analyser;
-    } catch (error) {
-      console.warn("Audio analyser unavailable; continuing without waveform analysis.", error);
-      cleanupCurrentAudioGraph();
-      return null;
-    }
-  }, [cleanupCurrentAudioGraph]);
   const setCurrentIndex = (currentIndex) => {
     if (localSkit) {
       setLocalSkit({ ...localSkit, currentIndex });
     }
     setIndex(currentIndex);
   };
-  const formatMessage = (text, speakerActor2, tokens) => {
+  const formatMessage = (text, speakerActor2, actorTheme2, tokens) => {
     return formatMessageWithStyles(text, {
-      speakerThemeColor: speakerActor2?.themeColor,
-      speakerThemeFontFamily: speakerActor2?.themeFontFamily,
+      speakerThemeColor: actorTheme2?.color,
+      speakerThemeFontFamily: actorTheme2?.fontFamily,
       proseColor: theme.palette.text.primary,
       tokens,
       enableFontEffects,
       inlineStyleOptions
     });
   };
-  useEffect4(() => {
+  useEffect5(() => {
     if (skit != localSkit) {
       setLocalSkit(skit);
     }
   }, [skit, externalLoading]);
-  useEffect4(() => {
+  useEffect5(() => {
     if (skit && localSkit) {
       skit.currentIndex = localSkit?.currentIndex ?? skit.currentIndex;
       skit.script = localSkit?.script ?? skit.script;
@@ -2454,7 +2843,7 @@ function NovelVisualizer(props) {
       }
     }
   }, [localSkit, onSkitChange]);
-  useEffect4(() => {
+  useEffect5(() => {
     const el = messageBoxRef.current;
     if (!el) return;
     const measure = () => {
@@ -2472,13 +2861,13 @@ function NovelVisualizer(props) {
     const y = e.clientY / window.innerHeight * 100;
     setMousePosition({ x, y });
   };
-  const actorsAtIndex = useMemo2(() => {
+  const actorsAtIndex = useMemo3(() => {
     if (!localSkit || !Array.isArray(localSkit.script)) {
       return [];
     }
     return getPresentActors(localSkit, index);
   }, [localSkit, index, actors, getPresentActors]);
-  const focusActor = useMemo2(() => {
+  const focusActor = useMemo3(() => {
     for (let i = Math.min(index, scriptEntries.length - 1); i >= 0; i--) {
       const speakerId = scriptEntries[i].speakerId;
       if (speakerId && actors[speakerId] && playerActorId !== speakerId) {
@@ -2487,22 +2876,31 @@ function NovelVisualizer(props) {
     }
     return null;
   }, [scriptEntries, index, actors]);
-  const speakerActor = useMemo2(() => {
+  const speakerActor = useMemo3(() => {
     return index >= 0 && index < scriptEntries.length && scriptEntries[index].speakerId ? actors[scriptEntries[index].speakerId] : null;
   }, [scriptEntries, index, actors]);
-  const currentVoiceModulation = useMemo2(() => {
-    return normalizeVoiceModulation(speakerActor ? getActorVoiceModulation?.(speakerActor) : void 0);
-  }, [speakerActor, getActorVoiceModulation]);
-  const popInSpeakerSide = useMemo2(() => {
+  const currentSpeechUrl = useMemo3(() => {
+    return index >= 0 && index < scriptEntries.length ? scriptEntries[index].speechUrl : void 0;
+  }, [scriptEntries, index]);
+  const { isAudioPlaying, audioAnalyser } = useVoiceAudio(
+    enableAudio,
+    currentSpeechUrl,
+    index,
+    speakerActor && localSkit ? getActorVoiceModulation?.(speakerActor, localSkit, index) : void 0
+  );
+  const popInSpeakerSide = useMemo3(() => {
     if (!enablePopInSpeakers || !speakerActor || actorsAtIndex.includes(speakerActor) || speakerActor.id === playerActorId) {
       return null;
     }
     return speakerActor.id.charCodeAt(0) % 2 === 0 ? "left" : "right";
   }, [enablePopInSpeakers, speakerActor, actorsAtIndex]);
-  const displayMessage = useMemo2(() => {
+  const actorTheme = useMemo3(() => {
+    return speakerActor && localSkit && getActorTheme ? getActorTheme(speakerActor, localSkit, index) : void 0;
+  }, [speakerActor, localSkit, index, getActorTheme]);
+  const displayMessage = useMemo3(() => {
     const message = index >= 0 && index < scriptEntries.length ? scriptEntries[index].message ?? "" : "";
-    return formatMessage(message, speakerActor, messageTokens);
-  }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage]);
+    return formatMessage(message, speakerActor, actorTheme, messageTokens);
+  }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage, actorTheme]);
   useLayoutEffect(() => {
     if (prevTypingIndexRef.current !== index) {
       setFinishTyping(false);
@@ -2510,89 +2908,23 @@ function NovelVisualizer(props) {
       prevTypingIndexRef.current = index;
     }
   }, [index]);
-  useEffect4(() => {
+  useEffect5(() => {
     if (prevIndexRef.current !== index) {
       if (isEditingMessage) {
         setIsEditingMessage(false);
         setOriginalMessage("");
       }
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current.currentTime = 0;
-        setIsAudioPlaying(false);
-        cleanupCurrentAudioGraph();
-      }
-      if (enableAudio && index >= 0 && index < scriptEntries.length && scriptEntries[index].speechUrl) {
-        const audio = new Audio(scriptEntries[index].speechUrl);
-        audio.playbackRate = currentVoiceModulation;
-        currentAudioRef.current = audio;
-        audio.crossOrigin = "anonymous";
-        const analyser = attachAudioAnalyser(audio);
-        if (audioContextRef.current?.state === "suspended") {
-          void audioContextRef.current.resume().catch((error) => {
-            console.error("Error resuming audio context:", error);
-          });
-        }
-        const handlePlay = () => setIsAudioPlaying(true);
-        const handlePauseOrEnded = () => setIsAudioPlaying(false);
-        const handleAudioError = () => setIsAudioPlaying(false);
-        const handleMaybeCorsRestriction = () => {
-          if (analyser || !audioContextRef.current || audioContextRef.current.state !== "running") {
-            return;
-          }
-          cleanupCurrentAudioGraph();
-        };
-        audio.addEventListener("play", handlePlay);
-        audio.addEventListener("pause", handlePauseOrEnded);
-        audio.addEventListener("ended", handlePauseOrEnded);
-        audio.addEventListener("error", handleAudioError);
-        audio.addEventListener("playing", handleMaybeCorsRestriction);
-        audio.play().catch((err) => {
-          console.error("Error playing audio:", err);
-          setIsAudioPlaying(false);
-        });
-        return () => {
-          audio.removeEventListener("play", handlePlay);
-          audio.removeEventListener("pause", handlePauseOrEnded);
-          audio.removeEventListener("ended", handlePauseOrEnded);
-          audio.removeEventListener("error", handleAudioError);
-          audio.removeEventListener("playing", handleMaybeCorsRestriction);
-        };
-      }
       prevIndexRef.current = index;
     }
-  }, [index, enableAudio, scriptEntries, currentVoiceModulation, attachAudioAnalyser, cleanupCurrentAudioGraph]);
-  useEffect4(() => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.playbackRate = currentVoiceModulation;
-    }
-  }, [currentVoiceModulation]);
-  useEffect4(() => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current.currentTime = 0;
-      currentAudioRef.current = null;
-      setIsAudioPlaying(false);
-    }
-    cleanupCurrentAudioGraph();
-  }, [enableAudio, cleanupCurrentAudioGraph]);
-  useEffect4(() => {
-    return () => {
-      cleanupCurrentAudioGraph();
-      if (audioContextRef.current) {
-        void audioContextRef.current.close().catch(() => void 0);
-        audioContextRef.current = null;
-      }
-    };
-  }, [cleanupCurrentAudioGraph]);
-  useEffect4(() => {
+  }, [index, isEditingMessage]);
+  useEffect5(() => {
     if (prevExternalLoadingRef.current !== externalLoading) {
       prevIndexRef.current = -1;
       setCurrentIndex(Math.min(Math.max(0, index), scriptEntries.length - 1));
       prevExternalLoadingRef.current = externalLoading;
     }
   }, [externalLoading, scriptEntries.length]);
-  useEffect4(() => {
+  useEffect5(() => {
     if (!mousePosition) {
       setHoveredActor(null);
       return;
@@ -2631,7 +2963,7 @@ function NovelVisualizer(props) {
     });
     setHoveredActor(closestActor);
   }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enablePopInSpeakers, focusActor, popInSpeakerSide]);
-  useEffect4(() => {
+  useEffect5(() => {
     const handleKeyDown = (e) => {
       const target = e.target;
       const isInputFocused = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
@@ -2699,7 +3031,7 @@ function NovelVisualizer(props) {
   };
   const sceneEnded = Boolean(index >= 0 && index < scriptEntries.length && scriptEntries[index]?.endScene);
   const progressLabel = `${scriptEntries.length === 0 ? 0 : index + 1} / ${scriptEntries.length}`;
-  const placeholderText = useMemo2(() => {
+  const placeholderText = useMemo3(() => {
     if (!localSkit || !Array.isArray(localSkit.script)) return "Type your next action...";
     if (typeof inputPlaceholder === "function") {
       return inputPlaceholder({ index, entry: index >= 0 && index < scriptEntries.length ? scriptEntries[index] : void 0 });
@@ -2862,11 +3194,11 @@ function NovelVisualizer(props) {
     }
   };
   const responsiveOverlayNode = responsiveOverlay ? responsiveOverlay(localSkit, hoveredActor) : null;
-  const backgroundImageUrl = useMemo2(
+  const backgroundImageUrl = useMemo3(
     () => getBackgroundImageUrl && localSkit ? getBackgroundImageUrl(localSkit, index) : void 0,
     [getBackgroundImageUrl, localSkit, index]
   );
-  const resolvedBackgroundElements = useMemo2(() => {
+  const resolvedBackgroundElements = useMemo3(() => {
     if (typeof backgroundElements === "function") {
       if (!localSkit) {
         return null;

@@ -10,7 +10,8 @@ import { BlurredBackground } from './BlurredBackground';
 import TypeOut from './TypeOut';
 import { formatMessageWithStyles } from '../utils/TextFormatting';
 import type { FormatInlineStylesOptions, MessageFormatTokens } from '../utils/TextFormatting';
-import type { NovelActor, NovelSkit, NovelScriptEntry, NovelScaleOffset } from '../types';
+import { useVoiceAudio } from '../utils/useVoiceAudio';
+import type { NovelActor, NovelSkit, NovelScriptEntry, NovelScaleOffset, NovelVoiceModulation, NovelActorTheme } from '../types';
 
 export interface SubmitButtonConfig {
     label: string;
@@ -51,12 +52,6 @@ const applyPopInSideSkew = (
     return Math.round((xPosition + proximityToLeft * MAX_SKEW) * 10) / 10;
 };
 
-const normalizeVoiceModulation = (voiceModulation: number | undefined): number => {
-    return typeof voiceModulation === 'number' && Number.isFinite(voiceModulation) && voiceModulation > 0
-        ? voiceModulation
-        : 1;
-};
-
 /**
  * Props for the NovelVisualizer component.
  * @template TScript - The script type
@@ -85,8 +80,9 @@ export interface NovelVisualizerProps<
     getActorImageUrl: (actor: TActor, skit: TSkit, index: number) => string;
     getActorImageColorMultiplier?: (actor: TActor, skit: TSkit, index: number) => string;
     getActorScaleOffset?: (actor: TActor, skit: TSkit, index: number) => NovelScaleOffset;
-    getActorVoiceModulation?: (actor: TActor) => number | undefined;
     getActorFilter?: (actor: TActor, skit: TSkit, index: number) => { filter?: 'ghost' | 'aura' | 'hologram'; filterColor?: string };
+    getActorVoiceModulation?: (actor: TActor, skit: TSkit, index: number) => NovelVoiceModulation | undefined;
+    getActorTheme?: (actor: TActor, skit: TSkit, index: number) => NovelActorTheme;
     backgroundElements?: React.ReactNode | ((context: {
         skit: TSkit;
         index: number;
@@ -157,6 +153,7 @@ export function NovelVisualizer<
         getActorFilter,
         getActorScaleOffset,
         getActorVoiceModulation,
+        getActorTheme,
         getPresentActors,
         backgroundElements,
         backgroundOptions,
@@ -173,16 +170,11 @@ export function NovelVisualizer<
         inlineStyleOptions,
         messageWindowSx
     } = props;
+
     const [inputText, setInputText] = useState<string>('');
     const [finishTyping, setFinishTyping] = useState<boolean>(false);
     const [messageKey, setMessageKey] = React.useState<number>(0); // Key to force TypeOut reset
     const [hoveredActor, setHoveredActor] = useState<TActor | null>(null);
-    const currentAudioRef = React.useRef<HTMLAudioElement | null>(null);
-    const audioContextRef = React.useRef<AudioContext | null>(null);
-    const currentAudioSourceRef = React.useRef<MediaElementAudioSourceNode | null>(null);
-    const currentAudioAnalyserRef = React.useRef<AnalyserNode | null>(null);
-    const [isAudioPlaying, setIsAudioPlaying] = React.useState<boolean>(false);
-    const [audioAnalyser, setAudioAnalyser] = React.useState<AnalyserNode | null>(null);
     const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
     const [messageBoxTopVh, setMessageBoxTopVh] = useState<number>(isVerticalLayout ? 50 : 60);
     const [loading, setLoading] = useState<boolean>(false);
@@ -231,49 +223,6 @@ export function NovelVisualizer<
         [baseTextShadow, theme]
     );
 
-    const cleanupCurrentAudioGraph = React.useCallback(() => {
-        currentAudioSourceRef.current?.disconnect();
-        currentAudioAnalyserRef.current?.disconnect();
-        currentAudioSourceRef.current = null;
-        currentAudioAnalyserRef.current = null;
-        setAudioAnalyser(null);
-    }, []);
-
-    const attachAudioAnalyser = React.useCallback((audio: HTMLAudioElement) => {
-        if (typeof window === 'undefined' || typeof window.AudioContext === 'undefined') {
-            cleanupCurrentAudioGraph();
-            return null;
-        }
-
-        try {
-            const audioContext = audioContextRef.current ?? new window.AudioContext();
-            audioContextRef.current = audioContext;
-
-            cleanupCurrentAudioGraph();
-
-            const source = audioContext.createMediaElementSource(audio);
-            const analyser = audioContext.createAnalyser();
-            analyser.fftSize = 2048;
-            analyser.smoothingTimeConstant = 0.7;
-
-            source.connect(analyser);
-            analyser.connect(audioContext.destination);
-
-            currentAudioSourceRef.current = source;
-            currentAudioAnalyserRef.current = analyser;
-            setAudioAnalyser(analyser);
-
-            return analyser;
-        } catch (error) {
-            // Cross-origin audio can block MediaElementAudioSource analysis unless the
-            // source server sends permissive CORS headers. Keep playback functional by
-            // gracefully disabling analyser-driven animation.
-            console.warn('Audio analyser unavailable; continuing without waveform analysis.', error);
-            cleanupCurrentAudioGraph();
-            return null;
-        }
-    }, [cleanupCurrentAudioGraph]);
-
     const setCurrentIndex = (currentIndex: number) => {
         if (localSkit) {
             setLocalSkit({ ...localSkit, currentIndex: currentIndex });
@@ -285,11 +234,12 @@ export function NovelVisualizer<
     const formatMessage = (
         text: string,
         speakerActor: TActor | null | undefined,
+        actorTheme: NovelActorTheme | null | undefined,
         tokens: MessageFormatTokens
     ): JSX.Element => {
         return formatMessageWithStyles(text, {
-            speakerThemeColor: speakerActor?.themeColor,
-            speakerThemeFontFamily: speakerActor?.themeFontFamily,
+            speakerThemeColor: actorTheme?.color,
+            speakerThemeFontFamily: actorTheme?.fontFamily,
             proseColor: theme.palette.text.primary,
             tokens,
             enableFontEffects,
@@ -360,9 +310,16 @@ export function NovelVisualizer<
         return index >= 0 && index < scriptEntries.length && scriptEntries[index].speakerId ? actors[scriptEntries[index].speakerId] : null;
     }, [scriptEntries, index, actors]);
 
-    const currentVoiceModulation = useMemo(() => {
-        return normalizeVoiceModulation(speakerActor ? getActorVoiceModulation?.(speakerActor) : undefined);
-    }, [speakerActor, getActorVoiceModulation]);
+    const currentSpeechUrl = useMemo(() => {
+        return index >= 0 && index < scriptEntries.length ? scriptEntries[index].speechUrl : undefined;
+    }, [scriptEntries, index]);
+
+    const { isAudioPlaying, audioAnalyser } = useVoiceAudio(
+        enableAudio,
+        currentSpeechUrl,
+        index,
+        speakerActor && localSkit ? getActorVoiceModulation?.(speakerActor, localSkit, index) : undefined
+    );
 
     const popInSpeakerSide = useMemo<'left' | 'right' | null>(() => {
         if (!enablePopInSpeakers || !speakerActor || actorsAtIndex.includes(speakerActor) || speakerActor.id === playerActorId) {
@@ -371,10 +328,14 @@ export function NovelVisualizer<
         return speakerActor.id.charCodeAt(0) % 2 === 0 ? 'left' : 'right';
     }, [enablePopInSpeakers, speakerActor, actorsAtIndex]);
 
+    const actorTheme = useMemo(() => {
+        return speakerActor && localSkit && getActorTheme ? getActorTheme(speakerActor, localSkit, index) : undefined;
+    }, [speakerActor, localSkit, index, getActorTheme]);
+
     const displayMessage = useMemo(() => {
         const message = index >= 0 && index < scriptEntries.length ? scriptEntries[index].message ?? '' : '';
-        return formatMessage(message, speakerActor, messageTokens);
-    }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage]);
+        return formatMessage(message, speakerActor, actorTheme, messageTokens);
+    }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage, actorTheme]);
 
     useLayoutEffect(() => {
         if (prevTypingIndexRef.current !== index) {
@@ -392,97 +353,9 @@ export function NovelVisualizer<
                 setIsEditingMessage(false);
                 setOriginalMessage('');
             }
-            if (currentAudioRef.current) {
-                // Stop any currently playing audio
-                currentAudioRef.current.pause();
-                currentAudioRef.current.currentTime = 0;
-                setIsAudioPlaying(false);
-                cleanupCurrentAudioGraph();
-            }
-            if (enableAudio && index >= 0 && index < scriptEntries.length && scriptEntries[index].speechUrl) {
-                const audio = new Audio(scriptEntries[index].speechUrl);
-                audio.playbackRate = currentVoiceModulation;
-                currentAudioRef.current = audio;
-
-                // Required for cross-origin waveform analysis when the remote server
-                // allows it via Access-Control-Allow-Origin. If CORS is not permitted,
-                // playback will still proceed without analyser data.
-                audio.crossOrigin = 'anonymous';
-
-                const analyser = attachAudioAnalyser(audio);
-
-                // Resume the AudioContext now, before play(), so that audio routed
-                // through Web Audio is not silently swallowed by a suspended context.
-                // The context is created in an async effect (outside a user gesture),
-                // so it starts suspended; we must resume it proactively.
-                if (audioContextRef.current?.state === 'suspended') {
-                    void audioContextRef.current.resume().catch((error) => {
-                        console.error('Error resuming audio context:', error);
-                    });
-                }
-
-                // Set up event listeners for audio state
-                const handlePlay = () => setIsAudioPlaying(true);
-                const handlePauseOrEnded = () => setIsAudioPlaying(false);
-                const handleAudioError = () => setIsAudioPlaying(false);
-
-                // Some browsers surface CORS/analysis restrictions when playback starts.
-                // If that happens, detach the graph and continue with plain playback.
-                const handleMaybeCorsRestriction = () => {
-                    if (analyser || !audioContextRef.current || audioContextRef.current.state !== 'running') {
-                        return;
-                    }
-                    cleanupCurrentAudioGraph();
-                };
-
-                audio.addEventListener('play', handlePlay);
-                audio.addEventListener('pause', handlePauseOrEnded);
-                audio.addEventListener('ended', handlePauseOrEnded);
-                audio.addEventListener('error', handleAudioError);
-                audio.addEventListener('playing', handleMaybeCorsRestriction);
-
-                audio.play().catch(err => {
-                    console.error('Error playing audio:', err);
-                    setIsAudioPlaying(false);
-                });
-
-                return () => {
-                    audio.removeEventListener('play', handlePlay);
-                    audio.removeEventListener('pause', handlePauseOrEnded);
-                    audio.removeEventListener('ended', handlePauseOrEnded);
-                    audio.removeEventListener('error', handleAudioError);
-                    audio.removeEventListener('playing', handleMaybeCorsRestriction);
-                };
-            }
             prevIndexRef.current = index;
         }
-    }, [index, enableAudio, scriptEntries, currentVoiceModulation, attachAudioAnalyser, cleanupCurrentAudioGraph]);
-
-    useEffect(() => {
-        if (currentAudioRef.current) {
-            currentAudioRef.current.playbackRate = currentVoiceModulation;
-        }
-    }, [currentVoiceModulation]);
-
-    useEffect(() => {
-        if (currentAudioRef.current) {
-            currentAudioRef.current.pause();
-            currentAudioRef.current.currentTime = 0;
-            currentAudioRef.current = null;
-            setIsAudioPlaying(false);
-        }
-        cleanupCurrentAudioGraph();
-    }, [enableAudio, cleanupCurrentAudioGraph]);
-
-    useEffect(() => {
-        return () => {
-            cleanupCurrentAudioGraph();
-            if (audioContextRef.current) {
-                void audioContextRef.current.close().catch(() => undefined);
-                audioContextRef.current = null;
-            }
-        };
-    }, [cleanupCurrentAudioGraph]);
+    }, [index, isEditingMessage]);
 
     useEffect(() => {
         if (prevExternalLoadingRef.current !== externalLoading) {

@@ -20,11 +20,13 @@ declare const formatInlineStyles: (text: string, options?: FormatInlineStylesOpt
 interface NovelActor {
     id: string;
     name: string;
-    themeColor?: string;
-    themeFontFamily?: string;
     defaultImageUrl?: string;
     filter?: 'ghost' | 'aura' | 'hologram';
     filterColor?: string;
+}
+interface NovelActorTheme {
+    color?: string;
+    fontFamily?: string;
 }
 /**
  * Base interface for script entries that the library requires.
@@ -49,6 +51,14 @@ interface NovelScaleOffset {
     scale?: number;
     offsetX?: number;
     offsetY?: number;
+}
+interface NovelVoiceModulation {
+    pitch?: number;
+    rate?: number;
+    volume?: number;
+    warmth?: number;
+    brightness?: number;
+    nasality?: number;
 }
 
 interface SubmitButtonConfig {
@@ -83,11 +93,12 @@ interface NovelVisualizerProps<TActor extends NovelActor, TSkit extends NovelSki
     getActorImageUrl: (actor: TActor, skit: TSkit, index: number) => string;
     getActorImageColorMultiplier?: (actor: TActor, skit: TSkit, index: number) => string;
     getActorScaleOffset?: (actor: TActor, skit: TSkit, index: number) => NovelScaleOffset;
-    getActorVoiceModulation?: (actor: TActor) => number | undefined;
     getActorFilter?: (actor: TActor, skit: TSkit, index: number) => {
         filter?: 'ghost' | 'aura' | 'hologram';
         filterColor?: string;
     };
+    getActorVoiceModulation?: (actor: TActor, skit: TSkit, index: number) => NovelVoiceModulation | undefined;
+    getActorTheme?: (actor: TActor, skit: TSkit, index: number) => NovelActorTheme;
     backgroundElements?: React__default.ReactNode | ((context: {
         skit: TSkit;
         index: number;
@@ -187,4 +198,4 @@ interface TypeOutProps {
 }
 declare const TypeOut: React__default.FC<TypeOutProps>;
 
-export { _default as ActorImage, type NovelSkit as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, FontHandler, type FormatInlineStylesOptions, type InlineClassStyle, type InlineStyleContext, type NovelActor, NovelVisualizer, type NovelVisualizerProps, type SubmitButtonConfig, TypeOut, buildGoogleFontImportRules, collectFontFamilies, defaultInlineClassStyles, formatInlineStyles, getFontSizeMultiplier };
+export { _default as ActorImage, type NovelSkit as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, FontHandler, type FormatInlineStylesOptions, type InlineClassStyle, type InlineStyleContext, type NovelActor, type NovelActorTheme, type NovelScaleOffset, NovelVisualizer, type NovelVisualizerProps, type NovelVoiceModulation, type SubmitButtonConfig, TypeOut, buildGoogleFontImportRules, collectFontFamilies, defaultInlineClassStyles, formatInlineStyles, getFontSizeMultiplier };
