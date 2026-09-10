@@ -1,6 +1,4 @@
 import type { NovelVoiceModulation } from '../types';
-import { ensureBufferSourceWorklet, createBufferSourceNode, loadBufferSourceAudio, stopBufferSourceNode } from './TimeStretch';
-import { ensurePitchShifterWorklet, createPitchShifterNode } from './PitchShifter';
 
 const WARMTH_FREQUENCY = 300;
 const BRIGHTNESS_FREQUENCY = 3000;
@@ -15,7 +13,6 @@ export interface VoiceAudioPlayback {
 }
 
 interface NormalizedVoiceModulation {
-    pitch: number;
     rate: number;
     volume: number;
     warmth: number;
@@ -32,7 +29,6 @@ const normalizeVoiceModulation = (voiceModulation: NovelVoiceModulation): Normal
     const volume = normalizeFiniteNumber(voiceModulation.volume, 1);
 
     return {
-        pitch: normalizeFiniteNumber(voiceModulation.pitch, 0),
         rate: rate > 0 ? rate : 1,
         volume: volume >= 0 ? volume : 1,
         warmth: normalizeFiniteNumber(voiceModulation.warmth, 0),
@@ -67,15 +63,10 @@ export const playVoiceAudio = async (
         }
 
         const audioBuffer = await context.decodeAudioData(await response.arrayBuffer());
-        await Promise.all([
-            ensureBufferSourceWorklet(context),
-            ensurePitchShifterWorklet(context)
-        ]);
 
-        const channelCount = audioBuffer.numberOfChannels;
-        const pitchRatio = Math.pow(2, modulation.pitch / 12) / modulation.rate;
-        const bufferSourceNode = createBufferSourceNode(context, modulation.rate, channelCount);
-        const pitchShifterNode = createPitchShifterNode(context, pitchRatio, channelCount);
+        const bufferSourceNode = context.createBufferSource();
+        bufferSourceNode.buffer = audioBuffer;
+        bufferSourceNode.playbackRate.value = modulation.rate;
 
         const warmthFilter = context.createBiquadFilter();
         warmthFilter.type = 'lowshelf';
@@ -100,8 +91,7 @@ export const playVoiceAudio = async (
         analyser.fftSize = 2048;
         analyser.smoothingTimeConstant = 0.7;
 
-        bufferSourceNode.connect(pitchShifterNode);
-        pitchShifterNode.connect(warmthFilter);
+        bufferSourceNode.connect(warmthFilter);
         warmthFilter.connect(brightnessFilter);
         brightnessFilter.connect(nasalityFilter);
         nasalityFilter.connect(gainNode);
@@ -119,9 +109,13 @@ export const playVoiceAudio = async (
                 return;
             }
             stopped = true;
-            stopBufferSourceNode(bufferSourceNode);
+            bufferSourceNode.onended = null;
+            try {
+                bufferSourceNode.stop();
+            } catch {
+                // Already stopped.
+            }
             bufferSourceNode.disconnect();
-            pitchShifterNode.disconnect();
             warmthFilter.disconnect();
             brightnessFilter.disconnect();
             nasalityFilter.disconnect();
@@ -134,17 +128,15 @@ export const playVoiceAudio = async (
             }
         };
 
-        bufferSourceNode.port.onmessage = (event: MessageEvent) => {
-            if (event.data?.type === 'ended') {
-                stop();
-            }
+        bufferSourceNode.onended = () => {
+            stop();
         };
 
         if (context.state === 'suspended') {
             await context.resume();
         }
 
-        loadBufferSourceAudio(bufferSourceNode, audioBuffer);
+        bufferSourceNode.start();
 
         return { audioContext: context, analyser, ended, stop };
     } catch (error) {

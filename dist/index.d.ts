@@ -53,7 +53,6 @@ interface NovelScaleOffset {
     offsetY?: number;
 }
 interface NovelVoiceModulation {
-    pitch?: number;
     rate?: number;
     volume?: number;
     warmth?: number;

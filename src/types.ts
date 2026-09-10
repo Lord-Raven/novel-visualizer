@@ -40,8 +40,7 @@ export interface NovelScaleOffset {
 }
 
 export interface NovelVoiceModulation {
-    pitch?: number; // +/- semitones (0 is normal)
-    rate?: number; // multiplier (1 is normal)
+    rate?: number; // playback rate multiplier (1 is normal)
     volume?: number; // multiplier (1 is normal)
     warmth?: number; // +/- dB (0 is normal)
     brightness?: number; // +/- dB (0 is normal)

@@ -3,7 +3,7 @@ import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typo
 import { useTheme } from '@mui/material/styles';
 import { safeAlpha, safeDarken, safeGetContrastText, safeLighten } from '../utils/safeColor';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, CardGiftcard, SvgIconComponent, Computer, Warning } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, SvgIconComponent, Computer, Warning } from '@mui/icons-material';
 import { AnimatePresence } from 'framer-motion';
 import ActorImage from './ActorImage';
 import { BlurredBackground } from './BlurredBackground';

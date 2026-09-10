@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NovelVoiceModulation } from '../types';
-import { ensureBufferSourceWorklet, createBufferSourceNode, loadBufferSourceAudio, stopBufferSourceNode } from './TimeStretch';
-import { ensurePitchShifterWorklet, createPitchShifterNode } from './PitchShifter';
 
 // Frequency/Q constants for the EQ-style modulation filters.
 const WARMTH_FREQUENCY = 300; // low-mid voice body
@@ -10,7 +8,6 @@ const NASALITY_FREQUENCY = 1500; // nasal formant region
 const NASALITY_Q = 1.2;
 
 interface NormalizedVoiceModulation {
-    pitch: number;
     rate: number;
     volume: number;
     warmth: number;
@@ -26,7 +23,6 @@ const normalizeVoiceModulation = (voiceModulation: NovelVoiceModulation | undefi
     const rate = normalizeFiniteNumber(voiceModulation?.rate, 1);
     const volume = normalizeFiniteNumber(voiceModulation?.volume, 1);
     return {
-        pitch: normalizeFiniteNumber(voiceModulation?.pitch, 0),
         rate: rate > 0 ? rate : 1,
         volume: volume >= 0 ? volume : 1,
         warmth: normalizeFiniteNumber(voiceModulation?.warmth, 0),
@@ -35,9 +31,6 @@ const normalizeVoiceModulation = (voiceModulation: NovelVoiceModulation | undefi
     };
 };
 
-// Converts +/- semitones into a frequency ratio for the pitch-shifter node.
-const semitonesToRatio = (semitones: number): number => Math.pow(2, semitones / 12);
-
 export interface UseVoiceAudioResult {
     isAudioPlaying: boolean;
     audioAnalyser: AnalyserNode | null;
@@ -45,11 +38,7 @@ export interface UseVoiceAudioResult {
 
 /**
  * Loads and plays a line of dialogue's speech audio through a Web Audio graph
- * that applies pitch/rate/volume/warmth/brightness/nasality voice modulation.
- *
- * Rate (duration) and pitch are decoupled via separate AudioWorklet nodes (see
- * TimeStretch.tsx and PitchShifter.tsx) rather than HTMLMediaElement.playbackRate,
- * so none of this ever affects a caller's text typing animation.
+ * that applies rate/volume/warmth/brightness/nasality voice modulation.
  *
  * `playbackKey` identifies the current line (e.g. its script index); audio is
  * (re)loaded whenever it changes, while `voiceModulation` changes are applied
@@ -62,8 +51,7 @@ export const useVoiceAudio = (
     voiceModulation: NovelVoiceModulation | undefined
 ): UseVoiceAudioResult => {
     const audioContextRef = useRef<AudioContext | null>(null);
-    const currentBufferSourceNodeRef = useRef<AudioWorkletNode | null>(null);
-    const currentPitchShifterNodeRef = useRef<AudioWorkletNode | null>(null);
+    const currentBufferSourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
     const currentAudioAnalyserRef = useRef<AnalyserNode | null>(null);
     const currentAudioWarmthFilterRef = useRef<BiquadFilterNode | null>(null);
     const currentAudioBrightnessFilterRef = useRef<BiquadFilterNode | null>(null);
@@ -77,27 +65,22 @@ export const useVoiceAudio = (
 
     const normalizedModulation = useMemo(() => normalizeVoiceModulation(voiceModulation), [voiceModulation]);
 
-    // The buffer-source node's `rate` controls duration and, as a side effect,
-    // shifts pitch by the same ratio. The pitch-shifter node's ratio corrects
-    // for that so the audio lands on the desired final pitch regardless of rate.
-    const pitchShifterRatio = useMemo(
-        () => semitonesToRatio(normalizedModulation.pitch) / normalizedModulation.rate,
-        [normalizedModulation]
-    );
-
     const cleanupAudioGraph = useCallback(() => {
         if (currentBufferSourceNodeRef.current) {
-            stopBufferSourceNode(currentBufferSourceNodeRef.current);
+            currentBufferSourceNodeRef.current.onended = null;
+            try {
+                currentBufferSourceNodeRef.current.stop();
+            } catch {
+                // Already stopped.
+            }
         }
         currentBufferSourceNodeRef.current?.disconnect();
-        currentPitchShifterNodeRef.current?.disconnect();
         currentAudioWarmthFilterRef.current?.disconnect();
         currentAudioBrightnessFilterRef.current?.disconnect();
         currentAudioNasalityFilterRef.current?.disconnect();
         currentAudioGainRef.current?.disconnect();
         currentAudioAnalyserRef.current?.disconnect();
         currentBufferSourceNodeRef.current = null;
-        currentPitchShifterNodeRef.current = null;
         currentAudioWarmthFilterRef.current = null;
         currentAudioBrightnessFilterRef.current = null;
         currentAudioNasalityFilterRef.current = null;
@@ -107,8 +90,6 @@ export const useVoiceAudio = (
     }, []);
 
     // Applies a voice modulation to the currently attached audio graph nodes.
-    // `rate` and `pitch` are AudioParams on the buffer-source/pitch-shifter nodes
-    // (see the effect below), since those two must stay in sync with each other.
     const applyModulationToGraph = useCallback((modulation: NormalizedVoiceModulation) => {
         currentAudioGainRef.current && (currentAudioGainRef.current.gain.value = modulation.volume);
         currentAudioWarmthFilterRef.current && (currentAudioWarmthFilterRef.current.gain.value = modulation.warmth);
@@ -117,12 +98,10 @@ export const useVoiceAudio = (
     }, []);
 
     // Builds the Web Audio graph for a decoded line of dialogue and starts playback.
-    const buildAudioGraph = useCallback(async (
+    const buildAudioGraph = useCallback((
         audioBuffer: AudioBuffer,
-        rate: number,
-        pitchRatio: number,
         modulation: NormalizedVoiceModulation
-    ): Promise<AnalyserNode | null> => {
+    ): AnalyserNode | null => {
         if (typeof window === 'undefined' || typeof window.AudioContext === 'undefined') {
             cleanupAudioGraph();
             return null;
@@ -132,16 +111,11 @@ export const useVoiceAudio = (
             const audioContext = audioContextRef.current ?? new window.AudioContext();
             audioContextRef.current = audioContext;
 
-            await Promise.all([
-                ensureBufferSourceWorklet(audioContext),
-                ensurePitchShifterWorklet(audioContext)
-            ]);
-
             cleanupAudioGraph();
 
-            const channelCount = audioBuffer.numberOfChannels;
-            const bufferSourceNode = createBufferSourceNode(audioContext, rate, channelCount);
-            const pitchShifterNode = createPitchShifterNode(audioContext, pitchRatio, channelCount);
+            const bufferSourceNode = audioContext.createBufferSource();
+            bufferSourceNode.buffer = audioBuffer;
+            bufferSourceNode.playbackRate.value = modulation.rate;
 
             const warmthFilter = audioContext.createBiquadFilter();
             warmthFilter.type = 'lowshelf';
@@ -166,8 +140,7 @@ export const useVoiceAudio = (
             analyser.fftSize = 2048;
             analyser.smoothingTimeConstant = 0.7;
 
-            bufferSourceNode.connect(pitchShifterNode);
-            pitchShifterNode.connect(warmthFilter);
+            bufferSourceNode.connect(warmthFilter);
             warmthFilter.connect(brightnessFilter);
             brightnessFilter.connect(nasalityFilter);
             nasalityFilter.connect(gainNode);
@@ -175,7 +148,6 @@ export const useVoiceAudio = (
             analyser.connect(audioContext.destination);
 
             currentBufferSourceNodeRef.current = bufferSourceNode;
-            currentPitchShifterNodeRef.current = pitchShifterNode;
             currentAudioWarmthFilterRef.current = warmthFilter;
             currentAudioBrightnessFilterRef.current = brightnessFilter;
             currentAudioNasalityFilterRef.current = nasalityFilter;
@@ -184,12 +156,12 @@ export const useVoiceAudio = (
             setAudioAnalyser(analyser);
 
             if (audioContext.state === 'suspended') {
-                await audioContext.resume().catch((error) => {
+                void audioContext.resume().catch((error) => {
                     console.error('Error resuming audio context:', error);
                 });
             }
 
-            loadBufferSourceAudio(bufferSourceNode, audioBuffer);
+            bufferSourceNode.start();
 
             return analyser;
         } catch (error) {
@@ -239,7 +211,7 @@ export const useVoiceAudio = (
                     return;
                 }
 
-                const analyser = await buildAudioGraph(audioBuffer, normalizedModulation.rate, pitchShifterRatio, normalizedModulation);
+                const analyser = buildAudioGraph(audioBuffer, normalizedModulation);
 
                 if (loadToken !== audioLoadTokenRef.current) {
                     cleanupAudioGraph();
@@ -250,11 +222,15 @@ export const useVoiceAudio = (
 
                 const bufferSourceNode = currentBufferSourceNodeRef.current;
                 if (bufferSourceNode) {
-                    bufferSourceNode.port.onmessage = (event: MessageEvent) => {
-                        if (event.data?.type === 'ended' && loadToken === audioLoadTokenRef.current) {
+                    bufferSourceNode.onended = () => {
+                        if (loadToken === audioLoadTokenRef.current) {
                             setIsAudioPlaying(false);
                         }
                     };
+                }
+
+                if (!analyser) {
+                    setIsAudioPlaying(false);
                 }
             } catch (error) {
                 if ((error as { name?: string })?.name !== 'AbortError') {
@@ -269,17 +245,16 @@ export const useVoiceAudio = (
         return () => {
             abortController.abort();
         };
-        // Modulation/rate/pitch changes for the *current* line are applied live by the
+        // Modulation/rate changes for the *current* line are applied live by the
         // effect below; only a new playbackKey (or enabled/speechUrl) should reload audio.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [playbackKey, enabled, speechUrl]);
 
     useEffect(() => {
         const currentTime = audioContextRef.current?.currentTime ?? 0;
-        currentBufferSourceNodeRef.current?.parameters.get('rate')?.setValueAtTime(normalizedModulation.rate, currentTime);
-        currentPitchShifterNodeRef.current?.parameters.get('pitchRatio')?.setValueAtTime(pitchShifterRatio, currentTime);
+        currentBufferSourceNodeRef.current?.playbackRate.setValueAtTime(normalizedModulation.rate, currentTime);
         applyModulationToGraph(normalizedModulation);
-    }, [normalizedModulation, pitchShifterRatio, applyModulationToGraph]);
+    }, [normalizedModulation, applyModulationToGraph]);
 
     useEffect(() => {
         setIsAudioPlaying(false);

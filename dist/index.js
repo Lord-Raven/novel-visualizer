@@ -2275,261 +2275,6 @@ var formatMessageWithStyles = (text, options) => {
 
 // src/utils/useVoiceAudio.ts
 import { useCallback, useEffect as useEffect4, useMemo as useMemo2, useRef, useState as useState4 } from "react";
-
-// src/utils/TimeStretch.tsx
-var BUFFER_SOURCE_PROCESSOR_NAME = "novel-visualizer-buffer-source";
-var BUFFER_SOURCE_PROCESSOR_SOURCE = `
-// Catmull-Rom cubic interpolation; noticeably cleaner than linear interpolation
-// for the fractional sample positions produced by rate changes.
-function cubicInterpolate(y0, y1, y2, y3, t) {
-    const a0 = y3 - y2 - y0 + y1;
-    const a1 = y0 - y1 - a0;
-    const a2 = y2 - y0;
-    const a3 = y1;
-    return ((a0 * t + a1) * t + a2) * t + a3;
-}
-
-class BufferSourceProcessor extends AudioWorkletProcessor {
-    static get parameterDescriptors() {
-        return [{ name: 'rate', defaultValue: 1, minValue: 0.1, maxValue: 4, automationRate: 'k-rate' }];
-    }
-
-    constructor() {
-        super();
-        this.channels = null;
-        this.length = 0;
-        this.readPosition = 0;
-        this.ended = false;
-        this.port.onmessage = (event) => {
-            const data = event.data;
-            if (data && data.type === 'load') {
-                this.channels = data.channels.map((buffer) => new Float32Array(buffer));
-                this.length = this.channels[0] ? this.channels[0].length : 0;
-                this.readPosition = 0;
-                this.ended = false;
-            } else if (data && data.type === 'stop') {
-                this.ended = true;
-            }
-        };
-    }
-
-    process(inputs, outputs, parameters) {
-        const output = outputs[0];
-        const rate = parameters.rate[0];
-
-        if (!this.channels || this.ended) {
-            return !this.ended;
-        }
-
-        for (let i = 0; i < output[0].length; i++) {
-            if (this.readPosition >= this.length - 1) {
-                if (!this.ended) {
-                    this.ended = true;
-                    this.port.postMessage({ type: 'ended' });
-                }
-                for (let ch = 0; ch < output.length; ch++) {
-                    output[ch][i] = 0;
-                }
-                continue;
-            }
-
-            const idx = Math.floor(this.readPosition);
-            const frac = this.readPosition - idx;
-
-            for (let ch = 0; ch < output.length; ch++) {
-                const channelData = this.channels[Math.min(ch, this.channels.length - 1)];
-                const last = channelData.length - 1;
-                const y0 = channelData[idx > 0 ? idx - 1 : 0];
-                const y1 = channelData[idx];
-                const y2 = channelData[idx + 1 <= last ? idx + 1 : last];
-                const y3 = channelData[idx + 2 <= last ? idx + 2 : last];
-                output[ch][i] = cubicInterpolate(y0, y1, y2, y3, frac);
-            }
-
-            this.readPosition += rate;
-        }
-
-        return true;
-    }
-}
-
-registerProcessor('${BUFFER_SOURCE_PROCESSOR_NAME}', BufferSourceProcessor);
-`;
-var registeredContexts = /* @__PURE__ */ new WeakSet();
-var ensureBufferSourceWorklet = async (audioContext) => {
-  if (registeredContexts.has(audioContext)) {
-    return;
-  }
-  const blob = new Blob([BUFFER_SOURCE_PROCESSOR_SOURCE], { type: "application/javascript" });
-  const url = URL.createObjectURL(blob);
-  try {
-    await audioContext.audioWorklet.addModule(url);
-    registeredContexts.add(audioContext);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-};
-var createBufferSourceNode = (audioContext, rate, channelCount) => {
-  return new AudioWorkletNode(audioContext, BUFFER_SOURCE_PROCESSOR_NAME, {
-    numberOfInputs: 0,
-    numberOfOutputs: 1,
-    channelCount,
-    channelCountMode: "explicit",
-    outputChannelCount: [channelCount],
-    parameterData: { rate }
-  });
-};
-var loadBufferSourceAudio = (node, audioBuffer) => {
-  const channels = [];
-  for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
-    channels.push(audioBuffer.getChannelData(ch).slice().buffer);
-  }
-  node.port.postMessage({ type: "load", channels }, channels);
-};
-var stopBufferSourceNode = (node) => {
-  node.port.postMessage({ type: "stop" });
-};
-
-// src/utils/PitchShifter.tsx
-var PITCH_SHIFTER_PROCESSOR_NAME = "novel-visualizer-pitch-shifter";
-var PITCH_SHIFTER_PROCESSOR_SOURCE = `
-// Catmull-Rom cubic interpolation; linear interpolation of grain reads is a
-// major source of the buzzy/aliased sound of naive granular pitch shifting.
-function cubicInterpolate(y0, y1, y2, y3, t) {
-    const a0 = y3 - y2 - y0 + y1;
-    const a1 = y0 - y1 - a0;
-    const a2 = y2 - y0;
-    const a3 = y1;
-    return ((a0 * t + a1) * t + a2) * t + a3;
-}
-
-class PitchShifterProcessor extends AudioWorkletProcessor {
-    static get parameterDescriptors() {
-        return [{ name: 'pitchRatio', defaultValue: 1, minValue: 0.25, maxValue: 4, automationRate: 'k-rate' }];
-    }
-
-    constructor() {
-        super();
-        this.grainSize = 4096;
-        this.hop = Math.floor(this.grainSize / 4);
-        // Grains start reading this far behind the write head so that, even at
-        // the maximum supported pitch ratio, they never read past unwritten data.
-        this.delay = this.grainSize * 3;
-        this.bufferSize = this.grainSize * 6;
-        this.channelStates = [];
-        this.window = new Float32Array(this.grainSize);
-        // Periodic (not symmetric) Hann window: with hop = grainSize / 4 this sums
-        // to a flat constant (COLA), avoiding the amplitude ripple/warble a
-        // symmetric window produces under overlap-add.
-        for (let i = 0; i < this.grainSize; i++) {
-            this.window[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / this.grainSize);
-        }
-        // Compensates for the constant gain introduced by summing 4 overlapping
-        // Hann-windowed grains (COLA sum = 1.5 at 75% overlap).
-        this.olaGain = 1 / 1.5;
-    }
-
-    getChannelState(channelIndex) {
-        let state = this.channelStates[channelIndex];
-        if (!state) {
-            state = {
-                ringBuffer: new Float32Array(this.bufferSize),
-                writeIndex: 0,
-                samplesUntilNextGrain: 0,
-                grains: []
-            };
-            this.channelStates[channelIndex] = state;
-        }
-        return state;
-    }
-
-    readRing(ringBuffer, position) {
-        const size = this.bufferSize;
-        let idx = position % size;
-        if (idx < 0) idx += size;
-        const i1 = Math.floor(idx);
-        const frac = idx - i1;
-        const i0 = (i1 - 1 + size) % size;
-        const i2 = (i1 + 1) % size;
-        const i3 = (i1 + 2) % size;
-        return cubicInterpolate(ringBuffer[i0], ringBuffer[i1], ringBuffer[i2], ringBuffer[i3], frac);
-    }
-
-    processChannel(inputChannel, outputChannel, pitchRatio, state) {
-        const ringBuffer = state.ringBuffer;
-        const grains = state.grains;
-
-        for (let i = 0; i < outputChannel.length; i++) {
-            ringBuffer[state.writeIndex] = inputChannel ? (inputChannel[i] || 0) : 0;
-
-            if (state.samplesUntilNextGrain <= 0) {
-                state.samplesUntilNextGrain = this.hop;
-                grains.push({ readPos: state.writeIndex - this.delay, age: 0 });
-                if (grains.length > 6) {
-                    grains.shift();
-                }
-            }
-            state.samplesUntilNextGrain--;
-
-            let sample = 0;
-            for (let g = grains.length - 1; g >= 0; g--) {
-                const grain = grains[g];
-                if (grain.age >= this.grainSize) {
-                    grains.splice(g, 1);
-                    continue;
-                }
-                sample += this.readRing(ringBuffer, grain.readPos + grain.age * pitchRatio) * this.window[grain.age];
-                grain.age++;
-            }
-
-            outputChannel[i] = sample * this.olaGain;
-            state.writeIndex = (state.writeIndex + 1) % this.bufferSize;
-        }
-    }
-
-    process(inputs, outputs, parameters) {
-        const input = inputs[0];
-        const output = outputs[0];
-        const pitchRatio = parameters.pitchRatio[0];
-
-        for (let ch = 0; ch < output.length; ch++) {
-            const inputChannel = input && input[ch] ? input[ch] : null;
-            const state = this.getChannelState(ch);
-            this.processChannel(inputChannel, output[ch], pitchRatio, state);
-        }
-
-        return true;
-    }
-}
-
-registerProcessor('${PITCH_SHIFTER_PROCESSOR_NAME}', PitchShifterProcessor);
-`;
-var registeredContexts2 = /* @__PURE__ */ new WeakSet();
-var ensurePitchShifterWorklet = async (audioContext) => {
-  if (registeredContexts2.has(audioContext)) {
-    return;
-  }
-  const blob = new Blob([PITCH_SHIFTER_PROCESSOR_SOURCE], { type: "application/javascript" });
-  const url = URL.createObjectURL(blob);
-  try {
-    await audioContext.audioWorklet.addModule(url);
-    registeredContexts2.add(audioContext);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-};
-var createPitchShifterNode = (audioContext, pitchRatio, channelCount) => {
-  return new AudioWorkletNode(audioContext, PITCH_SHIFTER_PROCESSOR_NAME, {
-    numberOfInputs: 1,
-    numberOfOutputs: 1,
-    channelCount,
-    channelCountMode: "explicit",
-    outputChannelCount: [channelCount],
-    parameterData: { pitchRatio }
-  });
-};
-
-// src/utils/useVoiceAudio.ts
 var WARMTH_FREQUENCY = 300;
 var BRIGHTNESS_FREQUENCY = 3e3;
 var NASALITY_FREQUENCY = 1500;
@@ -2541,7 +2286,6 @@ var normalizeVoiceModulation = (voiceModulation) => {
   const rate = normalizeFiniteNumber(voiceModulation?.rate, 1);
   const volume = normalizeFiniteNumber(voiceModulation?.volume, 1);
   return {
-    pitch: normalizeFiniteNumber(voiceModulation?.pitch, 0),
     rate: rate > 0 ? rate : 1,
     volume: volume >= 0 ? volume : 1,
     warmth: normalizeFiniteNumber(voiceModulation?.warmth, 0),
@@ -2549,11 +2293,9 @@ var normalizeVoiceModulation = (voiceModulation) => {
     nasality: normalizeFiniteNumber(voiceModulation?.nasality, 0)
   };
 };
-var semitonesToRatio = (semitones) => Math.pow(2, semitones / 12);
 var useVoiceAudio = (enabled, speechUrl, playbackKey, voiceModulation) => {
   const audioContextRef = useRef(null);
   const currentBufferSourceNodeRef = useRef(null);
-  const currentPitchShifterNodeRef = useRef(null);
   const currentAudioAnalyserRef = useRef(null);
   const currentAudioWarmthFilterRef = useRef(null);
   const currentAudioBrightnessFilterRef = useRef(null);
@@ -2564,23 +2306,21 @@ var useVoiceAudio = (enabled, speechUrl, playbackKey, voiceModulation) => {
   const [isAudioPlaying, setIsAudioPlaying] = useState4(false);
   const [audioAnalyser, setAudioAnalyser] = useState4(null);
   const normalizedModulation = useMemo2(() => normalizeVoiceModulation(voiceModulation), [voiceModulation]);
-  const pitchShifterRatio = useMemo2(
-    () => semitonesToRatio(normalizedModulation.pitch) / normalizedModulation.rate,
-    [normalizedModulation]
-  );
   const cleanupAudioGraph = useCallback(() => {
     if (currentBufferSourceNodeRef.current) {
-      stopBufferSourceNode(currentBufferSourceNodeRef.current);
+      currentBufferSourceNodeRef.current.onended = null;
+      try {
+        currentBufferSourceNodeRef.current.stop();
+      } catch {
+      }
     }
     currentBufferSourceNodeRef.current?.disconnect();
-    currentPitchShifterNodeRef.current?.disconnect();
     currentAudioWarmthFilterRef.current?.disconnect();
     currentAudioBrightnessFilterRef.current?.disconnect();
     currentAudioNasalityFilterRef.current?.disconnect();
     currentAudioGainRef.current?.disconnect();
     currentAudioAnalyserRef.current?.disconnect();
     currentBufferSourceNodeRef.current = null;
-    currentPitchShifterNodeRef.current = null;
     currentAudioWarmthFilterRef.current = null;
     currentAudioBrightnessFilterRef.current = null;
     currentAudioNasalityFilterRef.current = null;
@@ -2594,7 +2334,7 @@ var useVoiceAudio = (enabled, speechUrl, playbackKey, voiceModulation) => {
     currentAudioBrightnessFilterRef.current && (currentAudioBrightnessFilterRef.current.gain.value = modulation.brightness);
     currentAudioNasalityFilterRef.current && (currentAudioNasalityFilterRef.current.gain.value = modulation.nasality);
   }, []);
-  const buildAudioGraph = useCallback(async (audioBuffer, rate, pitchRatio, modulation) => {
+  const buildAudioGraph = useCallback((audioBuffer, modulation) => {
     if (typeof window === "undefined" || typeof window.AudioContext === "undefined") {
       cleanupAudioGraph();
       return null;
@@ -2602,14 +2342,10 @@ var useVoiceAudio = (enabled, speechUrl, playbackKey, voiceModulation) => {
     try {
       const audioContext = audioContextRef.current ?? new window.AudioContext();
       audioContextRef.current = audioContext;
-      await Promise.all([
-        ensureBufferSourceWorklet(audioContext),
-        ensurePitchShifterWorklet(audioContext)
-      ]);
       cleanupAudioGraph();
-      const channelCount = audioBuffer.numberOfChannels;
-      const bufferSourceNode = createBufferSourceNode(audioContext, rate, channelCount);
-      const pitchShifterNode = createPitchShifterNode(audioContext, pitchRatio, channelCount);
+      const bufferSourceNode = audioContext.createBufferSource();
+      bufferSourceNode.buffer = audioBuffer;
+      bufferSourceNode.playbackRate.value = modulation.rate;
       const warmthFilter = audioContext.createBiquadFilter();
       warmthFilter.type = "lowshelf";
       warmthFilter.frequency.value = WARMTH_FREQUENCY;
@@ -2628,15 +2364,13 @@ var useVoiceAudio = (enabled, speechUrl, playbackKey, voiceModulation) => {
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 2048;
       analyser.smoothingTimeConstant = 0.7;
-      bufferSourceNode.connect(pitchShifterNode);
-      pitchShifterNode.connect(warmthFilter);
+      bufferSourceNode.connect(warmthFilter);
       warmthFilter.connect(brightnessFilter);
       brightnessFilter.connect(nasalityFilter);
       nasalityFilter.connect(gainNode);
       gainNode.connect(analyser);
       analyser.connect(audioContext.destination);
       currentBufferSourceNodeRef.current = bufferSourceNode;
-      currentPitchShifterNodeRef.current = pitchShifterNode;
       currentAudioWarmthFilterRef.current = warmthFilter;
       currentAudioBrightnessFilterRef.current = brightnessFilter;
       currentAudioNasalityFilterRef.current = nasalityFilter;
@@ -2644,11 +2378,11 @@ var useVoiceAudio = (enabled, speechUrl, playbackKey, voiceModulation) => {
       currentAudioAnalyserRef.current = analyser;
       setAudioAnalyser(analyser);
       if (audioContext.state === "suspended") {
-        await audioContext.resume().catch((error) => {
+        void audioContext.resume().catch((error) => {
           console.error("Error resuming audio context:", error);
         });
       }
-      loadBufferSourceAudio(bufferSourceNode, audioBuffer);
+      bufferSourceNode.start();
       return analyser;
     } catch (error) {
       console.warn("Audio graph unavailable; continuing without playback.", error);
@@ -2684,7 +2418,7 @@ var useVoiceAudio = (enabled, speechUrl, playbackKey, voiceModulation) => {
         if (loadToken !== audioLoadTokenRef.current) {
           return;
         }
-        const analyser = await buildAudioGraph(audioBuffer, normalizedModulation.rate, pitchShifterRatio, normalizedModulation);
+        const analyser = buildAudioGraph(audioBuffer, normalizedModulation);
         if (loadToken !== audioLoadTokenRef.current) {
           cleanupAudioGraph();
           return;
@@ -2692,11 +2426,14 @@ var useVoiceAudio = (enabled, speechUrl, playbackKey, voiceModulation) => {
         setIsAudioPlaying(true);
         const bufferSourceNode = currentBufferSourceNodeRef.current;
         if (bufferSourceNode) {
-          bufferSourceNode.port.onmessage = (event) => {
-            if (event.data?.type === "ended" && loadToken === audioLoadTokenRef.current) {
+          bufferSourceNode.onended = () => {
+            if (loadToken === audioLoadTokenRef.current) {
               setIsAudioPlaying(false);
             }
           };
+        }
+        if (!analyser) {
+          setIsAudioPlaying(false);
         }
       } catch (error) {
         if (error?.name !== "AbortError") {
@@ -2713,10 +2450,9 @@ var useVoiceAudio = (enabled, speechUrl, playbackKey, voiceModulation) => {
   }, [playbackKey, enabled, speechUrl]);
   useEffect4(() => {
     const currentTime = audioContextRef.current?.currentTime ?? 0;
-    currentBufferSourceNodeRef.current?.parameters.get("rate")?.setValueAtTime(normalizedModulation.rate, currentTime);
-    currentPitchShifterNodeRef.current?.parameters.get("pitchRatio")?.setValueAtTime(pitchShifterRatio, currentTime);
+    currentBufferSourceNodeRef.current?.playbackRate.setValueAtTime(normalizedModulation.rate, currentTime);
     applyModulationToGraph(normalizedModulation);
-  }, [normalizedModulation, pitchShifterRatio, applyModulationToGraph]);
+  }, [normalizedModulation, applyModulationToGraph]);
   useEffect4(() => {
     setIsAudioPlaying(false);
     cleanupAudioGraph();
@@ -3740,7 +3476,6 @@ var normalizeVoiceModulation2 = (voiceModulation) => {
   const rate = normalizeFiniteNumber2(voiceModulation.rate, 1);
   const volume = normalizeFiniteNumber2(voiceModulation.volume, 1);
   return {
-    pitch: normalizeFiniteNumber2(voiceModulation.pitch, 0),
     rate: rate > 0 ? rate : 1,
     volume: volume >= 0 ? volume : 1,
     warmth: normalizeFiniteNumber2(voiceModulation.warmth, 0),
@@ -3761,14 +3496,9 @@ var playVoiceAudio = async (audioUrl, voiceModulation, audioContext) => {
       throw new Error(`Unable to load audio: ${response.status} ${response.statusText}`);
     }
     const audioBuffer = await context.decodeAudioData(await response.arrayBuffer());
-    await Promise.all([
-      ensureBufferSourceWorklet(context),
-      ensurePitchShifterWorklet(context)
-    ]);
-    const channelCount = audioBuffer.numberOfChannels;
-    const pitchRatio = Math.pow(2, modulation.pitch / 12) / modulation.rate;
-    const bufferSourceNode = createBufferSourceNode(context, modulation.rate, channelCount);
-    const pitchShifterNode = createPitchShifterNode(context, pitchRatio, channelCount);
+    const bufferSourceNode = context.createBufferSource();
+    bufferSourceNode.buffer = audioBuffer;
+    bufferSourceNode.playbackRate.value = modulation.rate;
     const warmthFilter = context.createBiquadFilter();
     warmthFilter.type = "lowshelf";
     warmthFilter.frequency.value = WARMTH_FREQUENCY2;
@@ -3787,8 +3517,7 @@ var playVoiceAudio = async (audioUrl, voiceModulation, audioContext) => {
     const analyser = context.createAnalyser();
     analyser.fftSize = 2048;
     analyser.smoothingTimeConstant = 0.7;
-    bufferSourceNode.connect(pitchShifterNode);
-    pitchShifterNode.connect(warmthFilter);
+    bufferSourceNode.connect(warmthFilter);
     warmthFilter.connect(brightnessFilter);
     brightnessFilter.connect(nasalityFilter);
     nasalityFilter.connect(gainNode);
@@ -3804,9 +3533,12 @@ var playVoiceAudio = async (audioUrl, voiceModulation, audioContext) => {
         return;
       }
       stopped = true;
-      stopBufferSourceNode(bufferSourceNode);
+      bufferSourceNode.onended = null;
+      try {
+        bufferSourceNode.stop();
+      } catch {
+      }
       bufferSourceNode.disconnect();
-      pitchShifterNode.disconnect();
       warmthFilter.disconnect();
       brightnessFilter.disconnect();
       nasalityFilter.disconnect();
@@ -3817,15 +3549,13 @@ var playVoiceAudio = async (audioUrl, voiceModulation, audioContext) => {
         void context.close().catch(() => void 0);
       }
     };
-    bufferSourceNode.port.onmessage = (event) => {
-      if (event.data?.type === "ended") {
-        stop();
-      }
+    bufferSourceNode.onended = () => {
+      stop();
     };
     if (context.state === "suspended") {
       await context.resume();
     }
-    loadBufferSourceAudio(bufferSourceNode, audioBuffer);
+    bufferSourceNode.start();
     return { audioContext: context, analyser, ended, stop };
   } catch (error) {
     if (ownsAudioContext) {
