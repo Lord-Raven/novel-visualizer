@@ -18,3 +18,5 @@ export type {
     InlineClassStyle,
     FormatInlineStylesOptions
 } from './utils/TextFormatting';
+export { playVoiceAudio } from './utils/playVoiceAudio';
+export type { VoiceAudioPlayback } from './utils/playVoiceAudio';

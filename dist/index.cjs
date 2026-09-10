@@ -39,7 +39,8 @@ __export(index_exports, {
   collectFontFamilies: () => collectFontFamilies,
   defaultInlineClassStyles: () => defaultInlineClassStyles,
   formatInlineStyles: () => formatInlineStyles,
-  getFontSizeMultiplier: () => getFontSizeMultiplier
+  getFontSizeMultiplier: () => getFontSizeMultiplier,
+  playVoiceAudio: () => playVoiceAudio
 });
 module.exports = __toCommonJS(index_exports);
 
@@ -3741,6 +3742,113 @@ function NovelVisualizer(props) {
   );
 }
 var NovelVisualizer_default = NovelVisualizer;
+
+// src/utils/playVoiceAudio.ts
+var WARMTH_FREQUENCY2 = 300;
+var BRIGHTNESS_FREQUENCY2 = 3e3;
+var NASALITY_FREQUENCY2 = 1500;
+var NASALITY_Q2 = 1.2;
+var normalizeFiniteNumber2 = (value, fallback) => {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+};
+var normalizeVoiceModulation2 = (voiceModulation) => {
+  const rate = normalizeFiniteNumber2(voiceModulation.rate, 1);
+  const volume = normalizeFiniteNumber2(voiceModulation.volume, 1);
+  return {
+    pitch: normalizeFiniteNumber2(voiceModulation.pitch, 0),
+    rate: rate > 0 ? rate : 1,
+    volume: volume >= 0 ? volume : 1,
+    warmth: normalizeFiniteNumber2(voiceModulation.warmth, 0),
+    brightness: normalizeFiniteNumber2(voiceModulation.brightness, 0),
+    nasality: normalizeFiniteNumber2(voiceModulation.nasality, 0)
+  };
+};
+var playVoiceAudio = async (audioUrl, voiceModulation, audioContext) => {
+  if (typeof window === "undefined" || typeof window.AudioContext === "undefined") {
+    throw new Error("Web Audio is unavailable in this environment.");
+  }
+  const ownsAudioContext = audioContext === void 0;
+  const context = audioContext ?? new window.AudioContext();
+  const modulation = normalizeVoiceModulation2(voiceModulation);
+  try {
+    const response = await fetch(audioUrl, { mode: "cors" });
+    if (!response.ok) {
+      throw new Error(`Unable to load audio: ${response.status} ${response.statusText}`);
+    }
+    const audioBuffer = await context.decodeAudioData(await response.arrayBuffer());
+    await Promise.all([
+      ensureBufferSourceWorklet(context),
+      ensurePitchShifterWorklet(context)
+    ]);
+    const channelCount = audioBuffer.numberOfChannels;
+    const pitchRatio = Math.pow(2, modulation.pitch / 12) / modulation.rate;
+    const bufferSourceNode = createBufferSourceNode(context, modulation.rate, channelCount);
+    const pitchShifterNode = createPitchShifterNode(context, pitchRatio, channelCount);
+    const warmthFilter = context.createBiquadFilter();
+    warmthFilter.type = "lowshelf";
+    warmthFilter.frequency.value = WARMTH_FREQUENCY2;
+    warmthFilter.gain.value = modulation.warmth;
+    const brightnessFilter = context.createBiquadFilter();
+    brightnessFilter.type = "highshelf";
+    brightnessFilter.frequency.value = BRIGHTNESS_FREQUENCY2;
+    brightnessFilter.gain.value = modulation.brightness;
+    const nasalityFilter = context.createBiquadFilter();
+    nasalityFilter.type = "peaking";
+    nasalityFilter.frequency.value = NASALITY_FREQUENCY2;
+    nasalityFilter.Q.value = NASALITY_Q2;
+    nasalityFilter.gain.value = modulation.nasality;
+    const gainNode = context.createGain();
+    gainNode.gain.value = modulation.volume;
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.7;
+    bufferSourceNode.connect(pitchShifterNode);
+    pitchShifterNode.connect(warmthFilter);
+    warmthFilter.connect(brightnessFilter);
+    brightnessFilter.connect(nasalityFilter);
+    nasalityFilter.connect(gainNode);
+    gainNode.connect(analyser);
+    analyser.connect(context.destination);
+    let resolveEnded;
+    const ended = new Promise((resolve) => {
+      resolveEnded = resolve;
+    });
+    let stopped = false;
+    const stop = () => {
+      if (stopped) {
+        return;
+      }
+      stopped = true;
+      stopBufferSourceNode(bufferSourceNode);
+      bufferSourceNode.disconnect();
+      pitchShifterNode.disconnect();
+      warmthFilter.disconnect();
+      brightnessFilter.disconnect();
+      nasalityFilter.disconnect();
+      gainNode.disconnect();
+      analyser.disconnect();
+      resolveEnded();
+      if (ownsAudioContext) {
+        void context.close().catch(() => void 0);
+      }
+    };
+    bufferSourceNode.port.onmessage = (event) => {
+      if (event.data?.type === "ended") {
+        stop();
+      }
+    };
+    if (context.state === "suspended") {
+      await context.resume();
+    }
+    loadBufferSourceAudio(bufferSourceNode, audioBuffer);
+    return { audioContext: context, analyser, ended, stop };
+  } catch (error) {
+    if (ownsAudioContext) {
+      await context.close().catch(() => void 0);
+    }
+    throw error;
+  }
+};
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   ActorImage,
@@ -3752,5 +3860,6 @@ var NovelVisualizer_default = NovelVisualizer;
   collectFontFamilies,
   defaultInlineClassStyles,
   formatInlineStyles,
-  getFontSizeMultiplier
+  getFontSizeMultiplier,
+  playVoiceAudio
 });

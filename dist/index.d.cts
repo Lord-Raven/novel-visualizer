@@ -198,4 +198,18 @@ interface TypeOutProps {
 }
 declare const TypeOut: React__default.FC<TypeOutProps>;
 
-export { _default as ActorImage, type NovelSkit as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, FontHandler, type FormatInlineStylesOptions, type InlineClassStyle, type InlineStyleContext, type NovelActor, type NovelActorTheme, type NovelScaleOffset, NovelVisualizer, type NovelVisualizerProps, type NovelVoiceModulation, type SubmitButtonConfig, TypeOut, buildGoogleFontImportRules, collectFontFamilies, defaultInlineClassStyles, formatInlineStyles, getFontSizeMultiplier };
+interface VoiceAudioPlayback {
+    audioContext: AudioContext;
+    analyser: AnalyserNode;
+    ended: Promise<void>;
+    stop: () => void;
+}
+/**
+ * Loads and plays an audio URL with the supplied voice modulation.
+ *
+ * Pass an AudioContext to reuse one owned by the consumer. When omitted, this
+ * function creates a context and closes it after playback ends or is stopped.
+ */
+declare const playVoiceAudio: (audioUrl: string, voiceModulation: NovelVoiceModulation, audioContext?: AudioContext) => Promise<VoiceAudioPlayback>;
+
+export { _default as ActorImage, type NovelSkit as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, FontHandler, type FormatInlineStylesOptions, type InlineClassStyle, type InlineStyleContext, type NovelActor, type NovelActorTheme, type NovelScaleOffset, NovelVisualizer, type NovelVisualizerProps, type NovelVoiceModulation, type SubmitButtonConfig, TypeOut, type VoiceAudioPlayback, buildGoogleFontImportRules, collectFontFamilies, defaultInlineClassStyles, formatInlineStyles, getFontSizeMultiplier, playVoiceAudio };
