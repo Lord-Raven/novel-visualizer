@@ -2325,6 +2325,16 @@ var import_react6 = require("react");
 // src/utils/TimeStretch.tsx
 var BUFFER_SOURCE_PROCESSOR_NAME = "novel-visualizer-buffer-source";
 var BUFFER_SOURCE_PROCESSOR_SOURCE = `
+// Catmull-Rom cubic interpolation; noticeably cleaner than linear interpolation
+// for the fractional sample positions produced by rate changes.
+function cubicInterpolate(y0, y1, y2, y3, t) {
+    const a0 = y3 - y2 - y0 + y1;
+    const a1 = y0 - y1 - a0;
+    const a2 = y2 - y0;
+    const a3 = y1;
+    return ((a0 * t + a1) * t + a2) * t + a3;
+}
+
 class BufferSourceProcessor extends AudioWorkletProcessor {
     static get parameterDescriptors() {
         return [{ name: 'rate', defaultValue: 1, minValue: 0.1, maxValue: 4, automationRate: 'k-rate' }];
@@ -2374,9 +2384,12 @@ class BufferSourceProcessor extends AudioWorkletProcessor {
 
             for (let ch = 0; ch < output.length; ch++) {
                 const channelData = this.channels[Math.min(ch, this.channels.length - 1)];
-                const s0 = channelData[idx] || 0;
-                const s1 = channelData[idx + 1] || 0;
-                output[ch][i] = s0 + (s1 - s0) * frac;
+                const last = channelData.length - 1;
+                const y0 = channelData[idx > 0 ? idx - 1 : 0];
+                const y1 = channelData[idx];
+                const y2 = channelData[idx + 1 <= last ? idx + 1 : last];
+                const y3 = channelData[idx + 2 <= last ? idx + 2 : last];
+                output[ch][i] = cubicInterpolate(y0, y1, y2, y3, frac);
             }
 
             this.readPosition += rate;
@@ -2426,6 +2439,16 @@ var stopBufferSourceNode = (node) => {
 // src/utils/PitchShifter.tsx
 var PITCH_SHIFTER_PROCESSOR_NAME = "novel-visualizer-pitch-shifter";
 var PITCH_SHIFTER_PROCESSOR_SOURCE = `
+// Catmull-Rom cubic interpolation; linear interpolation of grain reads is a
+// major source of the buzzy/aliased sound of naive granular pitch shifting.
+function cubicInterpolate(y0, y1, y2, y3, t) {
+    const a0 = y3 - y2 - y0 + y1;
+    const a1 = y0 - y1 - a0;
+    const a2 = y2 - y0;
+    const a3 = y1;
+    return ((a0 * t + a1) * t + a2) * t + a3;
+}
+
 class PitchShifterProcessor extends AudioWorkletProcessor {
     static get parameterDescriptors() {
         return [{ name: 'pitchRatio', defaultValue: 1, minValue: 0.25, maxValue: 4, automationRate: 'k-rate' }];
@@ -2441,9 +2464,15 @@ class PitchShifterProcessor extends AudioWorkletProcessor {
         this.bufferSize = this.grainSize * 6;
         this.channelStates = [];
         this.window = new Float32Array(this.grainSize);
+        // Periodic (not symmetric) Hann window: with hop = grainSize / 4 this sums
+        // to a flat constant (COLA), avoiding the amplitude ripple/warble a
+        // symmetric window produces under overlap-add.
         for (let i = 0; i < this.grainSize; i++) {
-            this.window[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (this.grainSize - 1));
+            this.window[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / this.grainSize);
         }
+        // Compensates for the constant gain introduced by summing 4 overlapping
+        // Hann-windowed grains (COLA sum = 1.5 at 75% overlap).
+        this.olaGain = 1 / 1.5;
     }
 
     getChannelState(channelIndex) {
@@ -2464,10 +2493,12 @@ class PitchShifterProcessor extends AudioWorkletProcessor {
         const size = this.bufferSize;
         let idx = position % size;
         if (idx < 0) idx += size;
-        const i0 = Math.floor(idx);
-        const i1 = (i0 + 1) % size;
-        const frac = idx - i0;
-        return ringBuffer[i0] * (1 - frac) + ringBuffer[i1] * frac;
+        const i1 = Math.floor(idx);
+        const frac = idx - i1;
+        const i0 = (i1 - 1 + size) % size;
+        const i2 = (i1 + 1) % size;
+        const i3 = (i1 + 2) % size;
+        return cubicInterpolate(ringBuffer[i0], ringBuffer[i1], ringBuffer[i2], ringBuffer[i3], frac);
     }
 
     processChannel(inputChannel, outputChannel, pitchRatio, state) {
@@ -2497,7 +2528,7 @@ class PitchShifterProcessor extends AudioWorkletProcessor {
                 grain.age++;
             }
 
-            outputChannel[i] = sample * 0.5;
+            outputChannel[i] = sample * this.olaGain;
             state.writeIndex = (state.writeIndex + 1) % this.bufferSize;
         }
     }

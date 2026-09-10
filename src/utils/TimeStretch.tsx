@@ -15,6 +15,16 @@
 const BUFFER_SOURCE_PROCESSOR_NAME = 'novel-visualizer-buffer-source';
 
 const BUFFER_SOURCE_PROCESSOR_SOURCE = `
+// Catmull-Rom cubic interpolation; noticeably cleaner than linear interpolation
+// for the fractional sample positions produced by rate changes.
+function cubicInterpolate(y0, y1, y2, y3, t) {
+    const a0 = y3 - y2 - y0 + y1;
+    const a1 = y0 - y1 - a0;
+    const a2 = y2 - y0;
+    const a3 = y1;
+    return ((a0 * t + a1) * t + a2) * t + a3;
+}
+
 class BufferSourceProcessor extends AudioWorkletProcessor {
     static get parameterDescriptors() {
         return [{ name: 'rate', defaultValue: 1, minValue: 0.1, maxValue: 4, automationRate: 'k-rate' }];
@@ -64,9 +74,12 @@ class BufferSourceProcessor extends AudioWorkletProcessor {
 
             for (let ch = 0; ch < output.length; ch++) {
                 const channelData = this.channels[Math.min(ch, this.channels.length - 1)];
-                const s0 = channelData[idx] || 0;
-                const s1 = channelData[idx + 1] || 0;
-                output[ch][i] = s0 + (s1 - s0) * frac;
+                const last = channelData.length - 1;
+                const y0 = channelData[idx > 0 ? idx - 1 : 0];
+                const y1 = channelData[idx];
+                const y2 = channelData[idx + 1 <= last ? idx + 1 : last];
+                const y3 = channelData[idx + 2 <= last ? idx + 2 : last];
+                output[ch][i] = cubicInterpolate(y0, y1, y2, y3, frac);
             }
 
             this.readPosition += rate;
