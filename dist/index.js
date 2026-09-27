@@ -2471,7 +2471,7 @@ var useVoiceAudio = (enabled, speechUrl, playbackKey, voiceModulation) => {
 
 // src/components/NovelVisualizer.tsx
 import { Fragment as Fragment3, jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
-var calculateActorXPosition = (actorIndex, totalActors, anySpeaker) => {
+var calculateActorXPosition = (actorIndex, totalActors, hasCenteredActor) => {
   const leftRange = Math.min(40, Math.ceil((totalActors - 2) / 2) * 20);
   const rightRange = Math.min(40, Math.floor((totalActors - 2) / 2) * 20);
   const leftSide = actorIndex % 2 === 0;
@@ -2479,7 +2479,7 @@ var calculateActorXPosition = (actorIndex, totalActors, anySpeaker) => {
   const actorsOnSide = leftSide ? Math.ceil(totalActors / 2) : Math.floor(totalActors / 2);
   const range = leftSide ? leftRange : rightRange;
   const increment = actorsOnSide > 1 ? indexOnSide / (actorsOnSide - 1) : 0.5;
-  const center = leftSide ? anySpeaker ? 25 : 30 : anySpeaker ? 75 : 70;
+  const center = leftSide ? hasCenteredActor ? 22 : 30 : hasCenteredActor ? 78 : 70;
   const xPosition = totalActors === 1 ? 50 : Math.round(increment * range) + (center - Math.floor(range / 2));
   return xPosition;
 };
@@ -2661,6 +2661,9 @@ function NovelVisualizer(props) {
     }
     return speakerActor.id.charCodeAt(0) % 2 === 0 ? "left" : "right";
   }, [enablePopInSpeakers, speakerActor, actorsAtIndex]);
+  const hasCenteredActor = useMemo3(() => {
+    return Boolean(speakerActor) || (focusActor ? actorsAtIndex.includes(focusActor) : false);
+  }, [speakerActor, focusActor, actorsAtIndex]);
   const actorTheme = useMemo3(() => {
     return speakerActor && localSkit && getActorTheme ? getActorTheme(speakerActor, localSkit, index) : void 0;
   }, [speakerActor, localSkit, index, getActorTheme]);
@@ -2705,7 +2708,7 @@ function NovelVisualizer(props) {
       return;
     }
     const actorPositions = actorsAtIndex.map((actor, i) => {
-      const baseXPosition = actor === focusActor ? 50 : calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
+      const baseXPosition = actor === focusActor ? 50 : calculateActorXPosition(i, actorsAtIndex.length, hasCenteredActor);
       return {
         actor,
         xPosition: applyPopInSideSkew(baseXPosition, popInSpeakerSide)
@@ -2729,7 +2732,7 @@ function NovelVisualizer(props) {
       }
     });
     setHoveredActor(closestActor);
-  }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enablePopInSpeakers, focusActor, popInSpeakerSide]);
+  }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enablePopInSpeakers, focusActor, popInSpeakerSide, hasCenteredActor]);
   useEffect5(() => {
     const handleKeyDown = (e) => {
       const target = e.target;
@@ -2832,7 +2835,7 @@ function NovelVisualizer(props) {
     const scalePerActor = isVerticalLayout ? 0.05 : 0.03;
     const sceneActorScale = Math.max(0.7, 1 - Math.max(0, actorsAtIndex.length - 1) * scalePerActor);
     const actorElements = actorsAtIndex.map((actor, i) => {
-      const baseXPosition = actor === focusActor ? 50 : calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
+      const baseXPosition = actor === focusActor ? 50 : calculateActorXPosition(i, actorsAtIndex.length, hasCenteredActor);
       const xPosition = applyPopInSideSkew(baseXPosition, popInSpeakerSide);
       const isSpeaking = actor === speakerActor;
       const isHovered = actor === hoveredActor;

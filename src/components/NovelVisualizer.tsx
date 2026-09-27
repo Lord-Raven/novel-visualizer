@@ -19,7 +19,7 @@ export interface SubmitButtonConfig {
     colorScheme?: 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
 }
 
-const calculateActorXPosition = (actorIndex: number, totalActors: number, anySpeaker: boolean): number => {
+const calculateActorXPosition = (actorIndex: number, totalActors: number, hasCenteredActor: boolean): number => {
     const leftRange = Math.min(40, Math.ceil((totalActors - 2) / 2) * 20);
     const rightRange = Math.min(40, Math.floor((totalActors - 2) / 2) * 20);
     const leftSide = (actorIndex % 2) === 0;
@@ -27,7 +27,7 @@ const calculateActorXPosition = (actorIndex: number, totalActors: number, anySpe
     const actorsOnSide = leftSide ? Math.ceil(totalActors / 2) : Math.floor(totalActors / 2);
     const range = leftSide ? leftRange : rightRange;
     const increment = actorsOnSide > 1 ? (indexOnSide / (actorsOnSide - 1)) : 0.5;
-    const center = leftSide ? (anySpeaker ? 25 : 30) : (anySpeaker ? 75 : 70);
+    const center = leftSide ? (hasCenteredActor ? 22 : 30) : (hasCenteredActor ? 78 : 70);
     const xPosition = totalActors === 1 ? 50 : Math.round(increment * range) + (center - Math.floor(range / 2));
 
     return xPosition;
@@ -328,6 +328,11 @@ export function NovelVisualizer<
         return speakerActor.id.charCodeAt(0) % 2 === 0 ? 'left' : 'right';
     }, [enablePopInSpeakers, speakerActor, actorsAtIndex]);
 
+    // The focus actor stays centered after they stop speaking, so the others stay spread out too.
+    const hasCenteredActor = useMemo(() => {
+        return Boolean(speakerActor) || (focusActor ? actorsAtIndex.includes(focusActor) : false);
+    }, [speakerActor, focusActor, actorsAtIndex]);
+
     const actorTheme = useMemo(() => {
         return speakerActor && localSkit && getActorTheme ? getActorTheme(speakerActor, localSkit, index) : undefined;
     }, [speakerActor, localSkit, index, getActorTheme]);
@@ -382,7 +387,7 @@ export function NovelVisualizer<
         }
 
         const actorPositions = actorsAtIndex.map((actor, i) => {
-            const baseXPosition = actor === focusActor ? 50 : calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
+            const baseXPosition = actor === focusActor ? 50 : calculateActorXPosition(i, actorsAtIndex.length, hasCenteredActor);
             return {
                 actor,
                 xPosition: applyPopInSideSkew(baseXPosition, popInSpeakerSide)
@@ -411,7 +416,7 @@ export function NovelVisualizer<
         });
 
         setHoveredActor(closestActor);
-    }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enablePopInSpeakers, focusActor, popInSpeakerSide]);
+    }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enablePopInSpeakers, focusActor, popInSpeakerSide, hasCenteredActor]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -532,7 +537,7 @@ export function NovelVisualizer<
         const sceneActorScale = Math.max(0.7, 1 - Math.max(0, actorsAtIndex.length - 1) * scalePerActor);
 
         const actorElements = actorsAtIndex.map((actor, i) => {
-            const baseXPosition = actor === focusActor ? 50 : calculateActorXPosition(i, actorsAtIndex.length, Boolean(speakerActor));
+            const baseXPosition = actor === focusActor ? 50 : calculateActorXPosition(i, actorsAtIndex.length, hasCenteredActor);
             const xPosition = applyPopInSideSkew(baseXPosition, popInSpeakerSide);
             const isSpeaking = actor === speakerActor;
             const isHovered = actor === hoveredActor;
