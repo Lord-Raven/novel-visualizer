@@ -188,10 +188,12 @@ const measureFontSizeMultiplier = (fontStack: string): number | null => {
 	const measurementFont = `400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontStack}`;
 	if (document.fonts) {
 		try {
-			if (!document.fonts.check(measurementFont)) {
+			if (!document.fonts.check(measurementFont, 'xX')) {
+				console.log('[FontHandler] Measurement deferred: font is still loading', { fontStack, measurementFont });
 				return null;
 			}
-		} catch {
+		} catch (error) {
+			console.warn('[FontHandler] Invalid measurement font', { fontStack, measurementFont, error });
 			return null;
 		}
 	}
@@ -199,25 +201,60 @@ const measureFontSizeMultiplier = (fontStack: string): number | null => {
 	const canvas = document.createElement('canvas');
 	const context = canvas.getContext('2d');
 	if (!context) {
+		console.warn('[FontHandler] Canvas measurement unavailable', { fontStack });
 		return null;
 	}
 
+	context.font = '10px monospace';
 	context.font = measurementFont;
+	if (context.font === '10px monospace') {
+		console.warn('[FontHandler] Canvas rejected measurement font', { fontStack, measurementFont });
+		return null;
+	}
+	context.textBaseline = 'alphabetic';
+	console.log('[FontHandler] Measuring font', {
+		fontStack,
+		requestedFont: measurementFont,
+		canvasFont: context.font,
+		fontLoadingStatus: document.fonts?.status ?? 'unavailable',
+		measurementSizePx: FONT_MEASUREMENT_SIZE_PX,
+	});
+
 	const metrics = context.measureText('x');
 	const xHeight = (metrics.actualBoundingBoxAscent ?? 0) + (metrics.actualBoundingBoxDescent ?? 0);
-
-	if (xHeight <= 0) {
+	const capMetrics = context.measureText('X');
+	const capHeight = (capMetrics.actualBoundingBoxAscent ?? 0) + (capMetrics.actualBoundingBoxDescent ?? 0);
+	const hasValidXHeight = Number.isFinite(xHeight) && xHeight > 0;
+	const hasValidCapHeight = Number.isFinite(capHeight) && capHeight > 0;
+	if (!hasValidXHeight && !hasValidCapHeight) {
+		console.warn('[FontHandler] No usable glyph heights', { fontStack, xHeight, capHeight });
 		return null;
 	}
 
-	const capMetrics = context.measureText('X');
-	const capHeight = (capMetrics.actualBoundingBoxAscent ?? 0) + (capMetrics.actualBoundingBoxDescent ?? 0);
-	const hasSimilarHeights = capHeight > 0
-		&& Math.abs(xHeight - capHeight) / capHeight <= X_CAP_HEIGHT_SIMILARITY_THRESHOLD;
-	const measuredHeight = hasSimilarHeights ? capHeight : xHeight;
-	const targetHeightRatio = hasSimilarHeights ? TARGET_CAP_HEIGHT_RATIO : TARGET_X_HEIGHT_RATIO;
+	const heightDifferenceRatio = hasValidXHeight && hasValidCapHeight
+		? Math.abs(xHeight - capHeight) / capHeight
+		: null;
+	const useCapHeight = !hasValidXHeight
+		|| (heightDifferenceRatio !== null && heightDifferenceRatio <= X_CAP_HEIGHT_SIMILARITY_THRESHOLD);
+	const measuredHeight = useCapHeight ? capHeight : xHeight;
+	const targetHeightRatio = useCapHeight ? TARGET_CAP_HEIGHT_RATIO : TARGET_X_HEIGHT_RATIO;
+	const rawMultiplier = targetHeightRatio / (measuredHeight / FONT_MEASUREMENT_SIZE_PX);
+	const multiplier = clampFontSizeMultiplier(rawMultiplier);
 
-	return targetHeightRatio / (measuredHeight / FONT_MEASUREMENT_SIZE_PX);
+	console.log('[FontHandler] Font measurement result', {
+		fontStack,
+		xHeight,
+		capHeight,
+		heightDifferenceRatio,
+		similarityThreshold: X_CAP_HEIGHT_SIMILARITY_THRESHOLD,
+		selectedMetric: useCapHeight ? 'cap-height' : 'x-height',
+		targetHeightRatio,
+		rawMultiplier,
+		multiplier,
+		clamped: multiplier !== rawMultiplier,
+	});
+
+	return multiplier;
 };
 
 export const clearFontSizeMultiplierCache = (): void => {
@@ -265,9 +302,8 @@ const cacheFontSizeMultiplier = (fontStack: string): number => {
 		return 1;
 	}
 
-	const multiplier = clampFontSizeMultiplier(measuredMultiplier);
-	fontSizeMultiplierCache.set(cacheKey, multiplier);
-	return multiplier;
+	fontSizeMultiplierCache.set(cacheKey, measuredMultiplier);
+	return measuredMultiplier;
 };
 
 const preloadFontSizeMultipliers = async (fontFamilies: string[]): Promise<void> => {
@@ -279,7 +315,7 @@ const preloadFontSizeMultipliers = async (fontFamilies: string[]): Promise<void>
 		await Promise.allSettled(
 			fontFamilies.map((fontFamily) => {
 				try {
-					return document.fonts.load(`400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontFamily}`);
+					return document.fonts.load(`400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontFamily}`, 'xX');
 				} catch {
 					return Promise.resolve([]);
 				}
