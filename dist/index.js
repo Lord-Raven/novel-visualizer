@@ -863,6 +863,9 @@ var GOOGLE_FONT_VARIANTS = ":ital,wght@0,400;0,700;1,400;1,700";
 var FONT_REFRESH_INTERVAL_MS = 500;
 var FONT_MEASUREMENT_SIZE_PX = 100;
 var TARGET_X_HEIGHT_RATIO = 0.52;
+var TARGET_CAP_HEIGHT_RATIO = 0.72;
+var CAP_LIKE_HEIGHT_THRESHOLD = 0.9;
+var LOWERCASE_HEIGHT_PROBES = "aenosu";
 var MIN_FONT_SIZE_MULTIPLIER = 0.75;
 var MAX_FONT_SIZE_MULTIPLIER = 1.5;
 var fontSizeMultiplierCache = /* @__PURE__ */ new Map();
@@ -1012,9 +1015,22 @@ var measureFontXHeightRatio = (fontStack) => {
     return null;
   }
   context.font = measurementFont;
-  const metrics = context.measureText("x");
-  const xHeight = (metrics.actualBoundingBoxAscent ?? 0) + (metrics.actualBoundingBoxDescent ?? 0);
-  console.log(`Measured x-height for font "${fontStack}": ${xHeight}px`);
+  const measureHeight = (text) => {
+    const metrics = context.measureText(text);
+    const height = (metrics.actualBoundingBoxAscent ?? 0) + (metrics.actualBoundingBoxDescent ?? 0);
+    return Number.isFinite(height) && height > 0 ? height : 0;
+  };
+  let xHeight = measureHeight("x");
+  const capHeight = measureHeight("X");
+  if (capHeight > 0 && xHeight >= capHeight * CAP_LIKE_HEIGHT_THRESHOLD) {
+    const lowercaseHeights = Array.from(LOWERCASE_HEIGHT_PROBES, measureHeight).filter((height) => height > 0 && height < capHeight * CAP_LIKE_HEIGHT_THRESHOLD).sort((left, right) => left - right);
+    if (lowercaseHeights.length > 0) {
+      const middle = Math.floor(lowercaseHeights.length / 2);
+      xHeight = lowercaseHeights.length % 2 === 0 ? (lowercaseHeights[middle - 1] + lowercaseHeights[middle]) / 2 : lowercaseHeights[middle];
+    } else {
+      xHeight = capHeight * TARGET_X_HEIGHT_RATIO / TARGET_CAP_HEIGHT_RATIO;
+    }
+  }
   return xHeight > 0 ? xHeight / FONT_MEASUREMENT_SIZE_PX : null;
 };
 var clearFontSizeMultiplierCache = () => {
