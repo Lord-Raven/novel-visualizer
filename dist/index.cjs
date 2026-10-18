@@ -898,9 +898,6 @@ var TypeOut = ({
 };
 var TypeOut_default = TypeOut;
 
-// src/utils/TextFormatting.tsx
-var import_react5 = __toESM(require("react"), 1);
-
 // src/components/FontHandler.tsx
 var import_react4 = require("react");
 var GOOGLE_FONT_LINK_ATTRIBUTE = "data-agenda-google-font";
@@ -1075,6 +1072,29 @@ var measureFontSizeMultiplier = (fontStack) => {
 var clearFontSizeMultiplierCache = () => {
   fontSizeMultiplierCache.clear();
 };
+var useFontMeasurementRevision = () => {
+  const [revision, setRevision] = (0, import_react4.useState)(0);
+  (0, import_react4.useEffect)(() => {
+    if (typeof document === "undefined" || !document.fonts) {
+      return;
+    }
+    let active = true;
+    const refreshMeasurements = () => {
+      if (!active) {
+        return;
+      }
+      clearFontSizeMultiplierCache();
+      setRevision((previous) => previous + 1);
+    };
+    document.fonts.addEventListener("loadingdone", refreshMeasurements);
+    document.fonts.ready.then(refreshMeasurements);
+    return () => {
+      active = false;
+      document.fonts.removeEventListener("loadingdone", refreshMeasurements);
+    };
+  }, []);
+  return revision;
+};
 var cacheFontSizeMultiplier = (fontStack) => {
   const cacheKey = getFontCacheKey(fontStack);
   const cachedMultiplier = fontSizeMultiplierCache.get(cacheKey);
@@ -1206,6 +1226,7 @@ var FontHandler = ({ fontFamilies }) => {
 var FontHandler_default = FontHandler;
 
 // src/utils/TextFormatting.tsx
+var import_react5 = __toESM(require("react"), 1);
 var import_jsx_runtime4 = require("react/jsx-runtime");
 var INLINE_STYLE_SHEET_ID = "novel-visualizer-inline-style-presets";
 var INLINE_STYLE_PRESET_CSS = `
@@ -2722,10 +2743,11 @@ function NovelVisualizer(props) {
   const actorTheme = (0, import_react7.useMemo)(() => {
     return speakerActor && localSkit && getActorTheme ? getActorTheme(speakerActor, localSkit, index) : void 0;
   }, [speakerActor, localSkit, index, getActorTheme]);
+  const fontMeasurementRevision = useFontMeasurementRevision();
   const displayMessage = (0, import_react7.useMemo)(() => {
     const message = index >= 0 && index < scriptEntries.length ? scriptEntries[index].message ?? "" : "";
     return formatMessage(message, speakerActor, actorTheme, messageTokens);
-  }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage, actorTheme]);
+  }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage, actorTheme, fontMeasurementRevision]);
   (0, import_react7.useLayoutEffect)(() => {
     if (prevTypingIndexRef.current !== index) {
       setFinishTyping(false);

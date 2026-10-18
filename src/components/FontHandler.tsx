@@ -224,6 +224,35 @@ export const clearFontSizeMultiplierCache = (): void => {
 	fontSizeMultiplierCache.clear();
 };
 
+export const useFontMeasurementRevision = (): number => {
+	const [revision, setRevision] = useState(0);
+
+	useEffect(() => {
+		if (typeof document === 'undefined' || !document.fonts) {
+			return;
+		}
+
+		let active = true;
+		const refreshMeasurements = () => {
+			if (!active) {
+				return;
+			}
+			clearFontSizeMultiplierCache();
+			setRevision(previous => previous + 1);
+		};
+
+		document.fonts.addEventListener('loadingdone', refreshMeasurements);
+		document.fonts.ready.then(refreshMeasurements);
+
+		return () => {
+			active = false;
+			document.fonts.removeEventListener('loadingdone', refreshMeasurements);
+		};
+	}, []);
+
+	return revision;
+};
+
 const cacheFontSizeMultiplier = (fontStack: string): number => {
 	const cacheKey = getFontCacheKey(fontStack);
 	const cachedMultiplier = fontSizeMultiplierCache.get(cacheKey);
