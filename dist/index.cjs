@@ -911,6 +911,8 @@ var X_CAP_HEIGHT_SIMILARITY_THRESHOLD = 0.05;
 var MIN_FONT_SIZE_MULTIPLIER = 0.75;
 var MAX_FONT_SIZE_MULTIPLIER = 1.5;
 var fontSizeMultiplierCache = /* @__PURE__ */ new Map();
+var pendingFontLoads = /* @__PURE__ */ new Map();
+var fontMeasurementListeners = /* @__PURE__ */ new Set();
 var CSS_VARIABLE_FUNCTION_PATTERN = /var\(\s*(--[-_a-zA-Z0-9]+)\s*(?:,\s*([^)]*))?\)/g;
 var CSS_VARIABLE_REFERENCE_PATTERN = /\bvar\(/i;
 var GENERIC_FONT_FAMILIES = /* @__PURE__ */ new Set([
@@ -1037,6 +1039,30 @@ var clampFontSizeMultiplier = (multiplier) => {
   return Math.max(MIN_FONT_SIZE_MULTIPLIER, Math.min(MAX_FONT_SIZE_MULTIPLIER, multiplier));
 };
 var getFontCacheKey = (fontStack) => normalizeFontFamily(fontStack).toLowerCase();
+var loadMeasurementFont = (fontStack) => {
+  const pendingLoad = pendingFontLoads.get(fontStack);
+  if (pendingLoad) {
+    return pendingLoad;
+  }
+  const measurementFont = `400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontStack}`;
+  const load = Promise.resolve().then(async () => {
+    console.log("[FontHandler] Loading measurement font", { fontStack, measurementFont });
+    const faces = await document.fonts.load(measurementFont, "xX");
+    console.log("[FontHandler] Measurement font load completed", {
+      fontStack,
+      matchedFaces: faces.map((face) => ({ family: face.family, status: face.status })),
+      ready: document.fonts.check(measurementFont, "xX")
+    });
+    clearFontSizeMultiplierCache();
+    fontMeasurementListeners.forEach((listener) => listener());
+  }).catch((error) => {
+    console.warn("[FontHandler] Measurement font load failed", { fontStack, measurementFont, error });
+  }).finally(() => {
+    pendingFontLoads.delete(fontStack);
+  });
+  pendingFontLoads.set(fontStack, load);
+  return load;
+};
 var measureFontSizeMultiplier = (fontStack) => {
   if (typeof document === "undefined") {
     return null;
@@ -1046,6 +1072,7 @@ var measureFontSizeMultiplier = (fontStack) => {
     try {
       if (!document.fonts.check(measurementFont, "xX")) {
         console.log("[FontHandler] Measurement deferred: font is still loading", { fontStack, measurementFont });
+        void loadMeasurementFont(fontStack);
         return null;
       }
     } catch (error) {
@@ -1121,10 +1148,12 @@ var useFontMeasurementRevision = () => {
       setRevision((previous) => previous + 1);
     };
     document.fonts.addEventListener("loadingdone", refreshMeasurements);
+    fontMeasurementListeners.add(refreshMeasurements);
     document.fonts.ready.then(refreshMeasurements);
     return () => {
       active = false;
       document.fonts.removeEventListener("loadingdone", refreshMeasurements);
+      fontMeasurementListeners.delete(refreshMeasurements);
     };
   }, []);
   return revision;
@@ -1147,15 +1176,7 @@ var preloadFontSizeMultipliers = async (fontFamilies) => {
     return;
   }
   if (document.fonts) {
-    await Promise.allSettled(
-      fontFamilies.map((fontFamily) => {
-        try {
-          return document.fonts.load(`400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontFamily}`, "xX");
-        } catch {
-          return Promise.resolve([]);
-        }
-      })
-    );
+    await Promise.all(fontFamilies.map((fontFamily) => loadMeasurementFont(JSON.stringify(fontFamily))));
     await document.fonts.ready;
   }
   fontFamilies.forEach(cacheFontSizeMultiplier);
@@ -1196,6 +1217,7 @@ var ensureGoogleFontPreconnects = () => {
 };
 var syncGoogleFontLinks = (fontFamilies) => {
   ensureGoogleFontPreconnects();
+  const stylesheetLoads = [];
   const nextFontKeys = new Set(fontFamilies.map((fontFamily) => fontFamily.toLowerCase()));
   document.head.querySelectorAll(`link[${GOOGLE_FONT_LINK_ATTRIBUTE}]`).forEach((link) => {
     const fontKey = link.getAttribute(GOOGLE_FONT_LINK_ATTRIBUTE) || "";
@@ -1206,15 +1228,37 @@ var syncGoogleFontLinks = (fontFamilies) => {
   fontFamilies.forEach((fontFamily) => {
     const fontKey = fontFamily.toLowerCase();
     const existingLink = document.head.querySelector(`link[${GOOGLE_FONT_LINK_ATTRIBUTE}="${CSS.escape(fontKey)}"]`);
+    if (existingLink?.sheet) {
+      return;
+    }
+    const link = existingLink || document.createElement("link");
+    stylesheetLoads.push(new Promise((resolve) => {
+      const cleanup = () => {
+        link.removeEventListener("load", onLoad);
+        link.removeEventListener("error", onError);
+      };
+      const onLoad = () => {
+        cleanup();
+        console.log("[FontHandler] Font stylesheet loaded", { fontFamily, href: link.href });
+        resolve();
+      };
+      const onError = () => {
+        cleanup();
+        console.warn("[FontHandler] Font stylesheet failed to load", { fontFamily, href: link.href });
+        resolve();
+      };
+      link.addEventListener("load", onLoad);
+      link.addEventListener("error", onError);
+    }));
     if (existingLink) {
       return;
     }
-    const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href = buildGoogleFontHref(fontFamily);
     link.setAttribute(GOOGLE_FONT_LINK_ATTRIBUTE, fontKey);
     document.head.appendChild(link);
   });
+  return Promise.all(stylesheetLoads);
 };
 var processFontFamilies = (fontFamilies) => {
   const processedFontFamilies = /* @__PURE__ */ new Map();
@@ -1244,9 +1288,18 @@ var FontHandler = ({ fontFamilies }) => {
   }, [fontFamilies]);
   (0, import_react4.useEffect)(() => {
     const processedFontFamilies = fontSignature ? fontSignature.split("\n") : [];
-    syncGoogleFontLinks(processedFontFamilies);
+    let active = true;
     clearFontSizeMultiplierCache();
-    preloadFontSizeMultipliers(processedFontFamilies).catch(() => void 0);
+    syncGoogleFontLinks(processedFontFamilies).then(() => {
+      if (active) {
+        return preloadFontSizeMultipliers(processedFontFamilies);
+      }
+    }).catch((error) => {
+      console.warn("[FontHandler] Font preloading failed", { fontFamilies: processedFontFamilies, error });
+    });
+    return () => {
+      active = false;
+    };
   }, [fontSignature]);
   (0, import_react4.useEffect)(() => {
     return () => {

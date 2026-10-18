@@ -16,6 +16,8 @@ const MIN_FONT_SIZE_MULTIPLIER = 0.75;
 const MAX_FONT_SIZE_MULTIPLIER = 1.5;
 
 const fontSizeMultiplierCache = new Map<string, number>();
+const pendingFontLoads = new Map<string, Promise<void>>();
+const fontMeasurementListeners = new Set<() => void>();
 const CSS_VARIABLE_FUNCTION_PATTERN = /var\(\s*(--[-_a-zA-Z0-9]+)\s*(?:,\s*([^)]*))?\)/g;
 const CSS_VARIABLE_REFERENCE_PATTERN = /\bvar\(/i;
 
@@ -180,6 +182,32 @@ const clampFontSizeMultiplier = (multiplier: number): number => {
 
 const getFontCacheKey = (fontStack: string): string => normalizeFontFamily(fontStack).toLowerCase();
 
+const loadMeasurementFont = (fontStack: string): Promise<void> => {
+	const pendingLoad = pendingFontLoads.get(fontStack);
+	if (pendingLoad) {
+		return pendingLoad;
+	}
+
+	const measurementFont = `400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontStack}`;
+	const load = Promise.resolve().then(async () => {
+		console.log('[FontHandler] Loading measurement font', { fontStack, measurementFont });
+		const faces = await document.fonts.load(measurementFont, 'xX');
+		console.log('[FontHandler] Measurement font load completed', {
+			fontStack,
+			matchedFaces: faces.map(face => ({ family: face.family, status: face.status })),
+			ready: document.fonts.check(measurementFont, 'xX'),
+		});
+		clearFontSizeMultiplierCache();
+		fontMeasurementListeners.forEach(listener => listener());
+	}).catch(error => {
+		console.warn('[FontHandler] Measurement font load failed', { fontStack, measurementFont, error });
+	}).finally(() => {
+		pendingFontLoads.delete(fontStack);
+	});
+	pendingFontLoads.set(fontStack, load);
+	return load;
+};
+
 const measureFontSizeMultiplier = (fontStack: string): number | null => {
 	if (typeof document === 'undefined') {
 		return null;
@@ -190,6 +218,7 @@ const measureFontSizeMultiplier = (fontStack: string): number | null => {
 		try {
 			if (!document.fonts.check(measurementFont, 'xX')) {
 				console.log('[FontHandler] Measurement deferred: font is still loading', { fontStack, measurementFont });
+				void loadMeasurementFont(fontStack);
 				return null;
 			}
 		} catch (error) {
@@ -279,11 +308,13 @@ export const useFontMeasurementRevision = (): number => {
 		};
 
 		document.fonts.addEventListener('loadingdone', refreshMeasurements);
+		fontMeasurementListeners.add(refreshMeasurements);
 		document.fonts.ready.then(refreshMeasurements);
 
 		return () => {
 			active = false;
 			document.fonts.removeEventListener('loadingdone', refreshMeasurements);
+			fontMeasurementListeners.delete(refreshMeasurements);
 		};
 	}, []);
 
@@ -312,15 +343,7 @@ const preloadFontSizeMultipliers = async (fontFamilies: string[]): Promise<void>
 	}
 
 	if (document.fonts) {
-		await Promise.allSettled(
-			fontFamilies.map((fontFamily) => {
-				try {
-					return document.fonts.load(`400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontFamily}`, 'xX');
-				} catch {
-					return Promise.resolve([]);
-				}
-			})
-		);
+		await Promise.all(fontFamilies.map(fontFamily => loadMeasurementFont(JSON.stringify(fontFamily))));
 		await document.fonts.ready;
 	}
 
@@ -387,6 +410,7 @@ const ensureGoogleFontPreconnects = () => {
 
 const syncGoogleFontLinks = (fontFamilies: string[]) => {
 	ensureGoogleFontPreconnects();
+	const stylesheetLoads: Promise<void>[] = [];
 
 	const nextFontKeys = new Set(fontFamilies.map(fontFamily => fontFamily.toLowerCase()));
 	document.head.querySelectorAll<HTMLLinkElement>(`link[${GOOGLE_FONT_LINK_ATTRIBUTE}]`).forEach((link) => {
@@ -399,17 +423,40 @@ const syncGoogleFontLinks = (fontFamilies: string[]) => {
 	fontFamilies.forEach((fontFamily) => {
 		const fontKey = fontFamily.toLowerCase();
 		const existingLink = document.head.querySelector<HTMLLinkElement>(`link[${GOOGLE_FONT_LINK_ATTRIBUTE}="${CSS.escape(fontKey)}"]`);
+		if (existingLink?.sheet) {
+			return;
+		}
+
+		const link = existingLink || document.createElement('link');
+		stylesheetLoads.push(new Promise<void>((resolve) => {
+			const cleanup = () => {
+				link.removeEventListener('load', onLoad);
+				link.removeEventListener('error', onError);
+			};
+			const onLoad = () => {
+				cleanup();
+				console.log('[FontHandler] Font stylesheet loaded', { fontFamily, href: link.href });
+				resolve();
+			};
+			const onError = () => {
+				cleanup();
+				console.warn('[FontHandler] Font stylesheet failed to load', { fontFamily, href: link.href });
+				resolve();
+			};
+			link.addEventListener('load', onLoad);
+			link.addEventListener('error', onError);
+		}));
 		if (existingLink) {
 			return;
 		}
 
-		const link = document.createElement('link');
 		link.rel = 'stylesheet';
 		link.href = buildGoogleFontHref(fontFamily);
 		link.setAttribute(GOOGLE_FONT_LINK_ATTRIBUTE, fontKey);
 		document.head.appendChild(link);
 	});
 
+	return Promise.all(stylesheetLoads);
 };
 
 const processFontFamilies = (fontFamilies: string[]): string[] => {
@@ -448,9 +495,18 @@ export const FontHandler: FC<FontHandlerProps> = ({ fontFamilies }) => {
 
 	useEffect(() => {
 		const processedFontFamilies = fontSignature ? fontSignature.split('\n') : [];
-		syncGoogleFontLinks(processedFontFamilies);
+		let active = true;
 		clearFontSizeMultiplierCache();
-		preloadFontSizeMultipliers(processedFontFamilies).catch(() => undefined);
+		syncGoogleFontLinks(processedFontFamilies).then(() => {
+			if (active) {
+				return preloadFontSizeMultipliers(processedFontFamilies);
+			}
+		}).catch(error => {
+			console.warn('[FontHandler] Font preloading failed', { fontFamilies: processedFontFamilies, error });
+		});
+		return () => {
+			active = false;
+		};
 	}, [fontSignature]);
 
 	useEffect(() => {
