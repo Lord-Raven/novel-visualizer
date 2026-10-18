@@ -8,7 +8,6 @@ import { AnimatePresence } from 'framer-motion';
 import ActorImage from './ActorImage';
 import { BlurredBackground } from './BlurredBackground';
 import TypeOut from './TypeOut';
-import { useFontMeasurementRevision } from './FontHandler';
 import { formatMessageWithStyles } from '../utils/TextFormatting';
 import type { FormatInlineStylesOptions, MessageFormatTokens } from '../utils/TextFormatting';
 import { useVoiceAudio } from '../utils/useVoiceAudio';
@@ -338,11 +337,10 @@ export function NovelVisualizer<
         return speakerActor && localSkit && getActorTheme ? getActorTheme(speakerActor, localSkit, index) : undefined;
     }, [speakerActor, localSkit, index, getActorTheme]);
 
-    const fontMeasurementRevision = useFontMeasurementRevision();
     const displayMessage = useMemo(() => {
         const message = index >= 0 && index < scriptEntries.length ? scriptEntries[index].message ?? '' : '';
         return formatMessage(message, speakerActor, actorTheme, messageTokens);
-    }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage, actorTheme, fontMeasurementRevision]);
+    }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage, actorTheme]);
 
     useLayoutEffect(() => {
         if (prevTypingIndexRef.current !== index) {
