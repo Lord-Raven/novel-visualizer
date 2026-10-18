@@ -1068,16 +1068,16 @@ var measureFontSizeMultiplier = (fontStack) => {
     return null;
   }
   const measurementFont = `400 ${FONT_MEASUREMENT_SIZE_PX}px ${fontStack}`;
+  let fontReady = null;
   if (document.fonts) {
     try {
-      if (!document.fonts.check(measurementFont, "xX")) {
-        console.log("[FontHandler] Measurement deferred: font is still loading", { fontStack, measurementFont });
+      fontReady = document.fonts.check(measurementFont, "xX");
+      if (!fontReady) {
+        console.log("[FontHandler] Font not ready; measuring current rendering while loading", { fontStack, measurementFont });
         void loadMeasurementFont(fontStack);
-        return null;
       }
     } catch (error) {
-      console.warn("[FontHandler] Invalid measurement font", { fontStack, measurementFont, error });
-      return null;
+      console.warn("[FontHandler] Font readiness check failed; trying canvas measurement", { fontStack, measurementFont, error });
     }
   }
   const canvas = document.createElement("canvas");
@@ -1097,6 +1097,7 @@ var measureFontSizeMultiplier = (fontStack) => {
     fontStack,
     requestedFont: measurementFont,
     canvasFont: context.font,
+    fontReady,
     fontLoadingStatus: document.fonts?.status ?? "unavailable",
     measurementSizePx: FONT_MEASUREMENT_SIZE_PX
   });
@@ -1118,6 +1119,7 @@ var measureFontSizeMultiplier = (fontStack) => {
   const multiplier = clampFontSizeMultiplier(rawMultiplier);
   console.log("[FontHandler] Font measurement result", {
     fontStack,
+    provisional: fontReady !== true,
     xHeight,
     capHeight,
     heightDifferenceRatio,
