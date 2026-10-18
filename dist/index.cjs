@@ -909,6 +909,8 @@ var GOOGLE_FONT_VARIANTS = ":ital,wght@0,400;0,700;1,400;1,700";
 var FONT_REFRESH_INTERVAL_MS = 500;
 var FONT_MEASUREMENT_SIZE_PX = 100;
 var TARGET_X_HEIGHT_RATIO = 0.52;
+var TARGET_CAP_HEIGHT_RATIO = 0.72;
+var X_CAP_HEIGHT_SIMILARITY_THRESHOLD = 0.05;
 var MIN_FONT_SIZE_MULTIPLIER = 0.75;
 var MAX_FONT_SIZE_MULTIPLIER = 1.5;
 var fontSizeMultiplierCache = /* @__PURE__ */ new Map();
@@ -1038,7 +1040,7 @@ var clampFontSizeMultiplier = (multiplier) => {
   return Math.max(MIN_FONT_SIZE_MULTIPLIER, Math.min(MAX_FONT_SIZE_MULTIPLIER, multiplier));
 };
 var getFontCacheKey = (fontStack) => normalizeFontFamily(fontStack).toLowerCase();
-var measureFontXHeightRatio = (fontStack) => {
+var measureFontSizeMultiplier = (fontStack) => {
   if (typeof document === "undefined") {
     return null;
   }
@@ -1060,8 +1062,15 @@ var measureFontXHeightRatio = (fontStack) => {
   context.font = measurementFont;
   const metrics = context.measureText("x");
   const xHeight = (metrics.actualBoundingBoxAscent ?? 0) + (metrics.actualBoundingBoxDescent ?? 0);
-  console.log(`Measured x-height for font "${fontStack}": ${xHeight}px`);
-  return xHeight > 0 ? xHeight / FONT_MEASUREMENT_SIZE_PX : null;
+  if (xHeight <= 0) {
+    return null;
+  }
+  const capMetrics = context.measureText("X");
+  const capHeight = (capMetrics.actualBoundingBoxAscent ?? 0) + (capMetrics.actualBoundingBoxDescent ?? 0);
+  const hasSimilarHeights = capHeight > 0 && Math.abs(xHeight - capHeight) / capHeight <= X_CAP_HEIGHT_SIMILARITY_THRESHOLD;
+  const measuredHeight = hasSimilarHeights ? capHeight : xHeight;
+  const targetHeightRatio = hasSimilarHeights ? TARGET_CAP_HEIGHT_RATIO : TARGET_X_HEIGHT_RATIO;
+  return targetHeightRatio / (measuredHeight / FONT_MEASUREMENT_SIZE_PX);
 };
 var clearFontSizeMultiplierCache = () => {
   fontSizeMultiplierCache.clear();
@@ -1072,11 +1081,11 @@ var cacheFontSizeMultiplier = (fontStack) => {
   if (cachedMultiplier !== void 0) {
     return cachedMultiplier;
   }
-  const xHeightRatio = measureFontXHeightRatio(fontStack);
-  if (!xHeightRatio) {
+  const measuredMultiplier = measureFontSizeMultiplier(fontStack);
+  if (!measuredMultiplier) {
     return 1;
   }
-  const multiplier = clampFontSizeMultiplier(TARGET_X_HEIGHT_RATIO / xHeightRatio);
+  const multiplier = clampFontSizeMultiplier(measuredMultiplier);
   fontSizeMultiplierCache.set(cacheKey, multiplier);
   return multiplier;
 };

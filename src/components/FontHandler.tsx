@@ -10,6 +10,8 @@ const GOOGLE_FONT_VARIANTS = ':ital,wght@0,400;0,700;1,400;1,700';
 const FONT_REFRESH_INTERVAL_MS = 500;
 const FONT_MEASUREMENT_SIZE_PX = 100;
 const TARGET_X_HEIGHT_RATIO = 0.52;
+const TARGET_CAP_HEIGHT_RATIO = 0.72;
+const X_CAP_HEIGHT_SIMILARITY_THRESHOLD = 0.05;
 const MIN_FONT_SIZE_MULTIPLIER = 0.75;
 const MAX_FONT_SIZE_MULTIPLIER = 1.5;
 
@@ -178,7 +180,7 @@ const clampFontSizeMultiplier = (multiplier: number): number => {
 
 const getFontCacheKey = (fontStack: string): string => normalizeFontFamily(fontStack).toLowerCase();
 
-const measureFontXHeightRatio = (fontStack: string): number | null => {
+const measureFontSizeMultiplier = (fontStack: string): number | null => {
 	if (typeof document === 'undefined') {
 		return null;
 	}
@@ -204,8 +206,18 @@ const measureFontXHeightRatio = (fontStack: string): number | null => {
 	const metrics = context.measureText('x');
 	const xHeight = (metrics.actualBoundingBoxAscent ?? 0) + (metrics.actualBoundingBoxDescent ?? 0);
 
-	console.log(`Measured x-height for font "${fontStack}": ${xHeight}px`);
-	return xHeight > 0 ? xHeight / FONT_MEASUREMENT_SIZE_PX : null;
+	if (xHeight <= 0) {
+		return null;
+	}
+
+	const capMetrics = context.measureText('X');
+	const capHeight = (capMetrics.actualBoundingBoxAscent ?? 0) + (capMetrics.actualBoundingBoxDescent ?? 0);
+	const hasSimilarHeights = capHeight > 0
+		&& Math.abs(xHeight - capHeight) / capHeight <= X_CAP_HEIGHT_SIMILARITY_THRESHOLD;
+	const measuredHeight = hasSimilarHeights ? capHeight : xHeight;
+	const targetHeightRatio = hasSimilarHeights ? TARGET_CAP_HEIGHT_RATIO : TARGET_X_HEIGHT_RATIO;
+
+	return targetHeightRatio / (measuredHeight / FONT_MEASUREMENT_SIZE_PX);
 };
 
 export const clearFontSizeMultiplierCache = (): void => {
@@ -219,12 +231,12 @@ const cacheFontSizeMultiplier = (fontStack: string): number => {
 		return cachedMultiplier;
 	}
 
-	const xHeightRatio = measureFontXHeightRatio(fontStack);
-	if (!xHeightRatio) {
+	const measuredMultiplier = measureFontSizeMultiplier(fontStack);
+	if (!measuredMultiplier) {
 		return 1;
 	}
 
-	const multiplier = clampFontSizeMultiplier(TARGET_X_HEIGHT_RATIO / xHeightRatio);
+	const multiplier = clampFontSizeMultiplier(measuredMultiplier);
 	fontSizeMultiplierCache.set(cacheKey, multiplier);
 	return multiplier;
 };
