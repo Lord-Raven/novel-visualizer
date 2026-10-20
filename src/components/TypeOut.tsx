@@ -135,8 +135,12 @@ export const TypeOut: React.FC<TypeOutProps> = ({
         () => getCharacterHapticDurations(children),
         [children]
     );
-    const prevTextContentRef = React.useRef<string>('');
+    const hapticSettingsRef = React.useRef({ enableHaptics, hapticDurations });
     const onTypingCompleteRef = React.useRef(onTypingComplete);
+
+    React.useLayoutEffect(() => {
+        hapticSettingsRef.current = { enableHaptics, hapticDurations };
+    }, [enableHaptics, hapticDurations]);
     
     // Keep the callback ref up to date without causing re-renders
     React.useEffect(() => {
@@ -144,62 +148,59 @@ export const TypeOut: React.FC<TypeOutProps> = ({
     }, [onTypingComplete]);
     
     React.useLayoutEffect(() => {
-        // Only reset if the actual text content has changed
-        if (textContent !== prevTextContentRef.current) {
-            prevTextContentRef.current = textContent;
-            setDisplayLength(0);
-            setFinished(false);
+        setDisplayLength(0);
+        setFinished(false);
 
-            if (!textContent) {
-                setFinished(true);
-                onTypingCompleteRef.current?.();
-                return;
+        if (!textContent) {
+            setFinished(true);
+            onTypingCompleteRef.current?.();
+            return;
+        }
+
+        if (speed <= 0) {
+            setDisplayLength(textContent.length);
+            setFinished(true);
+            onTypingCompleteRef.current?.();
+            return;
+        }
+
+        // Start interval to reveal characters
+        // Use a ref to track the current index so it persists across closures
+        const idxRef = { current: 0 };
+
+        timerRef.current = window.setInterval(() => {
+            idxRef.current += 1;
+            setDisplayLength(idxRef.current);
+            const character = textContent[idxRef.current - 1];
+            const { enableHaptics, hapticDurations } = hapticSettingsRef.current;
+            const hapticDuration = hapticDurations[idxRef.current - 1] ?? 0;
+            const now = Date.now();
+            if (
+                enableHaptics &&
+                hapticDuration > 0 &&
+                !/\s/.test(character) &&
+                now - lastHapticAtRef.current >= 70
+            ) {
+                triggerHapticFeedback(hapticDuration);
+                lastHapticAtRef.current = now;
             }
-
-            if (speed <= 0) {
-                setDisplayLength(textContent.length);
-                setFinished(true);
-                onTypingCompleteRef.current?.();
-                return;
-            }
-
-            // Start interval to reveal characters
-            // Use a ref to track the current index so it persists across closures
-            const idxRef = { current: 0 };
-            
-            timerRef.current = window.setInterval(() => {
-                idxRef.current += 1;
-                setDisplayLength(idxRef.current);
-                const character = textContent[idxRef.current - 1];
-                const hapticDuration = hapticDurations[idxRef.current - 1] ?? 0;
-                const now = Date.now();
-                if (
-                    enableHaptics &&
-                    hapticDuration > 0 &&
-                    !/\s/.test(character) &&
-                    now - lastHapticAtRef.current >= 70
-                ) {
-                    triggerHapticFeedback(hapticDuration);
-                    lastHapticAtRef.current = now;
-                }
-                if (idxRef.current >= textContent.length) {
-                    if (timerRef.current !== null) {
-                        clearInterval(timerRef.current);
-                        timerRef.current = null;
-                    }
-                    setFinished(true);
-                    onTypingCompleteRef.current?.();
-                }
-            }, speed);
-
-            return () => {
+            if (idxRef.current >= textContent.length) {
                 if (timerRef.current !== null) {
                     clearInterval(timerRef.current);
                     timerRef.current = null;
                 }
-            };
-        }
-    }, [textContent, speed, enableHaptics, hapticDurations]);
+                setFinished(true);
+                onTypingCompleteRef.current?.();
+            }
+        }, speed);
+
+        return () => {
+            if (timerRef.current !== null) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+        };
+    }, [textContent, speed]);
 
     // Effect to handle finishTyping prop
     React.useEffect(() => {

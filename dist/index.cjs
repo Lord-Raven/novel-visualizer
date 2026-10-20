@@ -855,55 +855,56 @@ var TypeOut = ({
     () => getCharacterHapticDurations(children),
     [children]
   );
-  const prevTextContentRef = import_react3.default.useRef("");
+  const hapticSettingsRef = import_react3.default.useRef({ enableHaptics, hapticDurations });
   const onTypingCompleteRef = import_react3.default.useRef(onTypingComplete);
+  import_react3.default.useLayoutEffect(() => {
+    hapticSettingsRef.current = { enableHaptics, hapticDurations };
+  }, [enableHaptics, hapticDurations]);
   import_react3.default.useEffect(() => {
     onTypingCompleteRef.current = onTypingComplete;
   }, [onTypingComplete]);
   import_react3.default.useLayoutEffect(() => {
-    if (textContent !== prevTextContentRef.current) {
-      prevTextContentRef.current = textContent;
-      setDisplayLength(0);
-      setFinished(false);
-      if (!textContent) {
-        setFinished(true);
-        onTypingCompleteRef.current?.();
-        return;
+    setDisplayLength(0);
+    setFinished(false);
+    if (!textContent) {
+      setFinished(true);
+      onTypingCompleteRef.current?.();
+      return;
+    }
+    if (speed <= 0) {
+      setDisplayLength(textContent.length);
+      setFinished(true);
+      onTypingCompleteRef.current?.();
+      return;
+    }
+    const idxRef = { current: 0 };
+    timerRef.current = window.setInterval(() => {
+      idxRef.current += 1;
+      setDisplayLength(idxRef.current);
+      const character = textContent[idxRef.current - 1];
+      const { enableHaptics: enableHaptics2, hapticDurations: hapticDurations2 } = hapticSettingsRef.current;
+      const hapticDuration = hapticDurations2[idxRef.current - 1] ?? 0;
+      const now = Date.now();
+      if (enableHaptics2 && hapticDuration > 0 && !/\s/.test(character) && now - lastHapticAtRef.current >= 70) {
+        triggerHapticFeedback(hapticDuration);
+        lastHapticAtRef.current = now;
       }
-      if (speed <= 0) {
-        setDisplayLength(textContent.length);
-        setFinished(true);
-        onTypingCompleteRef.current?.();
-        return;
-      }
-      const idxRef = { current: 0 };
-      timerRef.current = window.setInterval(() => {
-        idxRef.current += 1;
-        setDisplayLength(idxRef.current);
-        const character = textContent[idxRef.current - 1];
-        const hapticDuration = hapticDurations[idxRef.current - 1] ?? 0;
-        const now = Date.now();
-        if (enableHaptics && hapticDuration > 0 && !/\s/.test(character) && now - lastHapticAtRef.current >= 70) {
-          triggerHapticFeedback(hapticDuration);
-          lastHapticAtRef.current = now;
-        }
-        if (idxRef.current >= textContent.length) {
-          if (timerRef.current !== null) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
-          setFinished(true);
-          onTypingCompleteRef.current?.();
-        }
-      }, speed);
-      return () => {
+      if (idxRef.current >= textContent.length) {
         if (timerRef.current !== null) {
           clearInterval(timerRef.current);
           timerRef.current = null;
         }
-      };
-    }
-  }, [textContent, speed, enableHaptics, hapticDurations]);
+        setFinished(true);
+        onTypingCompleteRef.current?.();
+      }
+    }, speed);
+    return () => {
+      if (timerRef.current !== null) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [textContent, speed]);
   import_react3.default.useEffect(() => {
     if (finishTyping && !finished) {
       if (timerRef.current !== null) {
