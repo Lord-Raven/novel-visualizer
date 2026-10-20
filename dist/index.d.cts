@@ -75,6 +75,7 @@ interface NovelVisualizerProps<TActor extends NovelActor, TSkit extends NovelSki
     actors: Record<string, TActor>;
     playerActorId: string;
     getBackgroundImageUrl?: (skit: TSkit, index: number) => string;
+    /** Use compact spacing, thinner panel borders, and smaller controls for portrait layouts. */
     isVerticalLayout?: boolean;
     typingSpeed?: number;
     allowTypingSkip?: boolean;

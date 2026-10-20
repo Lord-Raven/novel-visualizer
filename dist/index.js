@@ -3052,9 +3052,17 @@ function NovelVisualizer(props) {
     }
     return backgroundElements ?? null;
   }, [backgroundElements, localSkit, index, actorsAtIndex]);
-  const responsiveOverlayTop = isVerticalLayout ? 2 : 5;
-  const responsiveOverlaySides = isVerticalLayout ? 2 : 5;
-  const responsiveOverlayBottomGap = isVerticalLayout ? 1 : 2;
+  const responsiveOverlayTop = isVerticalLayout ? 1 : 5;
+  const responsiveOverlaySides = isVerticalLayout ? 1 : 5;
+  const responsiveOverlayBottomGap = isVerticalLayout ? 0.5 : 2;
+  const compactIconButtonSx = isVerticalLayout ? {
+    width: "24px",
+    height: "24px",
+    minWidth: "24px",
+    padding: "3px",
+    boxSizing: "border-box",
+    flexShrink: 0
+  } : {};
   return /* @__PURE__ */ jsx5(
     BlurredBackground,
     {
@@ -3100,9 +3108,9 @@ function NovelVisualizer(props) {
                   right: `${responsiveOverlaySides}%`,
                   bottom: `${responsiveOverlayBottomGap}%`,
                   background: safeAlpha(theme.palette.background.paper, 0.92),
-                  border: `2px solid ${safeAlpha(theme.palette.divider, 0.3)}`,
-                  borderRadius: 3,
-                  p: 2,
+                  border: `${isVerticalLayout ? 1 : 2}px solid ${safeAlpha(theme.palette.divider, 0.3)}`,
+                  borderRadius: isVerticalLayout ? 1.5 : 3,
+                  p: isVerticalLayout ? 1 : 2,
                   color: theme.palette.text.primary,
                   zIndex: 4,
                   backdropFilter: "blur(8px)",
@@ -3125,8 +3133,7 @@ function NovelVisualizer(props) {
                           sx: {
                             color: theme.palette.text.secondary,
                             border: `1px solid ${safeAlpha(theme.palette.divider, 0.2)}`,
-                            padding: isVerticalLayout ? "4px" : void 0,
-                            minWidth: isVerticalLayout ? "28px" : void 0,
+                            ...compactIconButtonSx,
                             "&:disabled": { color: theme.palette.text.disabled }
                           },
                           children: /* @__PURE__ */ jsx5(ChevronLeft, { fontSize: isVerticalLayout ? "inherit" : "small", sx: { fontSize: isVerticalLayout ? "14px" : void 0 } })
@@ -3162,8 +3169,8 @@ function NovelVisualizer(props) {
                             progressLabel
                           ] }),
                           sx: {
-                            minWidth: isVerticalLayout ? 50 : 72,
-                            height: isVerticalLayout ? "24px" : void 0,
+                            minWidth: isVerticalLayout ? 44 : 72,
+                            height: isVerticalLayout ? "22px" : void 0,
                             fontSize: isVerticalLayout ? "0.7rem" : void 0,
                             fontWeight: 700,
                             color: theme.palette.primary.light,
@@ -3173,7 +3180,7 @@ function NovelVisualizer(props) {
                               display: "flex",
                               alignItems: "center",
                               gap: isVerticalLayout ? 0.25 : 0.5,
-                              padding: isVerticalLayout ? "0 6px" : void 0
+                              padding: isVerticalLayout ? "0 4px" : void 0
                             }
                           }
                         }
@@ -3187,8 +3194,7 @@ function NovelVisualizer(props) {
                           sx: {
                             color: theme.palette.text.secondary,
                             border: `1px solid ${safeAlpha(theme.palette.divider, 0.2)}`,
-                            padding: isVerticalLayout ? "4px" : void 0,
-                            minWidth: isVerticalLayout ? "28px" : void 0,
+                            ...compactIconButtonSx,
                             "&:disabled": { color: theme.palette.text.disabled }
                           },
                           children: /* @__PURE__ */ jsx5(ChevronRight, { fontSize: isVerticalLayout ? "inherit" : "small", sx: { fontSize: isVerticalLayout ? "14px" : void 0 } })
@@ -3222,8 +3228,7 @@ function NovelVisualizer(props) {
                           sx: {
                             color: accentMain,
                             border: `1px solid ${safeAlpha(accentMain, 0.25)}`,
-                            padding: isVerticalLayout ? "4px" : void 0,
-                            minWidth: isVerticalLayout ? "28px" : void 0,
+                            ...compactIconButtonSx,
                             opacity: 1,
                             transform: "scale(1)",
                             transition: "all 0.3s ease",
@@ -3253,8 +3258,7 @@ function NovelVisualizer(props) {
                             sx: {
                               color: accentMain,
                               border: `1px solid ${safeAlpha(accentMain, 0.25)}`,
-                              padding: isVerticalLayout ? "4px" : void 0,
-                              minWidth: isVerticalLayout ? "28px" : void 0,
+                              ...compactIconButtonSx,
                               opacity: 1,
                               transform: "scale(1)",
                               transition: "all 0.3s ease",
@@ -3283,8 +3287,7 @@ function NovelVisualizer(props) {
                             sx: {
                               color: errorMain,
                               border: `1px solid ${safeAlpha(errorMain, 0.25)}`,
-                              padding: isVerticalLayout ? "4px" : void 0,
-                              minWidth: isVerticalLayout ? "28px" : void 0,
+                              ...compactIconButtonSx,
                               opacity: 1,
                               transform: "scale(1)",
                               transition: "all 0.3s ease",
@@ -3315,8 +3318,7 @@ function NovelVisualizer(props) {
                           sx: {
                             color: accentMain,
                             border: `1px solid ${safeAlpha(accentMain, 0.25)}`,
-                            padding: isVerticalLayout ? "4px" : void 0,
-                            minWidth: isVerticalLayout ? "28px" : void 0,
+                            ...compactIconButtonSx,
                             transition: "all 0.3s ease",
                             "&:hover": {
                               borderColor: safeAlpha(accentMain, 0.4),
@@ -3334,8 +3336,8 @@ function NovelVisualizer(props) {
                     Box,
                     {
                       sx: {
-                        my: isVerticalLayout ? 1 : 2,
-                        minHeight: "4rem",
+                        my: isVerticalLayout ? 0.75 : 2,
+                        minHeight: isVerticalLayout ? "3rem" : "4rem",
                         cursor: isEditingMessage ? "text" : "pointer",
                         borderRadius: 1,
                         transition: "background-color 0.2s ease",
@@ -3376,7 +3378,7 @@ function NovelVisualizer(props) {
                               fontFamily: theme.typography.fontFamily,
                               color: theme.palette.text.primary,
                               backgroundColor: safeAlpha(theme.palette.action.selected, 0.5),
-                              padding: "8px"
+                              padding: isVerticalLayout ? "4px" : "8px"
                             },
                             "& .MuiInputBase-input": {
                               padding: 0
@@ -3450,7 +3452,7 @@ function NovelVisualizer(props) {
                             }
                           },
                           "& .MuiInputBase-input": {
-                            padding: isVerticalLayout ? "6px 8px" : void 0
+                            padding: isVerticalLayout ? "4px 6px" : void 0
                           },
                           "& .MuiInputBase-input::placeholder": {
                             color: safeAlpha(theme.palette.text.primary, 0.55),
@@ -3484,8 +3486,9 @@ function NovelVisualizer(props) {
                           return inputText.trim() ? /* @__PURE__ */ jsx5(Send, { fontSize: isVerticalLayout ? "small" : void 0 }) : /* @__PURE__ */ jsx5(Forward, { fontSize: isVerticalLayout ? "small" : void 0 });
                         })(),
                         sx: {
-                          height: "40px",
-                          minHeight: "40px",
+                          height: isVerticalLayout ? "28px" : "40px",
+                          minHeight: isVerticalLayout ? "28px" : "40px",
+                          minWidth: isVerticalLayout ? "48px" : void 0,
                           background: (() => {
                             const colorScheme = getSubmitButtonConfig ? localSkit ? getSubmitButtonConfig(localSkit, index, inputText).colorScheme : "primary" : sceneEnded && !inputText.trim() ? "error" : "primary";
                             const baseColor = getColorFromScheme(colorScheme ?? "primary");
@@ -3502,8 +3505,17 @@ function NovelVisualizer(props) {
                           })(),
                           fontWeight: 800,
                           fontSize: isVerticalLayout ? "clamp(0.6rem, 2vw, 0.875rem)" : void 0,
-                          padding: isVerticalLayout ? "4px 10px" : void 0,
+                          padding: isVerticalLayout ? "3px 6px" : void 0,
                           whiteSpace: "nowrap",
+                          ...isVerticalLayout && {
+                            "& .MuiButton-startIcon": {
+                              marginLeft: 0,
+                              marginRight: "4px",
+                              "& > :nth-of-type(1)": {
+                                fontSize: "16px"
+                              }
+                            }
+                          },
                           "&:hover": {
                             background: (() => {
                               const colorScheme = getSubmitButtonConfig ? localSkit ? getSubmitButtonConfig(localSkit, index, inputText).colorScheme : "primary" : sceneEnded && !inputText.trim() ? "error" : "primary";

@@ -67,6 +67,7 @@ export interface NovelVisualizerProps<
     actors: Record<string, TActor>;
     playerActorId: string;
     getBackgroundImageUrl?: (skit: TSkit, index: number) => string;
+    /** Use compact spacing, thinner panel borders, and smaller controls for portrait layouts. */
     isVerticalLayout?: boolean;
     typingSpeed?: number;
     allowTypingSkip?: boolean;
@@ -715,9 +716,17 @@ export function NovelVisualizer<
         return backgroundElements ?? null;
     }, [backgroundElements, localSkit, index, actorsAtIndex]);
 
-    const responsiveOverlayTop = isVerticalLayout ? 2 : 5;
-    const responsiveOverlaySides = isVerticalLayout ? 2 : 5;
-    const responsiveOverlayBottomGap = isVerticalLayout ? 1 : 2;
+    const responsiveOverlayTop = isVerticalLayout ? 1 : 5;
+    const responsiveOverlaySides = isVerticalLayout ? 1 : 5;
+    const responsiveOverlayBottomGap = isVerticalLayout ? 0.5 : 2;
+    const compactIconButtonSx = isVerticalLayout ? {
+        width: '24px',
+        height: '24px',
+        minWidth: '24px',
+        padding: '3px',
+        boxSizing: 'border-box',
+        flexShrink: 0
+    } : {};
 
     return (
         <BlurredBackground
@@ -771,9 +780,9 @@ export function NovelVisualizer<
                             right: `${responsiveOverlaySides}%`,
                             bottom: `${responsiveOverlayBottomGap}%`,
                             background: safeAlpha(theme.palette.background.paper, 0.92),
-                            border: `2px solid ${safeAlpha(theme.palette.divider, 0.3)}`,
-                            borderRadius: 3,
-                            p: 2,
+                            border: `${isVerticalLayout ? 1 : 2}px solid ${safeAlpha(theme.palette.divider, 0.3)}`,
+                            borderRadius: isVerticalLayout ? 1.5 : 3,
+                            p: isVerticalLayout ? 1 : 2,
                             color: theme.palette.text.primary,
                             zIndex: 4,
                             backdropFilter: 'blur(8px)',
@@ -795,8 +804,7 @@ export function NovelVisualizer<
                                 sx={{
                                     color: theme.palette.text.secondary,
                                     border: `1px solid ${safeAlpha(theme.palette.divider, 0.2)}`,
-                                    padding: isVerticalLayout ? '4px' : undefined,
-                                    minWidth: isVerticalLayout ? '28px' : undefined,
+                                    ...compactIconButtonSx,
                                     '&:disabled': { color: theme.palette.text.disabled }
                                 }}
                             >
@@ -826,8 +834,8 @@ export function NovelVisualizer<
                                     </span>
                                 )}
                                 sx={{
-                                    minWidth: isVerticalLayout ? 50 : 72,
-                                    height: isVerticalLayout ? '24px' : undefined,
+                                    minWidth: isVerticalLayout ? 44 : 72,
+                                    height: isVerticalLayout ? '22px' : undefined,
                                     fontSize: isVerticalLayout ? '0.7rem' : undefined,
                                     fontWeight: 700,
                                     color: theme.palette.primary.light,
@@ -837,7 +845,7 @@ export function NovelVisualizer<
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: isVerticalLayout ? 0.25 : 0.5,
-                                        padding: isVerticalLayout ? '0 6px' : undefined
+                                        padding: isVerticalLayout ? '0 4px' : undefined
                                     }
                                 }}
                             />
@@ -849,8 +857,7 @@ export function NovelVisualizer<
                                 sx={{
                                     color: theme.palette.text.secondary,
                                     border: `1px solid ${safeAlpha(theme.palette.divider, 0.2)}`,
-                                    padding: isVerticalLayout ? '4px' : undefined,
-                                    minWidth: isVerticalLayout ? '28px' : undefined,
+                                    ...compactIconButtonSx,
                                     '&:disabled': { color: theme.palette.text.disabled }
                                 }}
                             >
@@ -882,8 +889,7 @@ export function NovelVisualizer<
                                         sx={{
                                             color: accentMain,
                                             border: `1px solid ${safeAlpha(accentMain, 0.25)}`,
-                                            padding: isVerticalLayout ? '4px' : undefined,
-                                            minWidth: isVerticalLayout ? '28px' : undefined,
+                                            ...compactIconButtonSx,
                                             opacity: 1,
                                             transform: 'scale(1)',
                                             transition: 'all 0.3s ease',
@@ -911,8 +917,7 @@ export function NovelVisualizer<
                                             sx={{
                                                 color: accentMain,
                                                 border: `1px solid ${safeAlpha(accentMain, 0.25)}`,
-                                                padding: isVerticalLayout ? '4px' : undefined,
-                                                minWidth: isVerticalLayout ? '28px' : undefined,
+                                                ...compactIconButtonSx,
                                                 opacity: 1,
                                                 transform: 'scale(1)',
                                                 transition: 'all 0.3s ease',
@@ -937,8 +942,7 @@ export function NovelVisualizer<
                                             sx={{
                                                 color: errorMain,
                                                 border: `1px solid ${safeAlpha(errorMain, 0.25)}`,
-                                                padding: isVerticalLayout ? '4px' : undefined,
-                                                minWidth: isVerticalLayout ? '28px' : undefined,
+                                                ...compactIconButtonSx,
                                                 opacity: 1,
                                                 transform: 'scale(1)',
                                                 transition: 'all 0.3s ease',
@@ -968,8 +972,7 @@ export function NovelVisualizer<
                                         sx={{
                                             color: accentMain,
                                             border: `1px solid ${safeAlpha(accentMain, 0.25)}`,
-                                            padding: isVerticalLayout ? '4px' : undefined,
-                                            minWidth: isVerticalLayout ? '28px' : undefined,
+                                            ...compactIconButtonSx,
                                             transition: 'all 0.3s ease',
                                             '&:hover': {
                                                 borderColor: safeAlpha(accentMain, 0.4),
@@ -988,8 +991,8 @@ export function NovelVisualizer<
 
                     <Box
                         sx={{
-                            my: isVerticalLayout ? 1 : 2,
-                            minHeight: '4rem',
+                            my: isVerticalLayout ? 0.75 : 2,
+                            minHeight: isVerticalLayout ? '3rem' : '4rem',
                             cursor: isEditingMessage ? 'text' : 'pointer',
                             borderRadius: 1,
                             transition: 'background-color 0.2s ease',
@@ -1030,7 +1033,7 @@ export function NovelVisualizer<
                                         fontFamily: theme.typography.fontFamily,
                                         color: theme.palette.text.primary,
                                         backgroundColor: safeAlpha(theme.palette.action.selected, 0.5),
-                                        padding: '8px'
+                                        padding: isVerticalLayout ? '4px' : '8px'
                                     },
                                     '& .MuiInputBase-input': {
                                         padding: 0
@@ -1103,7 +1106,7 @@ export function NovelVisualizer<
                                         }
                                     },
                                     '& .MuiInputBase-input': {
-                                        padding: isVerticalLayout ? '6px 8px' : undefined
+                                        padding: isVerticalLayout ? '4px 6px' : undefined
                                     },
                                     '& .MuiInputBase-input::placeholder': {
                                         color: safeAlpha(theme.palette.text.primary, 0.55),
@@ -1137,8 +1140,9 @@ export function NovelVisualizer<
                                         : <Forward fontSize={isVerticalLayout ? 'small' : undefined} />;
                                 })()}
                                 sx={{
-                                    height: '40px',
-                                    minHeight: '40px',
+                                    height: isVerticalLayout ? '28px' : '40px',
+                                    minHeight: isVerticalLayout ? '28px' : '40px',
+                                    minWidth: isVerticalLayout ? '48px' : undefined,
                                     background: (() => {
                                         const colorScheme = getSubmitButtonConfig 
                                             ? localSkit ? getSubmitButtonConfig(localSkit, index, inputText).colorScheme : 'primary'
@@ -1159,8 +1163,17 @@ export function NovelVisualizer<
                                     })(),
                                     fontWeight: 800,
                                     fontSize: isVerticalLayout ? 'clamp(0.6rem, 2vw, 0.875rem)' : undefined,
-                                    padding: isVerticalLayout ? '4px 10px' : undefined,
+                                    padding: isVerticalLayout ? '3px 6px' : undefined,
                                     whiteSpace: 'nowrap',
+                                    ...(isVerticalLayout && {
+                                        '& .MuiButton-startIcon': {
+                                            marginLeft: 0,
+                                            marginRight: '4px',
+                                            '& > :nth-of-type(1)': {
+                                                fontSize: '16px'
+                                            }
+                                        }
+                                    }),
                                     '&:hover': {
                                         background: (() => {
                                             const colorScheme = getSubmitButtonConfig 
