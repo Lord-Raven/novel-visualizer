@@ -11,6 +11,7 @@ import TypeOut from './TypeOut';
 import { formatMessageWithStyles } from '../utils/TextFormatting';
 import type { FormatInlineStylesOptions, MessageFormatTokens } from '../utils/TextFormatting';
 import { useVoiceAudio } from '../utils/useVoiceAudio';
+import { triggerHapticFeedback } from '../utils/haptics';
 import type { NovelActor, NovelSkit, NovelScriptEntry, NovelScaleOffset, NovelVoiceModulation, NovelActorTheme } from '../types';
 
 export interface SubmitButtonConfig {
@@ -115,6 +116,10 @@ export interface NovelVisualizerProps<
      * Requires enableAudio to be true to have any effect.
      */
     enableTalkingAnimation?: boolean;
+    /**
+     * When enabled, the device will provide haptic feedback alongside the TypeOut animation and during button presses. Different intensity in vibration based on font effects.
+     */
+    enableHaptics?: boolean;
     enableReroll?: boolean;
     narratorLabel?: string;
     enableFontEffects?: boolean;
@@ -164,6 +169,7 @@ export function NovelVisualizer<
         enablePopInSpeakers = false,
         enableAudio = true,
         enableTalkingAnimation = true,
+        enableHaptics = false,
         enableReroll = true,
         narratorLabel = '',
         enableFontEffects: enableFontEffects = true,
@@ -184,6 +190,13 @@ export function NovelVisualizer<
     const [isEditingMessage, setIsEditingMessage] = useState<boolean>(false);
     const [editedMessage, setEditedMessage] = useState<string>('');
     const [originalMessage, setOriginalMessage] = useState<string>('');
+
+    const handleButtonPress = (action: () => void) => () => {
+        if (enableHaptics) {
+            triggerHapticFeedback(8);
+        }
+        action();
+    };
 
     const [localSkit, setLocalSkit] = useState<TSkit | null>(skit);
     const scriptEntries = useMemo(() => localSkit?.script ?? [], [localSkit]);
@@ -609,6 +622,9 @@ export function NovelVisualizer<
 
     const handleSubmit = () => {
         if (!localSkit || !Array.isArray(localSkit.script)) return;
+        if (enableHaptics) {
+            triggerHapticFeedback(8);
+        }
         if (isEditingMessage) {
             handleConfirmEdit();
         }
@@ -772,7 +788,7 @@ export function NovelVisualizer<
                     <Box sx={{ display: 'flex', alignItems: 'flex-end', overflow: 'visible' }}>
                         <Box sx={{ display: 'flex', gap: isVerticalLayout ? 0.5 : 1.5, alignItems: 'flex-end', flex: 1, overflow: 'visible' }}>
                             <IconButton
-                                onClick={prev}
+                                onClick={handleButtonPress(prev)}
                                 disabled={index === 0 || isLoading}
                                 size="small"
                                 sx={{
@@ -826,7 +842,7 @@ export function NovelVisualizer<
                             />
 
                             <IconButton
-                                onClick={next}
+                                onClick={handleButtonPress(next)}
                                 disabled={index >= scriptEntries.length - 1 || isLoading}
                                 size="small"
                                 sx={{
@@ -857,7 +873,7 @@ export function NovelVisualizer<
                             <Box sx={{ display: 'flex', gap: isVerticalLayout ? 0.5 : 1.5, alignItems: 'center' }}>
                                 {!isEditingMessage ? (
                                     <IconButton
-                                        onClick={handleEnterEditMode}
+                                        onClick={handleButtonPress(handleEnterEditMode)}
                                         onMouseEnter={() => {setTooltip?.('Edit message', Edit)}}
                                         onMouseLeave={() => setTooltip?.(null)}
                                         disabled={isLoading}
@@ -887,7 +903,7 @@ export function NovelVisualizer<
                                 ) : (
                                     <>
                                         <IconButton
-                                            onClick={handleConfirmEdit}
+                                            onClick={handleButtonPress(handleConfirmEdit)}
                                             onMouseEnter={() => {setTooltip?.('Confirm changes', Check)}}
                                             onMouseLeave={() => setTooltip?.(null)}
                                             size="small"
@@ -913,7 +929,7 @@ export function NovelVisualizer<
                                             <Check fontSize={isVerticalLayout ? 'inherit' : 'small'} sx={{ fontSize: isVerticalLayout ? '16px' : undefined }} />
                                         </IconButton>
                                         <IconButton
-                                            onClick={handleCancelEdit}
+                                            onClick={handleButtonPress(handleCancelEdit)}
                                             onMouseEnter={() => {setTooltip?.('Discard changes', Clear)}}
                                             onMouseLeave={() => setTooltip?.(null)}
                                             size="small"
@@ -943,7 +959,7 @@ export function NovelVisualizer<
 
                                 {enableReroll && (
                                     <IconButton
-                                        onClick={handleReroll}
+                                        onClick={handleButtonPress(handleReroll)}
                                         onMouseEnter={() => {setTooltip?.('Regenerate events from this point', Casino)}}
                                         onMouseLeave={() => setTooltip?.(null)}
                                         disabled={isLoading}
@@ -1036,6 +1052,7 @@ export function NovelVisualizer<
                                         key={`typeout-${messageKey}`}
                                         speed={typingSpeed}
                                         finishTyping={finishTyping}
+                                        enableHaptics={enableHaptics}
                                         onTypingComplete={() => setFinishTyping(true)}
                                     >
                                         {displayMessage}

@@ -746,6 +746,15 @@ var BlurredBackground_default = BlurredBackground;
 
 // src/components/TypeOut.tsx
 var import_react3 = __toESM(require("react"), 1);
+
+// src/utils/haptics.ts
+var triggerHapticFeedback = (duration = 6) => {
+  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+    navigator.vibrate(duration);
+  }
+};
+
+// src/components/TypeOut.tsx
 var import_jsx_runtime3 = require("react/jsx-runtime");
 var extractTextContent = (node) => {
   if (typeof node === "string") {
@@ -763,6 +772,25 @@ var extractTextContent = (node) => {
     return node.map(extractTextContent).join("");
   }
   return "";
+};
+var getCharacterHapticDurations = (node, effectDuration = 6) => {
+  if (typeof node === "string" || typeof node === "number") {
+    const text = String(node);
+    return Array.from(text).flatMap(
+      (character) => Array.from({ length: character.length }, () => /\s/.test(character) ? 0 : effectDuration)
+    );
+  }
+  if (Array.isArray(node)) {
+    return node.flatMap((child) => getCharacterHapticDurations(child, effectDuration));
+  }
+  if (import_react3.default.isValidElement(node)) {
+    const className = typeof node.props.className === "string" ? node.props.className : "";
+    const effectClass = className.split(/\s+/).find(Boolean);
+    const isStrongEffect = ["burn", "glitch", "quake", "shout", "zalgo"].includes(effectClass ?? "");
+    const childDuration = Math.max(effectDuration, effectClass ? isStrongEffect ? 10 : 8 : 0);
+    return getCharacterHapticDurations(node.props.children, childDuration);
+  }
+  return [];
 };
 var truncateReactContent = (node, maxLength) => {
   let currentLength = 0;
@@ -815,12 +843,18 @@ var TypeOut = ({
   speed = 25,
   className,
   finishTyping = false,
-  onTypingComplete
+  onTypingComplete,
+  enableHaptics = false
 }) => {
   const [displayLength, setDisplayLength] = import_react3.default.useState(0);
   const [finished, setFinished] = import_react3.default.useState(false);
   const timerRef = import_react3.default.useRef(null);
+  const lastHapticAtRef = import_react3.default.useRef(0);
   const textContent = import_react3.default.useMemo(() => extractTextContent(children), [children]);
+  const hapticDurations = import_react3.default.useMemo(
+    () => getCharacterHapticDurations(children),
+    [children]
+  );
   const prevTextContentRef = import_react3.default.useRef("");
   const onTypingCompleteRef = import_react3.default.useRef(onTypingComplete);
   import_react3.default.useEffect(() => {
@@ -846,6 +880,13 @@ var TypeOut = ({
       timerRef.current = window.setInterval(() => {
         idxRef.current += 1;
         setDisplayLength(idxRef.current);
+        const character = textContent[idxRef.current - 1];
+        const hapticDuration = hapticDurations[idxRef.current - 1] ?? 0;
+        const now = Date.now();
+        if (enableHaptics && hapticDuration > 0 && !/\s/.test(character) && now - lastHapticAtRef.current >= 70) {
+          triggerHapticFeedback(hapticDuration);
+          lastHapticAtRef.current = now;
+        }
         if (idxRef.current >= textContent.length) {
           if (timerRef.current !== null) {
             clearInterval(timerRef.current);
@@ -862,7 +903,7 @@ var TypeOut = ({
         }
       };
     }
-  }, [textContent, speed]);
+  }, [textContent, speed, enableHaptics, hapticDurations]);
   import_react3.default.useEffect(() => {
     if (finishTyping && !finished) {
       if (timerRef.current !== null) {
@@ -2590,6 +2631,7 @@ function NovelVisualizer(props) {
     enablePopInSpeakers = false,
     enableAudio = true,
     enableTalkingAnimation = true,
+    enableHaptics = false,
     enableReroll = true,
     narratorLabel = "",
     enableFontEffects = true,
@@ -2608,6 +2650,12 @@ function NovelVisualizer(props) {
   const [isEditingMessage, setIsEditingMessage] = (0, import_react7.useState)(false);
   const [editedMessage, setEditedMessage] = (0, import_react7.useState)("");
   const [originalMessage, setOriginalMessage] = (0, import_react7.useState)("");
+  const handleButtonPress = (action) => () => {
+    if (enableHaptics) {
+      triggerHapticFeedback(8);
+    }
+    action();
+  };
   const [localSkit, setLocalSkit] = (0, import_react7.useState)(skit);
   const scriptEntries = (0, import_react7.useMemo)(() => localSkit?.script ?? [], [localSkit]);
   const [index, setIndex] = (0, import_react7.useState)(skit?.currentIndex ?? -1);
@@ -2966,6 +3014,9 @@ function NovelVisualizer(props) {
   };
   const handleSubmit = () => {
     if (!localSkit || !Array.isArray(localSkit.script)) return;
+    if (enableHaptics) {
+      triggerHapticFeedback(8);
+    }
     if (isEditingMessage) {
       handleConfirmEdit();
     }
@@ -3110,7 +3161,7 @@ function NovelVisualizer(props) {
                       /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                         import_material.IconButton,
                         {
-                          onClick: prev,
+                          onClick: handleButtonPress(prev),
                           disabled: index === 0 || isLoading,
                           size: "small",
                           sx: {
@@ -3172,7 +3223,7 @@ function NovelVisualizer(props) {
                       /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                         import_material.IconButton,
                         {
-                          onClick: next,
+                          onClick: handleButtonPress(next),
                           disabled: index >= scriptEntries.length - 1 || isLoading,
                           size: "small",
                           sx: {
@@ -3203,7 +3254,7 @@ function NovelVisualizer(props) {
                       !isEditingMessage ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                         import_material.IconButton,
                         {
-                          onClick: handleEnterEditMode,
+                          onClick: handleButtonPress(handleEnterEditMode),
                           onMouseEnter: () => {
                             setTooltip?.("Edit message", import_icons_material.Edit);
                           },
@@ -3235,7 +3286,7 @@ function NovelVisualizer(props) {
                         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                           import_material.IconButton,
                           {
-                            onClick: handleConfirmEdit,
+                            onClick: handleButtonPress(handleConfirmEdit),
                             onMouseEnter: () => {
                               setTooltip?.("Confirm changes", import_icons_material.Check);
                             },
@@ -3265,7 +3316,7 @@ function NovelVisualizer(props) {
                         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                           import_material.IconButton,
                           {
-                            onClick: handleCancelEdit,
+                            onClick: handleButtonPress(handleCancelEdit),
                             onMouseEnter: () => {
                               setTooltip?.("Discard changes", import_icons_material.Clear);
                             },
@@ -3296,7 +3347,7 @@ function NovelVisualizer(props) {
                       enableReroll && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                         import_material.IconButton,
                         {
-                          onClick: handleReroll,
+                          onClick: handleButtonPress(handleReroll),
                           onMouseEnter: () => {
                             setTooltip?.("Regenerate events from this point", import_icons_material.Casino);
                           },
@@ -3390,6 +3441,7 @@ function NovelVisualizer(props) {
                             {
                               speed: typingSpeed,
                               finishTyping,
+                              enableHaptics,
                               onTypingComplete: () => setFinishTyping(true),
                               children: displayMessage
                             },

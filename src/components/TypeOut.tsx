@@ -1,4 +1,5 @@
 import React from 'react';
+import { triggerHapticFeedback } from '../utils/haptics';
 
 interface TypeOutProps {
     children: React.ReactNode;
@@ -6,6 +7,7 @@ interface TypeOutProps {
     className?: string;
     finishTyping?: boolean; // forces immediate completion when true
     onTypingComplete?: () => void; // called when typing animation finishes (either naturally or forced)
+    enableHaptics?: boolean;
 }
 
 // Helper function to extract text content from React elements
@@ -25,6 +27,32 @@ const extractTextContent = (node: React.ReactNode): string => {
         return node.map(extractTextContent).join('');
     }
     return '';
+};
+
+const getCharacterHapticDurations = (
+    node: React.ReactNode,
+    effectDuration = 6
+): number[] => {
+    if (typeof node === 'string' || typeof node === 'number') {
+        const text = String(node);
+        return Array.from(text).flatMap((character) =>
+            Array.from({ length: character.length }, () => /\s/.test(character) ? 0 : effectDuration)
+        );
+    }
+
+    if (Array.isArray(node)) {
+        return node.flatMap((child) => getCharacterHapticDurations(child, effectDuration));
+    }
+
+    if (React.isValidElement(node)) {
+        const className = typeof node.props.className === 'string' ? node.props.className : '';
+        const effectClass = className.split(/\s+/).find(Boolean);
+        const isStrongEffect = ['burn', 'glitch', 'quake', 'shout', 'zalgo'].includes(effectClass ?? '');
+        const childDuration = Math.max(effectDuration, effectClass ? (isStrongEffect ? 10 : 8) : 0);
+        return getCharacterHapticDurations(node.props.children, childDuration);
+    }
+
+    return [];
 };
 
 // Helper function to truncate React elements based on character count
@@ -94,13 +122,19 @@ export const TypeOut: React.FC<TypeOutProps> = ({
     speed = 25, 
     className, 
     finishTyping = false, 
-    onTypingComplete 
+    onTypingComplete,
+    enableHaptics = false
 }) => {
     const [displayLength, setDisplayLength] = React.useState<number>(0);
     const [finished, setFinished] = React.useState<boolean>(false);
     const timerRef = React.useRef<number | null>(null);
+    const lastHapticAtRef = React.useRef<number>(0);
     
     const textContent = React.useMemo(() => extractTextContent(children), [children]);
+    const hapticDurations = React.useMemo(
+        () => getCharacterHapticDurations(children),
+        [children]
+    );
     const prevTextContentRef = React.useRef<string>('');
     const onTypingCompleteRef = React.useRef(onTypingComplete);
     
@@ -136,6 +170,18 @@ export const TypeOut: React.FC<TypeOutProps> = ({
             timerRef.current = window.setInterval(() => {
                 idxRef.current += 1;
                 setDisplayLength(idxRef.current);
+                const character = textContent[idxRef.current - 1];
+                const hapticDuration = hapticDurations[idxRef.current - 1] ?? 0;
+                const now = Date.now();
+                if (
+                    enableHaptics &&
+                    hapticDuration > 0 &&
+                    !/\s/.test(character) &&
+                    now - lastHapticAtRef.current >= 70
+                ) {
+                    triggerHapticFeedback(hapticDuration);
+                    lastHapticAtRef.current = now;
+                }
                 if (idxRef.current >= textContent.length) {
                     if (timerRef.current !== null) {
                         clearInterval(timerRef.current);
@@ -153,7 +199,7 @@ export const TypeOut: React.FC<TypeOutProps> = ({
                 }
             };
         }
-    }, [textContent, speed]);
+    }, [textContent, speed, enableHaptics, hapticDurations]);
 
     // Effect to handle finishTyping prop
     React.useEffect(() => {

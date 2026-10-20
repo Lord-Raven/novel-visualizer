@@ -130,6 +130,10 @@ interface NovelVisualizerProps<TActor extends NovelActor, TSkit extends NovelSki
      * Requires enableAudio to be true to have any effect.
      */
     enableTalkingAnimation?: boolean;
+    /**
+     * When enabled, the device will provide haptic feedback alongside the TypeOut animation and during button presses. Different intensity in vibration based on font effects.
+     */
+    enableHaptics?: boolean;
     enableReroll?: boolean;
     narratorLabel?: string;
     enableFontEffects?: boolean;
@@ -194,6 +198,7 @@ interface TypeOutProps {
     className?: string;
     finishTyping?: boolean;
     onTypingComplete?: () => void;
+    enableHaptics?: boolean;
 }
 declare const TypeOut: React__default.FC<TypeOutProps>;
 
