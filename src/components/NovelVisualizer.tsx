@@ -117,7 +117,8 @@ export interface NovelVisualizerProps<
      */
     enableTalkingAnimation?: boolean;
     /**
-     * When enabled, the device will provide haptic feedback alongside the TypeOut animation and during button presses. Different intensity in vibration based on font effects.
+     * When enabled, supported devices provide haptic feedback during typing and button presses.
+     * Dialogue uses a stronger double pulse than prose; font effects further increase pulse duration.
      */
     enableHaptics?: boolean;
     enableReroll?: boolean;

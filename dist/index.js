@@ -1,5 +1,5 @@
 // src/components/NovelVisualizer.tsx
-import React4, { useEffect as useEffect5, useLayoutEffect, useMemo as useMemo3, useRef as useRef2, useState as useState5 } from "react";
+import React5, { useEffect as useEffect5, useLayoutEffect, useMemo as useMemo3, useRef as useRef2, useState as useState5 } from "react";
 import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
@@ -699,12 +699,34 @@ var BlurredBackground = ({
 var BlurredBackground_default = BlurredBackground;
 
 // src/components/TypeOut.tsx
-import React2 from "react";
+import React3 from "react";
 
 // src/utils/haptics.ts
-var triggerHapticFeedback = (duration = 6) => {
+import React2 from "react";
+var getCharacterHapticPatterns = (node, effectDuration = 6, isDialogue = false) => {
+  if (typeof node === "string" || typeof node === "number") {
+    const pattern = isDialogue ? [effectDuration + 2, 12, Math.max(4, effectDuration - 2)] : effectDuration;
+    return Array.from(String(node)).flatMap(
+      (character) => Array.from({ length: character.length }, () => /\s/.test(character) ? 0 : pattern)
+    );
+  }
+  if (Array.isArray(node)) {
+    return node.flatMap((child) => getCharacterHapticPatterns(child, effectDuration, isDialogue));
+  }
+  if (React2.isValidElement(node)) {
+    const className = typeof node.props.className === "string" ? node.props.className : "";
+    const effectClass = className.split(/\s+/).find(Boolean);
+    const isStrongEffect = ["burn", "glitch", "quake", "shout", "zalgo"].includes(effectClass ?? "");
+    const childDuration = Math.max(effectDuration, effectClass ? isStrongEffect ? 10 : 8 : 0);
+    const context = node.props["data-haptic-context"];
+    const childIsDialogue = context === "dialogue" || context !== "prose" && isDialogue;
+    return getCharacterHapticPatterns(node.props.children, childDuration, childIsDialogue);
+  }
+  return [];
+};
+var triggerHapticFeedback = (pattern = 6) => {
   if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-    navigator.vibrate(duration);
+    navigator.vibrate(pattern);
   }
 };
 
@@ -717,7 +739,7 @@ var extractTextContent = (node) => {
   if (typeof node === "number") {
     return String(node);
   }
-  if (React2.isValidElement(node)) {
+  if (React3.isValidElement(node)) {
     if (node.props.children) {
       return extractTextContent(node.props.children);
     }
@@ -726,25 +748,6 @@ var extractTextContent = (node) => {
     return node.map(extractTextContent).join("");
   }
   return "";
-};
-var getCharacterHapticDurations = (node, effectDuration = 6) => {
-  if (typeof node === "string" || typeof node === "number") {
-    const text = String(node);
-    return Array.from(text).flatMap(
-      (character) => Array.from({ length: character.length }, () => /\s/.test(character) ? 0 : effectDuration)
-    );
-  }
-  if (Array.isArray(node)) {
-    return node.flatMap((child) => getCharacterHapticDurations(child, effectDuration));
-  }
-  if (React2.isValidElement(node)) {
-    const className = typeof node.props.className === "string" ? node.props.className : "";
-    const effectClass = className.split(/\s+/).find(Boolean);
-    const isStrongEffect = ["burn", "glitch", "quake", "shout", "zalgo"].includes(effectClass ?? "");
-    const childDuration = Math.max(effectDuration, effectClass ? isStrongEffect ? 10 : 8 : 0);
-    return getCharacterHapticDurations(node.props.children, childDuration);
-  }
-  return [];
 };
 var truncateReactContent = (node, maxLength) => {
   let currentLength = 0;
@@ -765,16 +768,16 @@ var truncateReactContent = (node, maxLength) => {
       currentLength += truncated.length;
       return truncated;
     }
-    if (React2.isValidElement(n)) {
+    if (React3.isValidElement(n)) {
       const children = n.props.children;
       if (children !== void 0 && children !== null) {
         const truncatedChildren = truncateNode(children);
         if (truncatedChildren !== null || !children) {
-          return React2.cloneElement(n, { ...n.props, key }, truncatedChildren);
+          return React3.cloneElement(n, { ...n.props, key }, truncatedChildren);
         }
         return null;
       }
-      return React2.cloneElement(n, { ...n.props, key });
+      return React3.cloneElement(n, { ...n.props, key });
     }
     if (Array.isArray(n)) {
       const result = [];
@@ -800,24 +803,24 @@ var TypeOut = ({
   onTypingComplete,
   enableHaptics = false
 }) => {
-  const [displayLength, setDisplayLength] = React2.useState(0);
-  const [finished, setFinished] = React2.useState(false);
-  const timerRef = React2.useRef(null);
-  const lastHapticAtRef = React2.useRef(0);
-  const textContent = React2.useMemo(() => extractTextContent(children), [children]);
-  const hapticDurations = React2.useMemo(
-    () => getCharacterHapticDurations(children),
+  const [displayLength, setDisplayLength] = React3.useState(0);
+  const [finished, setFinished] = React3.useState(false);
+  const timerRef = React3.useRef(null);
+  const lastHapticAtRef = React3.useRef(0);
+  const textContent = React3.useMemo(() => extractTextContent(children), [children]);
+  const hapticPatterns = React3.useMemo(
+    () => getCharacterHapticPatterns(children),
     [children]
   );
-  const hapticSettingsRef = React2.useRef({ enableHaptics, hapticDurations });
-  const onTypingCompleteRef = React2.useRef(onTypingComplete);
-  React2.useLayoutEffect(() => {
-    hapticSettingsRef.current = { enableHaptics, hapticDurations };
-  }, [enableHaptics, hapticDurations]);
-  React2.useEffect(() => {
+  const hapticSettingsRef = React3.useRef({ enableHaptics, hapticPatterns });
+  const onTypingCompleteRef = React3.useRef(onTypingComplete);
+  React3.useLayoutEffect(() => {
+    hapticSettingsRef.current = { enableHaptics, hapticPatterns };
+  }, [enableHaptics, hapticPatterns]);
+  React3.useEffect(() => {
     onTypingCompleteRef.current = onTypingComplete;
   }, [onTypingComplete]);
-  React2.useLayoutEffect(() => {
+  React3.useLayoutEffect(() => {
     setDisplayLength(0);
     setFinished(false);
     if (!textContent) {
@@ -836,11 +839,11 @@ var TypeOut = ({
       idxRef.current += 1;
       setDisplayLength(idxRef.current);
       const character = textContent[idxRef.current - 1];
-      const { enableHaptics: enableHaptics2, hapticDurations: hapticDurations2 } = hapticSettingsRef.current;
-      const hapticDuration = hapticDurations2[idxRef.current - 1] ?? 0;
+      const { enableHaptics: enableHaptics2, hapticPatterns: hapticPatterns2 } = hapticSettingsRef.current;
+      const hapticPattern = hapticPatterns2[idxRef.current - 1] ?? 0;
       const now = Date.now();
-      if (enableHaptics2 && hapticDuration > 0 && !/\s/.test(character) && now - lastHapticAtRef.current >= 70) {
-        triggerHapticFeedback(hapticDuration);
+      if (enableHaptics2 && (Array.isArray(hapticPattern) || hapticPattern > 0) && !/\s/.test(character) && now - lastHapticAtRef.current >= 70) {
+        triggerHapticFeedback(hapticPattern);
         lastHapticAtRef.current = now;
       }
       if (idxRef.current >= textContent.length) {
@@ -859,7 +862,7 @@ var TypeOut = ({
       }
     };
   }, [textContent, speed]);
-  React2.useEffect(() => {
+  React3.useEffect(() => {
     if (finishTyping && !finished) {
       if (timerRef.current !== null) {
         clearInterval(timerRef.current);
@@ -870,7 +873,7 @@ var TypeOut = ({
       onTypingCompleteRef.current?.();
     }
   }, [finishTyping, finished, textContent.length]);
-  const displayContent = React2.useMemo(() => {
+  const displayContent = React3.useMemo(() => {
     if (displayLength === 0) {
       return null;
     }
@@ -895,7 +898,7 @@ var TypeOut = ({
 var TypeOut_default = TypeOut;
 
 // src/utils/TextFormatting.tsx
-import React3 from "react";
+import React4 from "react";
 
 // src/components/FontHandler.tsx
 import { useEffect as useEffect3, useState as useState3 } from "react";
@@ -2047,12 +2050,12 @@ var renderPerCharacterSegment = (segmentText, activeClass, resolvedStyle, segmen
   if (activeClass === "sigh") {
     return /* @__PURE__ */ jsx4("span", { className: activeClass, style: { ...resolvedStyle, textShadow: "none" }, children: tokens.map((token, tokenIndex) => {
       if (/^\s+$/.test(token)) {
-        return /* @__PURE__ */ jsx4(React3.Fragment, { children: token }, `${segmentKey}-ws-${tokenIndex}`);
+        return /* @__PURE__ */ jsx4(React4.Fragment, { children: token }, `${segmentKey}-ws-${tokenIndex}`);
       }
       const characters = Array.from(token);
       return /* @__PURE__ */ jsx4("span", { style: { display: "inline-block" }, children: characters.map((character, characterIndex) => {
         if (isWhitespaceCharacter(character)) {
-          return /* @__PURE__ */ jsx4(React3.Fragment, { children: character }, `${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`);
+          return /* @__PURE__ */ jsx4(React4.Fragment, { children: character }, `${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`);
         }
         const characterDelay = `${Math.min(characterIndex * 14, 140)}ms`;
         return /* @__PURE__ */ jsxs3(
@@ -2102,12 +2105,12 @@ var renderPerCharacterSegment = (segmentText, activeClass, resolvedStyle, segmen
   }
   return /* @__PURE__ */ jsx4("span", { className: activeClass, style: resolvedStyle, children: tokens.map((token, tokenIndex) => {
     if (/^\s+$/.test(token)) {
-      return /* @__PURE__ */ jsx4(React3.Fragment, { children: token }, `${segmentKey}-ws-${tokenIndex}`);
+      return /* @__PURE__ */ jsx4(React4.Fragment, { children: token }, `${segmentKey}-ws-${tokenIndex}`);
     }
     const characters = Array.from(token);
     return /* @__PURE__ */ jsx4("span", { style: { display: "inline-block" }, children: characters.map((character, characterIndex) => {
       if (isWhitespaceCharacter(character)) {
-        return /* @__PURE__ */ jsx4(React3.Fragment, { children: character }, `${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`);
+        return /* @__PURE__ */ jsx4(React4.Fragment, { children: character }, `${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`);
       }
       return /* @__PURE__ */ jsx4(
         "span",
@@ -2246,11 +2249,11 @@ var formatInlineStyles = (text, options, initialActiveClass = null) => {
   const renderSegment = (segmentText, activeClass, segmentKey) => {
     if (!segmentText) return null;
     if (activeClass === null) {
-      return /* @__PURE__ */ jsx4(React3.Fragment, { children: formatHeaders(segmentText) }, segmentKey);
+      return /* @__PURE__ */ jsx4(React4.Fragment, { children: formatHeaders(segmentText) }, segmentKey);
     }
     const resolvedStyle = getResolvedClassStyle(classStyles[activeClass], styleContext);
     if (!resolvedStyle) {
-      return /* @__PURE__ */ jsx4(React3.Fragment, { children: formatHeaders(segmentText) }, segmentKey);
+      return /* @__PURE__ */ jsx4(React4.Fragment, { children: formatHeaders(segmentText) }, segmentKey);
     }
     if (PER_CHARACTER_INLINE_CLASSES.has(activeClass) && !MARKDOWN_INLINE_PATTERN.test(segmentText)) {
       return renderPerCharacterSegment(segmentText, activeClass, resolvedStyle, segmentKey);
@@ -2327,7 +2330,7 @@ var formatMessageWithStyles = (text, options) => {
       activeInlineClass
     );
     activeInlineClass = resolveEndingInlineClass(part, activeInlineClass);
-    return /* @__PURE__ */ jsx4("span", { style: baseStyle, children: formattedPart }, index);
+    return /* @__PURE__ */ jsx4("span", { style: baseStyle, "data-haptic-context": isDialoguePart ? "dialogue" : "prose", children: formattedPart }, index);
   }) });
 };
 
@@ -2595,7 +2598,7 @@ function NovelVisualizer(props) {
   } = props;
   const [inputText, setInputText] = useState5("");
   const [finishTyping, setFinishTyping] = useState5(false);
-  const [messageKey, setMessageKey] = React4.useState(0);
+  const [messageKey, setMessageKey] = React5.useState(0);
   const [hoveredActor, setHoveredActor] = useState5(null);
   const [mousePosition, setMousePosition] = useState5(null);
   const [messageBoxTopVh, setMessageBoxTopVh] = useState5(isVerticalLayout ? 50 : 60);

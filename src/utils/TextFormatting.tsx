@@ -1335,7 +1335,7 @@ export const formatMessageWithStyles = (
                 activeInlineClass = resolveEndingInlineClass(part, activeInlineClass);
 
                 return (
-                    <span key={index} style={baseStyle}>
+                    <span key={index} style={baseStyle} data-haptic-context={isDialoguePart ? 'dialogue' : 'prose'}>
                         {formattedPart}
                     </span>
                 );

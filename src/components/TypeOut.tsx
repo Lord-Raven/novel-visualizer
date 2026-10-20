@@ -1,5 +1,5 @@
 import React from 'react';
-import { triggerHapticFeedback } from '../utils/haptics';
+import { getCharacterHapticPatterns, triggerHapticFeedback } from '../utils/haptics';
 
 interface TypeOutProps {
     children: React.ReactNode;
@@ -27,32 +27,6 @@ const extractTextContent = (node: React.ReactNode): string => {
         return node.map(extractTextContent).join('');
     }
     return '';
-};
-
-const getCharacterHapticDurations = (
-    node: React.ReactNode,
-    effectDuration = 6
-): number[] => {
-    if (typeof node === 'string' || typeof node === 'number') {
-        const text = String(node);
-        return Array.from(text).flatMap((character) =>
-            Array.from({ length: character.length }, () => /\s/.test(character) ? 0 : effectDuration)
-        );
-    }
-
-    if (Array.isArray(node)) {
-        return node.flatMap((child) => getCharacterHapticDurations(child, effectDuration));
-    }
-
-    if (React.isValidElement(node)) {
-        const className = typeof node.props.className === 'string' ? node.props.className : '';
-        const effectClass = className.split(/\s+/).find(Boolean);
-        const isStrongEffect = ['burn', 'glitch', 'quake', 'shout', 'zalgo'].includes(effectClass ?? '');
-        const childDuration = Math.max(effectDuration, effectClass ? (isStrongEffect ? 10 : 8) : 0);
-        return getCharacterHapticDurations(node.props.children, childDuration);
-    }
-
-    return [];
 };
 
 // Helper function to truncate React elements based on character count
@@ -131,16 +105,16 @@ export const TypeOut: React.FC<TypeOutProps> = ({
     const lastHapticAtRef = React.useRef<number>(0);
     
     const textContent = React.useMemo(() => extractTextContent(children), [children]);
-    const hapticDurations = React.useMemo(
-        () => getCharacterHapticDurations(children),
+    const hapticPatterns = React.useMemo(
+        () => getCharacterHapticPatterns(children),
         [children]
     );
-    const hapticSettingsRef = React.useRef({ enableHaptics, hapticDurations });
+    const hapticSettingsRef = React.useRef({ enableHaptics, hapticPatterns });
     const onTypingCompleteRef = React.useRef(onTypingComplete);
 
     React.useLayoutEffect(() => {
-        hapticSettingsRef.current = { enableHaptics, hapticDurations };
-    }, [enableHaptics, hapticDurations]);
+        hapticSettingsRef.current = { enableHaptics, hapticPatterns };
+    }, [enableHaptics, hapticPatterns]);
     
     // Keep the callback ref up to date without causing re-renders
     React.useEffect(() => {
@@ -172,16 +146,16 @@ export const TypeOut: React.FC<TypeOutProps> = ({
             idxRef.current += 1;
             setDisplayLength(idxRef.current);
             const character = textContent[idxRef.current - 1];
-            const { enableHaptics, hapticDurations } = hapticSettingsRef.current;
-            const hapticDuration = hapticDurations[idxRef.current - 1] ?? 0;
+            const { enableHaptics, hapticPatterns } = hapticSettingsRef.current;
+            const hapticPattern = hapticPatterns[idxRef.current - 1] ?? 0;
             const now = Date.now();
             if (
                 enableHaptics &&
-                hapticDuration > 0 &&
+                (Array.isArray(hapticPattern) || hapticPattern > 0) &&
                 !/\s/.test(character) &&
                 now - lastHapticAtRef.current >= 70
             ) {
-                triggerHapticFeedback(hapticDuration);
+                triggerHapticFeedback(hapticPattern);
                 lastHapticAtRef.current = now;
             }
             if (idxRef.current >= textContent.length) {

@@ -45,7 +45,7 @@ __export(index_exports, {
 module.exports = __toCommonJS(index_exports);
 
 // src/components/NovelVisualizer.tsx
-var import_react7 = __toESM(require("react"), 1);
+var import_react8 = __toESM(require("react"), 1);
 var import_material = require("@mui/material");
 var import_styles2 = require("@mui/material/styles");
 
@@ -745,12 +745,34 @@ var BlurredBackground = ({
 var BlurredBackground_default = BlurredBackground;
 
 // src/components/TypeOut.tsx
-var import_react3 = __toESM(require("react"), 1);
+var import_react4 = __toESM(require("react"), 1);
 
 // src/utils/haptics.ts
-var triggerHapticFeedback = (duration = 6) => {
+var import_react3 = __toESM(require("react"), 1);
+var getCharacterHapticPatterns = (node, effectDuration = 6, isDialogue = false) => {
+  if (typeof node === "string" || typeof node === "number") {
+    const pattern = isDialogue ? [effectDuration + 2, 12, Math.max(4, effectDuration - 2)] : effectDuration;
+    return Array.from(String(node)).flatMap(
+      (character) => Array.from({ length: character.length }, () => /\s/.test(character) ? 0 : pattern)
+    );
+  }
+  if (Array.isArray(node)) {
+    return node.flatMap((child) => getCharacterHapticPatterns(child, effectDuration, isDialogue));
+  }
+  if (import_react3.default.isValidElement(node)) {
+    const className = typeof node.props.className === "string" ? node.props.className : "";
+    const effectClass = className.split(/\s+/).find(Boolean);
+    const isStrongEffect = ["burn", "glitch", "quake", "shout", "zalgo"].includes(effectClass ?? "");
+    const childDuration = Math.max(effectDuration, effectClass ? isStrongEffect ? 10 : 8 : 0);
+    const context = node.props["data-haptic-context"];
+    const childIsDialogue = context === "dialogue" || context !== "prose" && isDialogue;
+    return getCharacterHapticPatterns(node.props.children, childDuration, childIsDialogue);
+  }
+  return [];
+};
+var triggerHapticFeedback = (pattern = 6) => {
   if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-    navigator.vibrate(duration);
+    navigator.vibrate(pattern);
   }
 };
 
@@ -763,7 +785,7 @@ var extractTextContent = (node) => {
   if (typeof node === "number") {
     return String(node);
   }
-  if (import_react3.default.isValidElement(node)) {
+  if (import_react4.default.isValidElement(node)) {
     if (node.props.children) {
       return extractTextContent(node.props.children);
     }
@@ -772,25 +794,6 @@ var extractTextContent = (node) => {
     return node.map(extractTextContent).join("");
   }
   return "";
-};
-var getCharacterHapticDurations = (node, effectDuration = 6) => {
-  if (typeof node === "string" || typeof node === "number") {
-    const text = String(node);
-    return Array.from(text).flatMap(
-      (character) => Array.from({ length: character.length }, () => /\s/.test(character) ? 0 : effectDuration)
-    );
-  }
-  if (Array.isArray(node)) {
-    return node.flatMap((child) => getCharacterHapticDurations(child, effectDuration));
-  }
-  if (import_react3.default.isValidElement(node)) {
-    const className = typeof node.props.className === "string" ? node.props.className : "";
-    const effectClass = className.split(/\s+/).find(Boolean);
-    const isStrongEffect = ["burn", "glitch", "quake", "shout", "zalgo"].includes(effectClass ?? "");
-    const childDuration = Math.max(effectDuration, effectClass ? isStrongEffect ? 10 : 8 : 0);
-    return getCharacterHapticDurations(node.props.children, childDuration);
-  }
-  return [];
 };
 var truncateReactContent = (node, maxLength) => {
   let currentLength = 0;
@@ -811,16 +814,16 @@ var truncateReactContent = (node, maxLength) => {
       currentLength += truncated.length;
       return truncated;
     }
-    if (import_react3.default.isValidElement(n)) {
+    if (import_react4.default.isValidElement(n)) {
       const children = n.props.children;
       if (children !== void 0 && children !== null) {
         const truncatedChildren = truncateNode(children);
         if (truncatedChildren !== null || !children) {
-          return import_react3.default.cloneElement(n, { ...n.props, key }, truncatedChildren);
+          return import_react4.default.cloneElement(n, { ...n.props, key }, truncatedChildren);
         }
         return null;
       }
-      return import_react3.default.cloneElement(n, { ...n.props, key });
+      return import_react4.default.cloneElement(n, { ...n.props, key });
     }
     if (Array.isArray(n)) {
       const result = [];
@@ -846,24 +849,24 @@ var TypeOut = ({
   onTypingComplete,
   enableHaptics = false
 }) => {
-  const [displayLength, setDisplayLength] = import_react3.default.useState(0);
-  const [finished, setFinished] = import_react3.default.useState(false);
-  const timerRef = import_react3.default.useRef(null);
-  const lastHapticAtRef = import_react3.default.useRef(0);
-  const textContent = import_react3.default.useMemo(() => extractTextContent(children), [children]);
-  const hapticDurations = import_react3.default.useMemo(
-    () => getCharacterHapticDurations(children),
+  const [displayLength, setDisplayLength] = import_react4.default.useState(0);
+  const [finished, setFinished] = import_react4.default.useState(false);
+  const timerRef = import_react4.default.useRef(null);
+  const lastHapticAtRef = import_react4.default.useRef(0);
+  const textContent = import_react4.default.useMemo(() => extractTextContent(children), [children]);
+  const hapticPatterns = import_react4.default.useMemo(
+    () => getCharacterHapticPatterns(children),
     [children]
   );
-  const hapticSettingsRef = import_react3.default.useRef({ enableHaptics, hapticDurations });
-  const onTypingCompleteRef = import_react3.default.useRef(onTypingComplete);
-  import_react3.default.useLayoutEffect(() => {
-    hapticSettingsRef.current = { enableHaptics, hapticDurations };
-  }, [enableHaptics, hapticDurations]);
-  import_react3.default.useEffect(() => {
+  const hapticSettingsRef = import_react4.default.useRef({ enableHaptics, hapticPatterns });
+  const onTypingCompleteRef = import_react4.default.useRef(onTypingComplete);
+  import_react4.default.useLayoutEffect(() => {
+    hapticSettingsRef.current = { enableHaptics, hapticPatterns };
+  }, [enableHaptics, hapticPatterns]);
+  import_react4.default.useEffect(() => {
     onTypingCompleteRef.current = onTypingComplete;
   }, [onTypingComplete]);
-  import_react3.default.useLayoutEffect(() => {
+  import_react4.default.useLayoutEffect(() => {
     setDisplayLength(0);
     setFinished(false);
     if (!textContent) {
@@ -882,11 +885,11 @@ var TypeOut = ({
       idxRef.current += 1;
       setDisplayLength(idxRef.current);
       const character = textContent[idxRef.current - 1];
-      const { enableHaptics: enableHaptics2, hapticDurations: hapticDurations2 } = hapticSettingsRef.current;
-      const hapticDuration = hapticDurations2[idxRef.current - 1] ?? 0;
+      const { enableHaptics: enableHaptics2, hapticPatterns: hapticPatterns2 } = hapticSettingsRef.current;
+      const hapticPattern = hapticPatterns2[idxRef.current - 1] ?? 0;
       const now = Date.now();
-      if (enableHaptics2 && hapticDuration > 0 && !/\s/.test(character) && now - lastHapticAtRef.current >= 70) {
-        triggerHapticFeedback(hapticDuration);
+      if (enableHaptics2 && (Array.isArray(hapticPattern) || hapticPattern > 0) && !/\s/.test(character) && now - lastHapticAtRef.current >= 70) {
+        triggerHapticFeedback(hapticPattern);
         lastHapticAtRef.current = now;
       }
       if (idxRef.current >= textContent.length) {
@@ -905,7 +908,7 @@ var TypeOut = ({
       }
     };
   }, [textContent, speed]);
-  import_react3.default.useEffect(() => {
+  import_react4.default.useEffect(() => {
     if (finishTyping && !finished) {
       if (timerRef.current !== null) {
         clearInterval(timerRef.current);
@@ -916,7 +919,7 @@ var TypeOut = ({
       onTypingCompleteRef.current?.();
     }
   }, [finishTyping, finished, textContent.length]);
-  const displayContent = import_react3.default.useMemo(() => {
+  const displayContent = import_react4.default.useMemo(() => {
     if (displayLength === 0) {
       return null;
     }
@@ -941,10 +944,10 @@ var TypeOut = ({
 var TypeOut_default = TypeOut;
 
 // src/utils/TextFormatting.tsx
-var import_react5 = __toESM(require("react"), 1);
+var import_react6 = __toESM(require("react"), 1);
 
 // src/components/FontHandler.tsx
-var import_react4 = require("react");
+var import_react5 = require("react");
 var GOOGLE_FONT_LINK_ATTRIBUTE = "data-agenda-google-font";
 var GOOGLE_FONT_PRECONNECT_ATTRIBUTE = "data-agenda-google-font-preconnect";
 var GOOGLE_FONT_VARIANTS = ":ital,wght@0,400;0,700;1,400;1,700";
@@ -1229,8 +1232,8 @@ var processFontFamilies = (fontFamilies) => {
   return Array.from(processedFontFamilies.values()).sort((left, right) => left.localeCompare(right));
 };
 var FontHandler = ({ fontFamilies }) => {
-  const [fontSignature, setFontSignature] = (0, import_react4.useState)("");
-  (0, import_react4.useEffect)(() => {
+  const [fontSignature, setFontSignature] = (0, import_react5.useState)("");
+  (0, import_react5.useEffect)(() => {
     const refreshFontSignature = () => {
       setFontSignature(processFontFamilies(fontFamilies).join("\n"));
     };
@@ -1238,13 +1241,13 @@ var FontHandler = ({ fontFamilies }) => {
     const intervalId = window.setInterval(refreshFontSignature, FONT_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(intervalId);
   }, [fontFamilies]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     const processedFontFamilies = fontSignature ? fontSignature.split("\n") : [];
     syncGoogleFontLinks(processedFontFamilies);
     clearFontSizeMultiplierCache();
     preloadFontSizeMultipliers(processedFontFamilies).catch(() => void 0);
   }, [fontSignature]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     return () => {
       document.head.querySelectorAll(`link[${GOOGLE_FONT_LINK_ATTRIBUTE}]`).forEach((link) => link.remove());
       document.head.querySelectorAll(`link[${GOOGLE_FONT_PRECONNECT_ATTRIBUTE}]`).forEach((link) => link.remove());
@@ -2093,12 +2096,12 @@ var renderPerCharacterSegment = (segmentText, activeClass, resolvedStyle, segmen
   if (activeClass === "sigh") {
     return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: activeClass, style: { ...resolvedStyle, textShadow: "none" }, children: tokens.map((token, tokenIndex) => {
       if (/^\s+$/.test(token)) {
-        return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.default.Fragment, { children: token }, `${segmentKey}-ws-${tokenIndex}`);
+        return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react6.default.Fragment, { children: token }, `${segmentKey}-ws-${tokenIndex}`);
       }
       const characters = Array.from(token);
       return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: { display: "inline-block" }, children: characters.map((character, characterIndex) => {
         if (isWhitespaceCharacter(character)) {
-          return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.default.Fragment, { children: character }, `${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`);
+          return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react6.default.Fragment, { children: character }, `${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`);
         }
         const characterDelay = `${Math.min(characterIndex * 14, 140)}ms`;
         return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
@@ -2148,12 +2151,12 @@ var renderPerCharacterSegment = (segmentText, activeClass, resolvedStyle, segmen
   }
   return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: activeClass, style: resolvedStyle, children: tokens.map((token, tokenIndex) => {
     if (/^\s+$/.test(token)) {
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.default.Fragment, { children: token }, `${segmentKey}-ws-${tokenIndex}`);
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react6.default.Fragment, { children: token }, `${segmentKey}-ws-${tokenIndex}`);
     }
     const characters = Array.from(token);
     return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: { display: "inline-block" }, children: characters.map((character, characterIndex) => {
       if (isWhitespaceCharacter(character)) {
-        return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.default.Fragment, { children: character }, `${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`);
+        return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react6.default.Fragment, { children: character }, `${segmentKey}-ws-char-${tokenIndex}-${characterIndex}`);
       }
       return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
         "span",
@@ -2292,11 +2295,11 @@ var formatInlineStyles = (text, options, initialActiveClass = null) => {
   const renderSegment = (segmentText, activeClass, segmentKey) => {
     if (!segmentText) return null;
     if (activeClass === null) {
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.default.Fragment, { children: formatHeaders(segmentText) }, segmentKey);
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react6.default.Fragment, { children: formatHeaders(segmentText) }, segmentKey);
     }
     const resolvedStyle = getResolvedClassStyle(classStyles[activeClass], styleContext);
     if (!resolvedStyle) {
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.default.Fragment, { children: formatHeaders(segmentText) }, segmentKey);
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react6.default.Fragment, { children: formatHeaders(segmentText) }, segmentKey);
     }
     if (PER_CHARACTER_INLINE_CLASSES.has(activeClass) && !MARKDOWN_INLINE_PATTERN.test(segmentText)) {
       return renderPerCharacterSegment(segmentText, activeClass, resolvedStyle, segmentKey);
@@ -2373,12 +2376,12 @@ var formatMessageWithStyles = (text, options) => {
       activeInlineClass
     );
     activeInlineClass = resolveEndingInlineClass(part, activeInlineClass);
-    return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: baseStyle, children: formattedPart }, index);
+    return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: baseStyle, "data-haptic-context": isDialoguePart ? "dialogue" : "prose", children: formattedPart }, index);
   }) });
 };
 
 // src/utils/useVoiceAudio.ts
-var import_react6 = require("react");
+var import_react7 = require("react");
 var WARMTH_FREQUENCY = 300;
 var BRIGHTNESS_FREQUENCY = 3e3;
 var NASALITY_FREQUENCY = 1500;
@@ -2398,19 +2401,19 @@ var normalizeVoiceModulation = (voiceModulation) => {
   };
 };
 var useVoiceAudio = (enabled, speechUrl, playbackKey, voiceModulation) => {
-  const audioContextRef = (0, import_react6.useRef)(null);
-  const currentBufferSourceNodeRef = (0, import_react6.useRef)(null);
-  const currentAudioAnalyserRef = (0, import_react6.useRef)(null);
-  const currentAudioWarmthFilterRef = (0, import_react6.useRef)(null);
-  const currentAudioBrightnessFilterRef = (0, import_react6.useRef)(null);
-  const currentAudioNasalityFilterRef = (0, import_react6.useRef)(null);
-  const currentAudioGainRef = (0, import_react6.useRef)(null);
-  const audioLoadTokenRef = (0, import_react6.useRef)(0);
-  const prevPlaybackKeyRef = (0, import_react6.useRef)(playbackKey);
-  const [isAudioPlaying, setIsAudioPlaying] = (0, import_react6.useState)(false);
-  const [audioAnalyser, setAudioAnalyser] = (0, import_react6.useState)(null);
-  const normalizedModulation = (0, import_react6.useMemo)(() => normalizeVoiceModulation(voiceModulation), [voiceModulation]);
-  const cleanupAudioGraph = (0, import_react6.useCallback)(() => {
+  const audioContextRef = (0, import_react7.useRef)(null);
+  const currentBufferSourceNodeRef = (0, import_react7.useRef)(null);
+  const currentAudioAnalyserRef = (0, import_react7.useRef)(null);
+  const currentAudioWarmthFilterRef = (0, import_react7.useRef)(null);
+  const currentAudioBrightnessFilterRef = (0, import_react7.useRef)(null);
+  const currentAudioNasalityFilterRef = (0, import_react7.useRef)(null);
+  const currentAudioGainRef = (0, import_react7.useRef)(null);
+  const audioLoadTokenRef = (0, import_react7.useRef)(0);
+  const prevPlaybackKeyRef = (0, import_react7.useRef)(playbackKey);
+  const [isAudioPlaying, setIsAudioPlaying] = (0, import_react7.useState)(false);
+  const [audioAnalyser, setAudioAnalyser] = (0, import_react7.useState)(null);
+  const normalizedModulation = (0, import_react7.useMemo)(() => normalizeVoiceModulation(voiceModulation), [voiceModulation]);
+  const cleanupAudioGraph = (0, import_react7.useCallback)(() => {
     if (currentBufferSourceNodeRef.current) {
       currentBufferSourceNodeRef.current.onended = null;
       try {
@@ -2432,13 +2435,13 @@ var useVoiceAudio = (enabled, speechUrl, playbackKey, voiceModulation) => {
     currentAudioAnalyserRef.current = null;
     setAudioAnalyser(null);
   }, []);
-  const applyModulationToGraph = (0, import_react6.useCallback)((modulation) => {
+  const applyModulationToGraph = (0, import_react7.useCallback)((modulation) => {
     currentAudioGainRef.current && (currentAudioGainRef.current.gain.value = modulation.volume);
     currentAudioWarmthFilterRef.current && (currentAudioWarmthFilterRef.current.gain.value = modulation.warmth);
     currentAudioBrightnessFilterRef.current && (currentAudioBrightnessFilterRef.current.gain.value = modulation.brightness);
     currentAudioNasalityFilterRef.current && (currentAudioNasalityFilterRef.current.gain.value = modulation.nasality);
   }, []);
-  const buildAudioGraph = (0, import_react6.useCallback)((audioBuffer, modulation) => {
+  const buildAudioGraph = (0, import_react7.useCallback)((audioBuffer, modulation) => {
     if (typeof window === "undefined" || typeof window.AudioContext === "undefined") {
       cleanupAudioGraph();
       return null;
@@ -2494,7 +2497,7 @@ var useVoiceAudio = (enabled, speechUrl, playbackKey, voiceModulation) => {
       return null;
     }
   }, [cleanupAudioGraph]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react7.useEffect)(() => {
     if (prevPlaybackKeyRef.current === playbackKey) {
       return;
     }
@@ -2552,16 +2555,16 @@ var useVoiceAudio = (enabled, speechUrl, playbackKey, voiceModulation) => {
       abortController.abort();
     };
   }, [playbackKey, enabled, speechUrl]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react7.useEffect)(() => {
     const currentTime = audioContextRef.current?.currentTime ?? 0;
     currentBufferSourceNodeRef.current?.playbackRate.setValueAtTime(normalizedModulation.rate, currentTime);
     applyModulationToGraph(normalizedModulation);
   }, [normalizedModulation, applyModulationToGraph]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react7.useEffect)(() => {
     setIsAudioPlaying(false);
     cleanupAudioGraph();
   }, [enabled, cleanupAudioGraph]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react7.useEffect)(() => {
     return () => {
       cleanupAudioGraph();
       if (audioContextRef.current) {
@@ -2639,30 +2642,30 @@ function NovelVisualizer(props) {
     inlineStyleOptions,
     messageWindowSx
   } = props;
-  const [inputText, setInputText] = (0, import_react7.useState)("");
-  const [finishTyping, setFinishTyping] = (0, import_react7.useState)(false);
-  const [messageKey, setMessageKey] = import_react7.default.useState(0);
-  const [hoveredActor, setHoveredActor] = (0, import_react7.useState)(null);
-  const [mousePosition, setMousePosition] = (0, import_react7.useState)(null);
-  const [messageBoxTopVh, setMessageBoxTopVh] = (0, import_react7.useState)(isVerticalLayout ? 50 : 60);
-  const [loading, setLoading] = (0, import_react7.useState)(false);
+  const [inputText, setInputText] = (0, import_react8.useState)("");
+  const [finishTyping, setFinishTyping] = (0, import_react8.useState)(false);
+  const [messageKey, setMessageKey] = import_react8.default.useState(0);
+  const [hoveredActor, setHoveredActor] = (0, import_react8.useState)(null);
+  const [mousePosition, setMousePosition] = (0, import_react8.useState)(null);
+  const [messageBoxTopVh, setMessageBoxTopVh] = (0, import_react8.useState)(isVerticalLayout ? 50 : 60);
+  const [loading, setLoading] = (0, import_react8.useState)(false);
   const isLoading = loading || externalLoading;
-  const messageBoxRef = (0, import_react7.useRef)(null);
-  const [isEditingMessage, setIsEditingMessage] = (0, import_react7.useState)(false);
-  const [editedMessage, setEditedMessage] = (0, import_react7.useState)("");
-  const [originalMessage, setOriginalMessage] = (0, import_react7.useState)("");
+  const messageBoxRef = (0, import_react8.useRef)(null);
+  const [isEditingMessage, setIsEditingMessage] = (0, import_react8.useState)(false);
+  const [editedMessage, setEditedMessage] = (0, import_react8.useState)("");
+  const [originalMessage, setOriginalMessage] = (0, import_react8.useState)("");
   const handleButtonPress = (action) => () => {
     if (enableHaptics) {
       triggerHapticFeedback(8);
     }
     action();
   };
-  const [localSkit, setLocalSkit] = (0, import_react7.useState)(skit);
-  const scriptEntries = (0, import_react7.useMemo)(() => localSkit?.script ?? [], [localSkit]);
-  const [index, setIndex] = (0, import_react7.useState)(skit?.currentIndex ?? -1);
-  const prevIndexRef = (0, import_react7.useRef)(index);
-  const prevTypingIndexRef = (0, import_react7.useRef)(index);
-  const prevExternalLoadingRef = (0, import_react7.useRef)(externalLoading);
+  const [localSkit, setLocalSkit] = (0, import_react8.useState)(skit);
+  const scriptEntries = (0, import_react8.useMemo)(() => localSkit?.script ?? [], [localSkit]);
+  const [index, setIndex] = (0, import_react8.useState)(skit?.currentIndex ?? -1);
+  const prevIndexRef = (0, import_react8.useRef)(index);
+  const prevTypingIndexRef = (0, import_react8.useRef)(index);
+  const prevExternalLoadingRef = (0, import_react8.useRef)(externalLoading);
   const accentMain = theme.palette.primary.main;
   const accentLight = theme.palette.primary.light;
   const errorMain = theme.palette.error.main;
@@ -2678,11 +2681,11 @@ function NovelVisualizer(props) {
     };
     return schemeMap[colorScheme] || theme.palette.primary.main;
   };
-  const baseTextShadow = (0, import_react7.useMemo)(
+  const baseTextShadow = (0, import_react8.useMemo)(
     () => `2px 2px 2px ${safeAlpha(theme.palette.common.black, 0.8)}`,
     [theme]
   );
-  const messageTokens = (0, import_react7.useMemo)(
+  const messageTokens = (0, import_react8.useMemo)(
     () => ({
       baseTextShadow,
       defaultDialogueColor: theme.palette.info.light,
@@ -2707,12 +2710,12 @@ function NovelVisualizer(props) {
       inlineStyleOptions
     });
   };
-  (0, import_react7.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (skit != localSkit) {
       setLocalSkit(skit);
     }
   }, [skit, externalLoading]);
-  (0, import_react7.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (skit && localSkit) {
       skit.currentIndex = localSkit?.currentIndex ?? skit.currentIndex;
       skit.script = localSkit?.script ?? skit.script;
@@ -2721,7 +2724,7 @@ function NovelVisualizer(props) {
       }
     }
   }, [localSkit, onSkitChange]);
-  (0, import_react7.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     const el = messageBoxRef.current;
     if (!el) return;
     const measure = () => {
@@ -2739,13 +2742,13 @@ function NovelVisualizer(props) {
     const y = e.clientY / window.innerHeight * 100;
     setMousePosition({ x, y });
   };
-  const actorsAtIndex = (0, import_react7.useMemo)(() => {
+  const actorsAtIndex = (0, import_react8.useMemo)(() => {
     if (!localSkit || !Array.isArray(localSkit.script)) {
       return [];
     }
     return getPresentActors(localSkit, index);
   }, [localSkit, index, actors, getPresentActors]);
-  const focusActor = (0, import_react7.useMemo)(() => {
+  const focusActor = (0, import_react8.useMemo)(() => {
     for (let i = Math.min(index, scriptEntries.length - 1); i >= 0; i--) {
       const speakerId = scriptEntries[i].speakerId;
       if (speakerId && actors[speakerId] && playerActorId !== speakerId) {
@@ -2754,10 +2757,10 @@ function NovelVisualizer(props) {
     }
     return null;
   }, [scriptEntries, index, actors]);
-  const speakerActor = (0, import_react7.useMemo)(() => {
+  const speakerActor = (0, import_react8.useMemo)(() => {
     return index >= 0 && index < scriptEntries.length && scriptEntries[index].speakerId ? actors[scriptEntries[index].speakerId] : null;
   }, [scriptEntries, index, actors]);
-  const currentSpeechUrl = (0, import_react7.useMemo)(() => {
+  const currentSpeechUrl = (0, import_react8.useMemo)(() => {
     return index >= 0 && index < scriptEntries.length ? scriptEntries[index].speechUrl : void 0;
   }, [scriptEntries, index]);
   const { isAudioPlaying, audioAnalyser } = useVoiceAudio(
@@ -2766,30 +2769,30 @@ function NovelVisualizer(props) {
     index,
     speakerActor && localSkit ? getActorVoiceModulation?.(speakerActor, localSkit, index) : void 0
   );
-  const popInSpeakerSide = (0, import_react7.useMemo)(() => {
+  const popInSpeakerSide = (0, import_react8.useMemo)(() => {
     if (!enablePopInSpeakers || !speakerActor || actorsAtIndex.includes(speakerActor) || speakerActor.id === playerActorId) {
       return null;
     }
     return speakerActor.id.charCodeAt(0) % 2 === 0 ? "left" : "right";
   }, [enablePopInSpeakers, speakerActor, actorsAtIndex]);
-  const hasCenteredActor = (0, import_react7.useMemo)(() => {
+  const hasCenteredActor = (0, import_react8.useMemo)(() => {
     return Boolean(speakerActor) || (focusActor ? actorsAtIndex.includes(focusActor) : false);
   }, [speakerActor, focusActor, actorsAtIndex]);
-  const actorTheme = (0, import_react7.useMemo)(() => {
+  const actorTheme = (0, import_react8.useMemo)(() => {
     return speakerActor && localSkit && getActorTheme ? getActorTheme(speakerActor, localSkit, index) : void 0;
   }, [speakerActor, localSkit, index, getActorTheme]);
-  const displayMessage = (0, import_react7.useMemo)(() => {
+  const displayMessage = (0, import_react8.useMemo)(() => {
     const message = index >= 0 && index < scriptEntries.length ? scriptEntries[index].message ?? "" : "";
     return formatMessage(message, speakerActor, actorTheme, messageTokens);
   }, [scriptEntries, index, speakerActor, messageTokens, isEditingMessage, actorTheme]);
-  (0, import_react7.useLayoutEffect)(() => {
+  (0, import_react8.useLayoutEffect)(() => {
     if (prevTypingIndexRef.current !== index) {
       setFinishTyping(false);
       setMessageKey((prev2) => prev2 + 1);
       prevTypingIndexRef.current = index;
     }
   }, [index]);
-  (0, import_react7.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (prevIndexRef.current !== index) {
       if (isEditingMessage) {
         setIsEditingMessage(false);
@@ -2798,14 +2801,14 @@ function NovelVisualizer(props) {
       prevIndexRef.current = index;
     }
   }, [index, isEditingMessage]);
-  (0, import_react7.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (prevExternalLoadingRef.current !== externalLoading) {
       prevIndexRef.current = -1;
       setCurrentIndex(Math.min(Math.max(0, index), scriptEntries.length - 1));
       prevExternalLoadingRef.current = externalLoading;
     }
   }, [externalLoading, scriptEntries.length]);
-  (0, import_react7.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (!mousePosition) {
       setHoveredActor(null);
       return;
@@ -2844,7 +2847,7 @@ function NovelVisualizer(props) {
     });
     setHoveredActor(closestActor);
   }, [mousePosition, messageBoxTopVh, actorsAtIndex, speakerActor, enablePopInSpeakers, focusActor, popInSpeakerSide, hasCenteredActor]);
-  (0, import_react7.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     const handleKeyDown = (e) => {
       const target = e.target;
       const isInputFocused = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
@@ -2912,7 +2915,7 @@ function NovelVisualizer(props) {
   };
   const sceneEnded = Boolean(index >= 0 && index < scriptEntries.length && scriptEntries[index]?.endScene);
   const progressLabel = `${scriptEntries.length === 0 ? 0 : index + 1} / ${scriptEntries.length}`;
-  const placeholderText = (0, import_react7.useMemo)(() => {
+  const placeholderText = (0, import_react8.useMemo)(() => {
     if (!localSkit || !Array.isArray(localSkit.script)) return "Type your next action...";
     if (typeof inputPlaceholder === "function") {
       return inputPlaceholder({ index, entry: index >= 0 && index < scriptEntries.length ? scriptEntries[index] : void 0 });
@@ -3078,11 +3081,11 @@ function NovelVisualizer(props) {
     }
   };
   const responsiveOverlayNode = responsiveOverlay ? responsiveOverlay(localSkit, hoveredActor) : null;
-  const backgroundImageUrl = (0, import_react7.useMemo)(
+  const backgroundImageUrl = (0, import_react8.useMemo)(
     () => getBackgroundImageUrl && localSkit ? getBackgroundImageUrl(localSkit, index) : void 0,
     [getBackgroundImageUrl, localSkit, index]
   );
-  const resolvedBackgroundElements = (0, import_react7.useMemo)(() => {
+  const resolvedBackgroundElements = (0, import_react8.useMemo)(() => {
     if (typeof backgroundElements === "function") {
       if (!localSkit) {
         return null;
