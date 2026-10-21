@@ -218,4 +218,29 @@ interface VoiceAudioPlayback {
  */
 declare const playVoiceAudio: (audioUrl: string, voiceModulation: NovelVoiceModulation, audioContext?: AudioContext) => Promise<VoiceAudioPlayback>;
 
-export { _default as ActorImage, type NovelSkit as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, FontHandler, type FormatInlineStylesOptions, type InlineClassStyle, type InlineStyleContext, type NovelActor, type NovelActorTheme, type NovelScaleOffset, NovelVisualizer, type NovelVisualizerProps, type NovelVoiceModulation, type SubmitButtonConfig, TypeOut, type VoiceAudioPlayback, buildGoogleFontImportRules, collectFontFamilies, defaultInlineClassStyles, formatInlineStyles, getFontSizeMultiplier, playVoiceAudio };
+type VoiceModulation = {
+    rate: number;
+    warmth: number;
+    brightness: number;
+    nasality: number;
+};
+declare const DEFAULT_VOICE_MODULATION: VoiceModulation;
+declare const normalizeVoiceModulation: (value: unknown) => VoiceModulation;
+declare const ACTOR_VOICE_ACCENTS: readonly ["African", "American", "Australian", "British", "Caribbean", "Chinese", "French", "German", "Indian", "Italian", "Japanese", "Korean", "Latin American", "Middle Eastern", "Multilingual", "Scandinavian", "Scottish", "Slavic", "Spanish"];
+type ActorVoiceAccent = typeof ACTOR_VOICE_ACCENTS[number];
+type ActorVoiceGender = 'male' | 'female' | 'non-binary';
+declare const ACTOR_VOICE_GENDER_LABELS: Record<ActorVoiceGender, string>;
+interface ActorVoice {
+    id: string;
+    description: string;
+    gender: ActorVoiceGender;
+    accent: ActorVoiceAccent;
+    volumeModifier: number;
+    tags?: string[];
+}
+declare const ACTOR_VOICES: ActorVoice[];
+declare const getActorVoice: (voiceId: string | undefined) => ActorVoice | undefined;
+declare const formatActorVoiceLabel: (voice: ActorVoice) => string;
+declare const getActorVoiceVolume: (voiceId: string | undefined) => number;
+
+export { ACTOR_VOICES, ACTOR_VOICE_ACCENTS, ACTOR_VOICE_GENDER_LABELS, _default as ActorImage, type ActorVoice, type ActorVoiceAccent, type ActorVoiceGender, type NovelSkit as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, DEFAULT_VOICE_MODULATION, FontHandler, type FormatInlineStylesOptions, type InlineClassStyle, type InlineStyleContext, type NovelActor, type NovelActorTheme, type NovelScaleOffset, NovelVisualizer, type NovelVisualizerProps, type NovelVoiceModulation, type SubmitButtonConfig, TypeOut, type VoiceAudioPlayback, type VoiceModulation, buildGoogleFontImportRules, collectFontFamilies, defaultInlineClassStyles, formatActorVoiceLabel, formatInlineStyles, getActorVoice, getActorVoiceVolume, getFontSizeMultiplier, normalizeVoiceModulation, playVoiceAudio };

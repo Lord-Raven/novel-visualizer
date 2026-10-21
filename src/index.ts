@@ -20,3 +20,19 @@ export type {
 } from './utils/TextFormatting';
 export { playVoiceAudio } from './utils/playVoiceAudio';
 export type { VoiceAudioPlayback } from './utils/playVoiceAudio';
+export {
+    DEFAULT_VOICE_MODULATION,
+    normalizeVoiceModulation,
+    ACTOR_VOICE_ACCENTS,
+    ACTOR_VOICE_GENDER_LABELS,
+    ACTOR_VOICES,
+    getActorVoice,
+    formatActorVoiceLabel,
+    getActorVoiceVolume
+} from './components/ActorVoice';
+export type {
+    VoiceModulation,
+    ActorVoiceAccent,
+    ActorVoiceGender,
+    ActorVoice
+} from './components/ActorVoice';
