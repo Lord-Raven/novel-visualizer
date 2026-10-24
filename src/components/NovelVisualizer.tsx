@@ -106,6 +106,8 @@ export interface NovelVisualizerProps<
     setTooltip?: (newMessage: string | null, newIcon?: SvgIconComponent) => void;
     hideInput?: boolean;
     hideActionButtons?: boolean;
+    /** Custom buttons rendered before edit/reroll; hidden when hideActionButtons is true. */
+    additionalActionButtons?: React.ReactNode;
     /**
      * When enabled, non-present actors who speak can "pop in" into the scene,
      * tilting in from the edge of the screen for visual presence.
@@ -168,6 +170,7 @@ export function NovelVisualizer<
         setTooltip,
         hideInput = false,
         hideActionButtons = false,
+        additionalActionButtons,
         enablePopInSpeakers = false,
         enableAudio = true,
         enableTalkingAnimation = true,
@@ -879,6 +882,7 @@ export function NovelVisualizer<
 
                         {!hideActionButtons && (
                             <Box sx={{ display: 'flex', gap: isVerticalLayout ? 0.5 : 1.5, alignItems: 'center' }}>
+                                {additionalActionButtons}
                                 {!isEditingMessage ? (
                                     <IconButton
                                         onClick={handleButtonPress(handleEnterEditMode)}

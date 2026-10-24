@@ -2640,6 +2640,7 @@ function NovelVisualizer(props) {
     setTooltip,
     hideInput = false,
     hideActionButtons = false,
+    additionalActionButtons,
     enablePopInSpeakers = false,
     enableAudio = true,
     enableTalkingAnimation = true,
@@ -3269,6 +3270,7 @@ function NovelVisualizer(props) {
                       )
                     ] }),
                     !hideActionButtons && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_material.Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "center" }, children: [
+                      additionalActionButtons,
                       !isEditingMessage ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                         import_material.IconButton,
                         {

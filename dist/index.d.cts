@@ -120,6 +120,8 @@ interface NovelVisualizerProps<TActor extends NovelActor, TSkit extends NovelSki
     setTooltip?: (newMessage: string | null, newIcon?: SvgIconComponent) => void;
     hideInput?: boolean;
     hideActionButtons?: boolean;
+    /** Custom buttons rendered before edit/reroll; hidden when hideActionButtons is true. */
+    additionalActionButtons?: React__default.ReactNode;
     /**
      * When enabled, non-present actors who speak can "pop in" into the scene,
      * tilting in from the edge of the screen for visual presence.
