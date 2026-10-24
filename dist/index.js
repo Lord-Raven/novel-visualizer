@@ -3064,6 +3064,25 @@ function NovelVisualizer(props) {
     boxSizing: "border-box",
     flexShrink: 0
   } : {};
+  const actionIconButtonSx = {
+    color: accentMain,
+    border: `1px solid ${safeAlpha(accentMain, 0.25)}`,
+    ...compactIconButtonSx,
+    opacity: 1,
+    transform: "scale(1)",
+    transition: "all 0.3s ease",
+    animation: "fadeIn 0.3s ease",
+    "@keyframes fadeIn": {
+      from: { opacity: 0, transform: "scale(0.8)" },
+      to: { opacity: 1, transform: "scale(1)" }
+    },
+    "& .MuiSvgIcon-root": { fontSize: isVerticalLayout ? "16px" : "20px" },
+    "&:hover": {
+      borderColor: safeAlpha(accentMain, 0.4),
+      color: accentLight
+    },
+    "&:disabled": { color: theme.palette.text.disabled }
+  };
   return /* @__PURE__ */ jsx5(
     BlurredBackground,
     {
@@ -3216,7 +3235,20 @@ function NovelVisualizer(props) {
                       )
                     ] }),
                     !hideActionButtons && /* @__PURE__ */ jsxs4(Box, { sx: { display: "flex", gap: isVerticalLayout ? 0.5 : 1.5, alignItems: "center" }, children: [
-                      additionalActionButtons,
+                      additionalActionButtons?.map((button) => /* @__PURE__ */ jsx5(
+                        IconButton,
+                        {
+                          "aria-label": button.label,
+                          onClick: handleButtonPress(button.onClick),
+                          onMouseEnter: () => setTooltip?.(button.label),
+                          onMouseLeave: () => setTooltip?.(null),
+                          disabled: isLoading || button.disabled,
+                          size: "small",
+                          sx: actionIconButtonSx,
+                          children: button.content
+                        },
+                        button.id
+                      )),
                       !isEditingMessage ? /* @__PURE__ */ jsx5(
                         IconButton,
                         {
@@ -3227,24 +3259,7 @@ function NovelVisualizer(props) {
                           onMouseLeave: () => setTooltip?.(null),
                           disabled: isLoading,
                           size: "small",
-                          sx: {
-                            color: accentMain,
-                            border: `1px solid ${safeAlpha(accentMain, 0.25)}`,
-                            ...compactIconButtonSx,
-                            opacity: 1,
-                            transform: "scale(1)",
-                            transition: "all 0.3s ease",
-                            animation: "fadeIn 0.3s ease",
-                            "@keyframes fadeIn": {
-                              from: { opacity: 0, transform: "scale(0.8)" },
-                              to: { opacity: 1, transform: "scale(1)" }
-                            },
-                            "&:hover": {
-                              borderColor: safeAlpha(accentMain, 0.4),
-                              color: accentLight
-                            },
-                            "&:disabled": { color: theme.palette.text.disabled }
-                          },
+                          sx: actionIconButtonSx,
                           children: /* @__PURE__ */ jsx5(Edit, { fontSize: isVerticalLayout ? "inherit" : "small", sx: { fontSize: isVerticalLayout ? "16px" : void 0 } })
                         }
                       ) : /* @__PURE__ */ jsxs4(Fragment3, { children: [

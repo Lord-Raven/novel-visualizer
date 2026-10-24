@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 const require = createRequire(import.meta.url);
 const { NovelVisualizer } = require('@lord-raven/novel-visualizer');
+const { default: Bookmark } = require('@mui/icons-material/Bookmark');
 
 const render = (props = {}) => renderToStaticMarkup(React.createElement(NovelVisualizer, {
     skit: { currentIndex: 0, script: [{ message: 'Hello' }] },
@@ -17,13 +18,24 @@ const render = (props = {}) => renderToStaticMarkup(React.createElement(NovelVis
     ...props
 }));
 
-const additionalActionButtons = React.createElement(React.Fragment, null,
-    React.createElement('button', { 'data-testid': 'bookmark' }, 'Bookmark'),
-    React.createElement('button', { 'data-testid': 'share' }, 'Share')
-);
+const additionalActionButtons = [
+    {
+        id: 'bookmark',
+        label: 'Bookmark',
+        content: React.createElement(Bookmark, { 'data-testid': 'bookmark' }),
+        onClick: () => {}
+    },
+    {
+        id: 'share',
+        label: 'Share',
+        content: React.createElement('span', { 'data-testid': 'share' }, 'Share'),
+        onClick: () => {}
+    }
+];
 
 for (const isVerticalLayout of [false, true]) {
-    test(`custom actions precede edit/reroll in ${isVerticalLayout ? 'vertical' : 'standard'} layout`, () => {
+    const layout = isVerticalLayout ? 'vertical' : 'standard';
+    test(`custom actions precede edit/reroll in ${layout} layout`, () => {
         const markup = render({ additionalActionButtons, isVerticalLayout });
         const bookmark = markup.indexOf('data-testid="bookmark"');
         const share = markup.indexOf('data-testid="share"');
@@ -33,6 +45,45 @@ for (const isVerticalLayout of [false, true]) {
         assert.ok(share > bookmark);
         assert.ok(edit > share);
         assert.ok(reroll > edit);
+        const customButton = markup.match(/<button[^>]*aria-label="Bookmark"[^>]*>/)?.[0];
+        assert.ok(customButton);
+        assert.ok(customButton.includes('MuiIconButton-sizeSmall'));
+        const customClass = customButton.match(/class="([^"]*)"/)?.[1];
+        const editButton = markup.slice(0, edit).match(/<button[^>]*>/g)?.at(-1);
+        assert.equal(editButton?.match(/class="([^"]*)"/)?.[1], customClass);
+        assert.ok(markup.includes(`.MuiSvgIcon-root{font-size:${isVerticalLayout ? 16 : 20}px;}`));
+    });
+
+    test(`loading disables all custom actions in ${layout} layout`, () => {
+        const markup = render({ additionalActionButtons, loading: true, isVerticalLayout });
+        for (const label of ['Bookmark', 'Share']) {
+            const button = markup.match(new RegExp(`<button[^>]*aria-label="${label}"[^>]*>`))?.[0];
+            assert.ok(button?.includes('disabled=""'));
+        }
+    });
+
+    test(`individual actions can be disabled independently in ${layout} layout`, () => {
+        const markup = render({
+            isVerticalLayout,
+            additionalActionButtons: additionalActionButtons.map(button => ({
+                ...button,
+                disabled: button.id === 'bookmark'
+            }))
+        });
+        const bookmark = markup.match(/<button[^>]*aria-label="Bookmark"[^>]*>/)?.[0];
+        const share = markup.match(/<button[^>]*aria-label="Share"[^>]*>/)?.[0];
+        assert.ok(bookmark?.includes('disabled=""'));
+        assert.ok(share && !share.includes('disabled=""'));
+    });
+
+    test(`empty action lists and non-icon contents are supported in ${layout} layout`, () => {
+        assert.equal(render({ additionalActionButtons: [], isVerticalLayout }), render({ isVerticalLayout }));
+        const markup = render({
+            isVerticalLayout,
+            additionalActionButtons: [{ id: 'text', label: 'Text action', content: 'Custom text', onClick: () => {} }]
+        });
+        assert.match(markup, /aria-label="Text action"/);
+        assert.ok(markup.includes('Custom text'));
     });
 }
 

@@ -1,5 +1,5 @@
 export { default as NovelVisualizer } from './components/NovelVisualizer';
-export type { NovelVisualizerProps, SubmitButtonConfig } from './components/NovelVisualizer';
+export type { NovelVisualizerProps, SubmitButtonConfig, ActionButtonConfig } from './components/NovelVisualizer';
 export type { 
     NovelActor,
     NovelActorTheme,

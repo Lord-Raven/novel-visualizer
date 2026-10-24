@@ -20,6 +20,15 @@ export interface SubmitButtonConfig {
     colorScheme?: 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
 }
 
+export interface ActionButtonConfig {
+    id: string;
+    /** Accessible name and tooltip text. */
+    label: string;
+    content: React.ReactNode;
+    onClick: () => void;
+    disabled?: boolean;
+}
+
 const calculateActorXPosition = (actorIndex: number, totalActors: number, hasCenteredActor: boolean): number => {
     const leftRange = Math.min(40, Math.ceil((totalActors - 2) / 2) * 20);
     const rightRange = Math.min(40, Math.floor((totalActors - 2) / 2) * 20);
@@ -106,8 +115,8 @@ export interface NovelVisualizerProps<
     setTooltip?: (newMessage: string | null, newIcon?: SvgIconComponent) => void;
     hideInput?: boolean;
     hideActionButtons?: boolean;
-    /** Custom buttons rendered before edit/reroll; hidden when hideActionButtons is true. */
-    additionalActionButtons?: React.ReactNode;
+    /** Styled custom actions rendered before edit/reroll; hidden when hideActionButtons is true. */
+    additionalActionButtons?: readonly ActionButtonConfig[];
     /**
      * When enabled, non-present actors who speak can "pop in" into the scene,
      * tilting in from the edge of the screen for visual presence.
@@ -730,6 +739,25 @@ export function NovelVisualizer<
         boxSizing: 'border-box',
         flexShrink: 0
     } : {};
+    const actionIconButtonSx = {
+        color: accentMain,
+        border: `1px solid ${safeAlpha(accentMain, 0.25)}`,
+        ...compactIconButtonSx,
+        opacity: 1,
+        transform: 'scale(1)',
+        transition: 'all 0.3s ease',
+        animation: 'fadeIn 0.3s ease',
+        '@keyframes fadeIn': {
+            from: { opacity: 0, transform: 'scale(0.8)' },
+            to: { opacity: 1, transform: 'scale(1)' }
+        },
+        '& .MuiSvgIcon-root': { fontSize: isVerticalLayout ? '16px' : '20px' },
+        '&:hover': {
+            borderColor: safeAlpha(accentMain, 0.4),
+            color: accentLight
+        },
+        '&:disabled': { color: theme.palette.text.disabled }
+    };
 
     return (
         <BlurredBackground
@@ -882,7 +910,20 @@ export function NovelVisualizer<
 
                         {!hideActionButtons && (
                             <Box sx={{ display: 'flex', gap: isVerticalLayout ? 0.5 : 1.5, alignItems: 'center' }}>
-                                {additionalActionButtons}
+                                {additionalActionButtons?.map((button) => (
+                                    <IconButton
+                                        key={button.id}
+                                        aria-label={button.label}
+                                        onClick={handleButtonPress(button.onClick)}
+                                        onMouseEnter={() => setTooltip?.(button.label)}
+                                        onMouseLeave={() => setTooltip?.(null)}
+                                        disabled={isLoading || button.disabled}
+                                        size="small"
+                                        sx={actionIconButtonSx}
+                                    >
+                                        {button.content}
+                                    </IconButton>
+                                ))}
                                 {!isEditingMessage ? (
                                     <IconButton
                                         onClick={handleButtonPress(handleEnterEditMode)}
@@ -890,24 +931,7 @@ export function NovelVisualizer<
                                         onMouseLeave={() => setTooltip?.(null)}
                                         disabled={isLoading}
                                         size="small"
-                                        sx={{
-                                            color: accentMain,
-                                            border: `1px solid ${safeAlpha(accentMain, 0.25)}`,
-                                            ...compactIconButtonSx,
-                                            opacity: 1,
-                                            transform: 'scale(1)',
-                                            transition: 'all 0.3s ease',
-                                            animation: 'fadeIn 0.3s ease',
-                                            '@keyframes fadeIn': {
-                                                from: { opacity: 0, transform: 'scale(0.8)' },
-                                                to: { opacity: 1, transform: 'scale(1)' }
-                                            },
-                                            '&:hover': {
-                                                borderColor: safeAlpha(accentMain, 0.4),
-                                                color: accentLight
-                                            },
-                                            '&:disabled': { color: theme.palette.text.disabled }
-                                        }}
+                                        sx={actionIconButtonSx}
                                     >
                                         <Edit fontSize={isVerticalLayout ? 'inherit' : 'small'} sx={{ fontSize: isVerticalLayout ? '16px' : undefined }} />
                                     </IconButton>

@@ -65,6 +65,14 @@ interface SubmitButtonConfig {
     icon?: React__default.ReactElement;
     colorScheme?: 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
 }
+interface ActionButtonConfig {
+    id: string;
+    /** Accessible name and tooltip text. */
+    label: string;
+    content: React__default.ReactNode;
+    onClick: () => void;
+    disabled?: boolean;
+}
 /**
  * Props for the NovelVisualizer component.
  * @template TScript - The script type
@@ -120,8 +128,8 @@ interface NovelVisualizerProps<TActor extends NovelActor, TSkit extends NovelSki
     setTooltip?: (newMessage: string | null, newIcon?: SvgIconComponent) => void;
     hideInput?: boolean;
     hideActionButtons?: boolean;
-    /** Custom buttons rendered before edit/reroll; hidden when hideActionButtons is true. */
-    additionalActionButtons?: React__default.ReactNode;
+    /** Styled custom actions rendered before edit/reroll; hidden when hideActionButtons is true. */
+    additionalActionButtons?: readonly ActionButtonConfig[];
     /**
      * When enabled, non-present actors who speak can "pop in" into the scene,
      * tilting in from the edge of the screen for visual presence.
@@ -245,4 +253,4 @@ declare const getActorVoice: (voiceId: string | undefined) => ActorVoice | undef
 declare const formatActorVoiceLabel: (voice: ActorVoice) => string;
 declare const getActorVoiceVolume: (voiceId: string | undefined) => number;
 
-export { ACTOR_VOICES, ACTOR_VOICE_ACCENTS, ACTOR_VOICE_GENDER_LABELS, _default as ActorImage, type ActorVoice, type ActorVoiceAccent, type ActorVoiceGender, type NovelSkit as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, DEFAULT_VOICE_MODULATION, FontHandler, type FormatInlineStylesOptions, type InlineClassStyle, type InlineStyleContext, type NovelActor, type NovelActorTheme, type NovelScaleOffset, NovelVisualizer, type NovelVisualizerProps, type NovelVoiceModulation, type SubmitButtonConfig, TypeOut, type VoiceAudioPlayback, type VoiceModulation, buildGoogleFontImportRules, collectFontFamilies, defaultInlineClassStyles, formatActorVoiceLabel, formatInlineStyles, getActorVoice, getActorVoiceVolume, getFontSizeMultiplier, normalizeVoiceModulation, playVoiceAudio };
+export { ACTOR_VOICES, ACTOR_VOICE_ACCENTS, ACTOR_VOICE_GENDER_LABELS, type ActionButtonConfig, _default as ActorImage, type ActorVoice, type ActorVoiceAccent, type ActorVoiceGender, type NovelSkit as BaseScript, type NovelScriptEntry as BaseScriptEntry, BlurredBackground, DEFAULT_VOICE_MODULATION, FontHandler, type FormatInlineStylesOptions, type InlineClassStyle, type InlineStyleContext, type NovelActor, type NovelActorTheme, type NovelScaleOffset, NovelVisualizer, type NovelVisualizerProps, type NovelVoiceModulation, type SubmitButtonConfig, TypeOut, type VoiceAudioPlayback, type VoiceModulation, buildGoogleFontImportRules, collectFontFamilies, defaultInlineClassStyles, formatActorVoiceLabel, formatInlineStyles, getActorVoice, getActorVoiceVolume, getFontSizeMultiplier, normalizeVoiceModulation, playVoiceAudio };
