@@ -211,6 +211,7 @@ export function NovelVisualizer<
     const [originalMessage, setOriginalMessage] = useState<string>('');
 
     const [isChatLogOpen, setIsChatLogOpen] = useState<boolean>(false);
+    const chatLogContainerRef = useRef<HTMLDivElement>(null);
     const currentLogEntryRef = useRef<HTMLDivElement>(null);
 
     const handleButtonPress = (action: () => void) => () => {
@@ -475,10 +476,17 @@ export function NovelVisualizer<
     }, [inputText, index, localSkit, finishTyping, isLoading, isEditingMessage, isChatLogOpen]);
 
     // Center the current message in view whenever the chat log opens.
+    // Scroll only the chat log container itself; scrollIntoView would also
+    // scroll scrollable ancestors (e.g. the scene when an actor image trails
+    // off the bottom of it), permanently shifting the whole scene upward.
     useLayoutEffect(() => {
-        if (isChatLogOpen) {
-            currentLogEntryRef.current?.scrollIntoView({ block: 'center' });
-        }
+        if (!isChatLogOpen) return;
+        const container = chatLogContainerRef.current;
+        const entry = currentLogEntryRef.current;
+        if (!container || !entry) return;
+        const containerRect = container.getBoundingClientRect();
+        const entryRect = entry.getBoundingClientRect();
+        container.scrollTop += (entryRect.top - containerRect.top) - (container.clientHeight - entryRect.height) / 2;
     }, [isChatLogOpen]);
 
     const next = () => {
@@ -1330,6 +1338,7 @@ export function NovelVisualizer<
                         }}
                     >
                         <Paper
+                            ref={chatLogContainerRef}
                             elevation={8}
                             role="dialog"
                             aria-label="Chat log"

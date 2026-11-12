@@ -2612,6 +2612,7 @@ function NovelVisualizer(props) {
   const [editedMessage, setEditedMessage] = useState5("");
   const [originalMessage, setOriginalMessage] = useState5("");
   const [isChatLogOpen, setIsChatLogOpen] = useState5(false);
+  const chatLogContainerRef = useRef2(null);
   const currentLogEntryRef = useRef2(null);
   const handleButtonPress = (action) => () => {
     if (enableHaptics) {
@@ -2825,9 +2826,13 @@ function NovelVisualizer(props) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [inputText, index, localSkit, finishTyping, isLoading, isEditingMessage, isChatLogOpen]);
   useLayoutEffect(() => {
-    if (isChatLogOpen) {
-      currentLogEntryRef.current?.scrollIntoView({ block: "center" });
-    }
+    if (!isChatLogOpen) return;
+    const container = chatLogContainerRef.current;
+    const entry = currentLogEntryRef.current;
+    if (!container || !entry) return;
+    const containerRect = container.getBoundingClientRect();
+    const entryRect = entry.getBoundingClientRect();
+    container.scrollTop += entryRect.top - containerRect.top - (container.clientHeight - entryRect.height) / 2;
   }, [isChatLogOpen]);
   const next = () => {
     if (!localSkit || !Array.isArray(localSkit.script)) return;
@@ -3648,6 +3653,7 @@ function NovelVisualizer(props) {
                 children: /* @__PURE__ */ jsx5(
                   Paper,
                   {
+                    ref: chatLogContainerRef,
                     elevation: 8,
                     role: "dialog",
                     "aria-label": "Chat log",

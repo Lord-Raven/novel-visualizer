@@ -2666,6 +2666,7 @@ function NovelVisualizer(props) {
   const [editedMessage, setEditedMessage] = (0, import_react8.useState)("");
   const [originalMessage, setOriginalMessage] = (0, import_react8.useState)("");
   const [isChatLogOpen, setIsChatLogOpen] = (0, import_react8.useState)(false);
+  const chatLogContainerRef = (0, import_react8.useRef)(null);
   const currentLogEntryRef = (0, import_react8.useRef)(null);
   const handleButtonPress = (action) => () => {
     if (enableHaptics) {
@@ -2879,9 +2880,13 @@ function NovelVisualizer(props) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [inputText, index, localSkit, finishTyping, isLoading, isEditingMessage, isChatLogOpen]);
   (0, import_react8.useLayoutEffect)(() => {
-    if (isChatLogOpen) {
-      currentLogEntryRef.current?.scrollIntoView({ block: "center" });
-    }
+    if (!isChatLogOpen) return;
+    const container = chatLogContainerRef.current;
+    const entry = currentLogEntryRef.current;
+    if (!container || !entry) return;
+    const containerRect = container.getBoundingClientRect();
+    const entryRect = entry.getBoundingClientRect();
+    container.scrollTop += entryRect.top - containerRect.top - (container.clientHeight - entryRect.height) / 2;
   }, [isChatLogOpen]);
   const next = () => {
     if (!localSkit || !Array.isArray(localSkit.script)) return;
@@ -3702,6 +3707,7 @@ function NovelVisualizer(props) {
                 children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
                   import_material.Paper,
                   {
+                    ref: chatLogContainerRef,
                     elevation: 8,
                     role: "dialog",
                     "aria-label": "Chat log",
