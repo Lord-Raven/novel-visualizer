@@ -2598,6 +2598,7 @@ var calculateActorXPosition = (actorIndex, totalActors, hasCenteredActor) => {
   const xPosition = totalActors === 1 ? 50 : Math.round(increment * range) + (center - Math.floor(range / 2));
   return xPosition;
 };
+var INTERACTIVE_CLICK_SELECTOR = 'button, a, input, textarea, select, [role="button"], [role="link"], [role="menuitem"], [tabindex]';
 var applyPopInSideSkew = (xPosition, popInSide) => {
   if (!popInSide) {
     return xPosition;
@@ -2657,12 +2658,15 @@ function NovelVisualizer(props) {
   const [hoveredActor, setHoveredActor] = (0, import_react8.useState)(null);
   const [mousePosition, setMousePosition] = (0, import_react8.useState)(null);
   const [messageBoxTopVh, setMessageBoxTopVh] = (0, import_react8.useState)(isVerticalLayout ? 50 : 60);
+  const [isMessageBoxHidden, setIsMessageBoxHidden] = (0, import_react8.useState)(false);
   const [loading, setLoading] = (0, import_react8.useState)(false);
   const isLoading = loading || externalLoading;
   const messageBoxRef = (0, import_react8.useRef)(null);
   const [isEditingMessage, setIsEditingMessage] = (0, import_react8.useState)(false);
   const [editedMessage, setEditedMessage] = (0, import_react8.useState)("");
   const [originalMessage, setOriginalMessage] = (0, import_react8.useState)("");
+  const [isChatLogOpen, setIsChatLogOpen] = (0, import_react8.useState)(false);
+  const currentLogEntryRef = (0, import_react8.useRef)(null);
   const handleButtonPress = (action) => () => {
     if (enableHaptics) {
       triggerHapticFeedback(8);
@@ -2860,7 +2864,10 @@ function NovelVisualizer(props) {
     const handleKeyDown = (e) => {
       const target = e.target;
       const isInputFocused = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
-      if (e.key === "ArrowLeft" && !isEditingMessage && !isInputFocused && inputText.trim() === "") {
+      if (e.key === "Escape" && isChatLogOpen) {
+        e.preventDefault();
+        setIsChatLogOpen(false);
+      } else if (e.key === "ArrowLeft" && !isEditingMessage && !isInputFocused && inputText.trim() === "") {
         e.preventDefault();
         prev();
       } else if (e.key === "ArrowRight" && !isEditingMessage && !isInputFocused && inputText.trim() === "") {
@@ -2870,7 +2877,12 @@ function NovelVisualizer(props) {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [inputText, index, localSkit, finishTyping, isLoading, isEditingMessage]);
+  }, [inputText, index, localSkit, finishTyping, isLoading, isEditingMessage, isChatLogOpen]);
+  (0, import_react8.useLayoutEffect)(() => {
+    if (isChatLogOpen) {
+      currentLogEntryRef.current?.scrollIntoView({ block: "center" });
+    }
+  }, [isChatLogOpen]);
   const next = () => {
     if (!localSkit || !Array.isArray(localSkit.script)) return;
     if (isEditingMessage) {
@@ -2888,6 +2900,36 @@ function NovelVisualizer(props) {
       handleConfirmEdit();
     }
     setCurrentIndex(Math.max(0, index - 1));
+  };
+  const handleSceneClick = (e) => {
+    const target = e.target;
+    if (messageBoxRef.current?.contains(target)) return;
+    const interactive = target.closest(INTERACTIVE_CLICK_SELECTOR);
+    if (interactive && e.currentTarget.contains(interactive)) return;
+    if (!isMessageBoxHidden) {
+      if (isEditingMessage) return;
+      setIsMessageBoxHidden(true);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const xPercent = rect.width > 0 ? (e.clientX - rect.left) / rect.width * 100 : 50;
+    if (xPercent <= 15) {
+      if (!isLoading && index > 0 && localSkit && Array.isArray(localSkit.script)) {
+        if (enableHaptics) {
+          triggerHapticFeedback(8);
+        }
+        setCurrentIndex(Math.max(0, index - 1));
+      }
+    } else if (xPercent >= 85) {
+      if (!isLoading && index < scriptEntries.length - 1 && localSkit && Array.isArray(localSkit.script)) {
+        if (enableHaptics) {
+          triggerHapticFeedback(8);
+        }
+        setCurrentIndex(Math.min(scriptEntries.length - 1, index + 1));
+      }
+    } else {
+      setIsMessageBoxHidden(false);
+    }
   };
   const handleEnterEditMode = () => {
     if (!localSkit || !Array.isArray(localSkit.script)) return;
@@ -2921,6 +2963,16 @@ function NovelVisualizer(props) {
     setEditedMessage(originalMessage);
     setIsEditingMessage(false);
     setOriginalMessage("");
+  };
+  const handleToggleChatLog = () => {
+    setIsChatLogOpen((prevOpen) => !prevOpen);
+  };
+  const handleChatLogEntryClick = (entryIndex) => {
+    if (enableHaptics) {
+      triggerHapticFeedback(8);
+    }
+    setCurrentIndex(entryIndex);
+    setIsChatLogOpen(false);
   };
   const sceneEnded = Boolean(index >= 0 && index < scriptEntries.length && scriptEntries[index]?.endScene);
   const progressLabel = `${scriptEntries.length === 0 ? 0 : index + 1} / ${scriptEntries.length}`;
@@ -3153,6 +3205,7 @@ function NovelVisualizer(props) {
           style: { position: "relative", width: "100%", height: "100%" },
           onMouseMove: handleMouseMove,
           onMouseLeave: () => setMousePosition(null),
+          onClick: handleSceneClick,
           children: [
             resolvedBackgroundElements && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 0 }, children: resolvedBackgroundElements }),
             /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { position: "absolute", inset: 0, zIndex: 1 }, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_framer_motion2.AnimatePresence, { children: renderActors() }) }),
@@ -3193,7 +3246,13 @@ function NovelVisualizer(props) {
                   flexDirection: "column",
                   justifyContent: "space-between",
                   overflow: "visible",
-                  ...messageWindowSx
+                  transition: "opacity 0.25s ease, visibility 0.25s ease",
+                  ...messageWindowSx,
+                  ...isMessageBoxHidden ? {
+                    opacity: 0,
+                    visibility: "hidden",
+                    pointerEvents: "none"
+                  } : {}
                 },
                 children: [
                   /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_material.Box, { sx: { display: "flex", alignItems: "flex-end", overflow: "visible" }, children: [
@@ -3242,6 +3301,11 @@ function NovelVisualizer(props) {
                             ),
                             progressLabel
                           ] }),
+                          onClick: !isLoading ? handleButtonPress(handleToggleChatLog) : void 0,
+                          onMouseEnter: !isLoading ? () => {
+                            setTooltip?.(isChatLogOpen ? "Close the chat log" : "Open the chat log", import_icons_material.Forum);
+                          } : void 0,
+                          onMouseLeave: !isLoading ? () => setTooltip?.(null) : void 0,
                           sx: {
                             minWidth: isVerticalLayout ? 44 : 72,
                             height: isVerticalLayout ? "22px" : void 0,
@@ -3250,6 +3314,11 @@ function NovelVisualizer(props) {
                             color: theme.palette.primary.light,
                             border: `1px solid ${safeAlpha(theme.palette.divider, 0.2)}`,
                             transition: "all 0.3s ease",
+                            cursor: isLoading ? "default" : "pointer",
+                            "&:hover": isLoading ? void 0 : {
+                              borderColor: safeAlpha(accentMain, 0.4),
+                              backgroundColor: theme.palette.action.hover
+                            },
                             "& .MuiChip-label": {
                               display: "flex",
                               alignItems: "center",
@@ -3612,6 +3681,98 @@ function NovelVisualizer(props) {
                     )
                   ] })
                 ]
+              }
+            ),
+            isChatLogOpen && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+              import_material.Box,
+              {
+                onClick: (e) => {
+                  e.stopPropagation();
+                  setIsChatLogOpen(false);
+                },
+                sx: {
+                  position: "absolute",
+                  inset: 0,
+                  zIndex: 5,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: safeAlpha(theme.palette.common.black, 0.4)
+                },
+                children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                  import_material.Paper,
+                  {
+                    elevation: 8,
+                    role: "dialog",
+                    "aria-label": "Chat log",
+                    onClick: (e) => e.stopPropagation(),
+                    sx: {
+                      width: `${100 - responsiveOverlaySides * 2}%`,
+                      maxHeight: "85%",
+                      overflowY: "auto",
+                      background: safeAlpha(theme.palette.background.paper, 0.85),
+                      border: `${isVerticalLayout ? 1 : 2}px solid ${safeAlpha(theme.palette.divider, 0.3)}`,
+                      borderRadius: isVerticalLayout ? 1.5 : 3,
+                      p: isVerticalLayout ? 1 : 2,
+                      color: theme.palette.text.primary,
+                      backdropFilter: "blur(8px)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: isVerticalLayout ? 0.5 : 1
+                    },
+                    children: scriptEntries.map((entry, entryIndex) => {
+                      const entrySpeaker = entry.speakerId ? actors[entry.speakerId] ?? null : null;
+                      const entryTheme = entrySpeaker && localSkit && getActorTheme ? getActorTheme(entrySpeaker, localSkit, entryIndex) : void 0;
+                      const isCurrentEntry = entryIndex === index;
+                      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+                        import_material.Box,
+                        {
+                          ref: isCurrentEntry ? currentLogEntryRef : void 0,
+                          onClick: () => handleChatLogEntryClick(entryIndex),
+                          sx: {
+                            cursor: "pointer",
+                            borderRadius: 1,
+                            p: isVerticalLayout ? 0.75 : 1.5,
+                            border: `2px solid ${isCurrentEntry ? accentMain : "transparent"}`,
+                            transition: "background-color 0.2s ease, border-color 0.2s ease",
+                            "&:hover": {
+                              backgroundColor: theme.palette.action.hover
+                            }
+                          },
+                          children: [
+                            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                              import_material.Typography,
+                              {
+                                sx: {
+                                  fontWeight: 700,
+                                  color: theme.palette.primary.light,
+                                  fontSize: isVerticalLayout ? "0.75rem" : "0.9rem",
+                                  textShadow: baseTextShadow
+                                },
+                                children: entrySpeaker ? entrySpeaker.name : narratorLabel
+                              }
+                            ),
+                            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                              import_material.Typography,
+                              {
+                                variant: "body1",
+                                sx: {
+                                  fontSize: isVerticalLayout ? "clamp(0.7rem, 2vw, 1rem)" : "1rem",
+                                  lineHeight: 1.5,
+                                  fontFamily: theme.typography.fontFamily,
+                                  color: theme.palette.text.primary,
+                                  textShadow: baseTextShadow
+                                },
+                                children: formatMessage(entry.message ?? "", entrySpeaker, entryTheme, messageTokens)
+                              }
+                            )
+                          ]
+                        },
+                        entryIndex
+                      );
+                    })
+                  }
+                )
               }
             )
           ]

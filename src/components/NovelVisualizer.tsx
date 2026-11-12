@@ -3,7 +3,7 @@ import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typo
 import { useTheme } from '@mui/material/styles';
 import { safeAlpha, safeDarken, safeGetContrastText, safeLighten } from '../utils/safeColor';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, SvgIconComponent, Computer, Warning } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, SvgIconComponent, Computer, Warning, Forum } from '@mui/icons-material';
 import { AnimatePresence } from 'framer-motion';
 import ActorImage from './ActorImage';
 import { BlurredBackground } from './BlurredBackground';
@@ -42,6 +42,10 @@ const calculateActorXPosition = (actorIndex: number, totalActors: number, hasCen
 
     return xPosition;
 };
+
+// Interactive elements (including those rendered over the scene by a consuming
+// application) whose clicks should never toggle message box visibility.
+const INTERACTIVE_CLICK_SELECTOR = 'button, a, input, textarea, select, [role="button"], [role="link"], [role="menuitem"], [tabindex]';
 
 const applyPopInSideSkew = (
     xPosition: number,
@@ -197,6 +201,7 @@ export function NovelVisualizer<
     const [hoveredActor, setHoveredActor] = useState<TActor | null>(null);
     const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
     const [messageBoxTopVh, setMessageBoxTopVh] = useState<number>(isVerticalLayout ? 50 : 60);
+    const [isMessageBoxHidden, setIsMessageBoxHidden] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
     const isLoading = loading || externalLoading;
     const messageBoxRef = useRef<HTMLDivElement>(null);
@@ -204,6 +209,9 @@ export function NovelVisualizer<
     const [isEditingMessage, setIsEditingMessage] = useState<boolean>(false);
     const [editedMessage, setEditedMessage] = useState<string>('');
     const [originalMessage, setOriginalMessage] = useState<string>('');
+
+    const [isChatLogOpen, setIsChatLogOpen] = useState<boolean>(false);
+    const currentLogEntryRef = useRef<HTMLDivElement>(null);
 
     const handleButtonPress = (action: () => void) => () => {
         if (enableHaptics) {
@@ -450,7 +458,10 @@ export function NovelVisualizer<
             const target = e.target as HTMLElement;
             const isInputFocused = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
 
-            if (e.key === 'ArrowLeft' && !isEditingMessage && !isInputFocused && inputText.trim() === '') {
+            if (e.key === 'Escape' && isChatLogOpen) {
+                e.preventDefault();
+                setIsChatLogOpen(false);
+            } else if (e.key === 'ArrowLeft' && !isEditingMessage && !isInputFocused && inputText.trim() === '') {
                 e.preventDefault();
                 prev();
             } else if (e.key === 'ArrowRight' && !isEditingMessage && !isInputFocused && inputText.trim() === '') {
@@ -461,7 +472,14 @@ export function NovelVisualizer<
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [inputText, index, localSkit, finishTyping, isLoading, isEditingMessage]);
+    }, [inputText, index, localSkit, finishTyping, isLoading, isEditingMessage, isChatLogOpen]);
+
+    // Center the current message in view whenever the chat log opens.
+    useLayoutEffect(() => {
+        if (isChatLogOpen) {
+            currentLogEntryRef.current?.scrollIntoView({ block: 'center' });
+        }
+    }, [isChatLogOpen]);
 
     const next = () => {
         if (!localSkit || !Array.isArray(localSkit.script)) return;
@@ -481,6 +499,42 @@ export function NovelVisualizer<
             handleConfirmEdit();
         }
         setCurrentIndex(Math.max(0, index - 1));
+    };
+
+    const handleSceneClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        // Ignore clicks within the message box or on interactive elements
+        // (e.g. buttons rendered over the scene by a consuming application).
+        if (messageBoxRef.current?.contains(target)) return;
+        const interactive = target.closest(INTERACTIVE_CLICK_SELECTOR);
+        if (interactive && e.currentTarget.contains(interactive)) return;
+
+        if (!isMessageBoxHidden) {
+            if (isEditingMessage) return;
+            setIsMessageBoxHidden(true);
+            return;
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const xPercent = rect.width > 0 ? ((e.clientX - rect.left) / rect.width) * 100 : 50;
+
+        if (xPercent <= 15) {
+            if (!isLoading && index > 0 && localSkit && Array.isArray(localSkit.script)) {
+                if (enableHaptics) {
+                    triggerHapticFeedback(8);
+                }
+                setCurrentIndex(Math.max(0, index - 1));
+            }
+        } else if (xPercent >= 85) {
+            if (!isLoading && index < scriptEntries.length - 1 && localSkit && Array.isArray(localSkit.script)) {
+                if (enableHaptics) {
+                    triggerHapticFeedback(8);
+                }
+                setCurrentIndex(Math.min(scriptEntries.length - 1, index + 1));
+            }
+        } else {
+            setIsMessageBoxHidden(false);
+        }
     };
 
     const handleEnterEditMode = () => {
@@ -519,6 +573,18 @@ export function NovelVisualizer<
         setEditedMessage(originalMessage);
         setIsEditingMessage(false);
         setOriginalMessage('');
+    };
+
+    const handleToggleChatLog = () => {
+        setIsChatLogOpen((prevOpen) => !prevOpen);
+    };
+
+    const handleChatLogEntryClick = (entryIndex: number) => {
+        if (enableHaptics) {
+            triggerHapticFeedback(8);
+        }
+        setCurrentIndex(entryIndex);
+        setIsChatLogOpen(false);
     };
 
     const sceneEnded = Boolean(index >= 0 && index < scriptEntries.length && scriptEntries[index]?.endScene);
@@ -773,6 +839,7 @@ export function NovelVisualizer<
                 style={{ position: 'relative', width: '100%', height: '100%' }}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={() => setMousePosition(null)}
+                onClick={handleSceneClick}
             >
                 {resolvedBackgroundElements && (
                     <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
@@ -822,8 +889,14 @@ export function NovelVisualizer<
                             flexDirection: 'column',
                             justifyContent: 'space-between',
                             overflow: 'visible',
-                            
-                            ...messageWindowSx
+                            transition: 'opacity 0.25s ease, visibility 0.25s ease',
+
+                            ...messageWindowSx,
+                            ...(isMessageBoxHidden ? {
+                                opacity: 0,
+                                visibility: 'hidden',
+                                pointerEvents: 'none'
+                            } : {})
                         }}
                 >
                     <Box sx={{ display: 'flex', alignItems: 'flex-end', overflow: 'visible' }}>
@@ -864,6 +937,9 @@ export function NovelVisualizer<
                                         {progressLabel}
                                     </span>
                                 )}
+                                onClick={!isLoading ? handleButtonPress(handleToggleChatLog) : undefined}
+                                onMouseEnter={!isLoading ? () => {setTooltip?.(isChatLogOpen ? 'Close the chat log' : 'Open the chat log', Forum)} : undefined}
+                                onMouseLeave={!isLoading ? () => setTooltip?.(null) : undefined}
                                 sx={{
                                     minWidth: isVerticalLayout ? 44 : 72,
                                     height: isVerticalLayout ? '22px' : undefined,
@@ -872,6 +948,11 @@ export function NovelVisualizer<
                                     color: theme.palette.primary.light,
                                     border: `1px solid ${safeAlpha(theme.palette.divider, 0.2)}`,
                                     transition: 'all 0.3s ease',
+                                    cursor: isLoading ? 'default' : 'pointer',
+                                    '&:hover': isLoading ? undefined : {
+                                        borderColor: safeAlpha(accentMain, 0.4),
+                                        backgroundColor: theme.palette.action.hover
+                                    },
                                     '& .MuiChip-label': {
                                         display: 'flex',
                                         alignItems: 'center',
@@ -1231,6 +1312,94 @@ export function NovelVisualizer<
                         </Box>
                     )}
                 </Paper>
+
+                {isChatLogOpen && (
+                    <Box
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsChatLogOpen(false);
+                        }}
+                        sx={{
+                            position: 'absolute',
+                            inset: 0,
+                            zIndex: 5,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: safeAlpha(theme.palette.common.black, 0.4)
+                        }}
+                    >
+                        <Paper
+                            elevation={8}
+                            role="dialog"
+                            aria-label="Chat log"
+                            onClick={(e) => e.stopPropagation()}
+                            sx={{
+                                width: `${100 - responsiveOverlaySides * 2}%`,
+                                maxHeight: '85%',
+                                overflowY: 'auto',
+                                background: safeAlpha(theme.palette.background.paper, 0.85),
+                                border: `${isVerticalLayout ? 1 : 2}px solid ${safeAlpha(theme.palette.divider, 0.3)}`,
+                                borderRadius: isVerticalLayout ? 1.5 : 3,
+                                p: isVerticalLayout ? 1 : 2,
+                                color: theme.palette.text.primary,
+                                backdropFilter: 'blur(8px)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: isVerticalLayout ? 0.5 : 1
+                            }}
+                        >
+                            {scriptEntries.map((entry, entryIndex) => {
+                                const entrySpeaker = entry.speakerId ? actors[entry.speakerId] ?? null : null;
+                                const entryTheme = entrySpeaker && localSkit && getActorTheme
+                                    ? getActorTheme(entrySpeaker, localSkit, entryIndex)
+                                    : undefined;
+                                const isCurrentEntry = entryIndex === index;
+
+                                return (
+                                    <Box
+                                        key={entryIndex}
+                                        ref={isCurrentEntry ? currentLogEntryRef : undefined}
+                                        onClick={() => handleChatLogEntryClick(entryIndex)}
+                                        sx={{
+                                            cursor: 'pointer',
+                                            borderRadius: 1,
+                                            p: isVerticalLayout ? 0.75 : 1.5,
+                                            border: `2px solid ${isCurrentEntry ? accentMain : 'transparent'}`,
+                                            transition: 'background-color 0.2s ease, border-color 0.2s ease',
+                                            '&:hover': {
+                                                backgroundColor: theme.palette.action.hover
+                                            }
+                                        }}
+                                    >
+                                        <Typography
+                                            sx={{
+                                                fontWeight: 700,
+                                                color: theme.palette.primary.light,
+                                                fontSize: isVerticalLayout ? '0.75rem' : '0.9rem',
+                                                textShadow: baseTextShadow
+                                            }}
+                                        >
+                                            {entrySpeaker ? entrySpeaker.name : narratorLabel}
+                                        </Typography>
+                                        <Typography
+                                            variant="body1"
+                                            sx={{
+                                                fontSize: isVerticalLayout ? 'clamp(0.7rem, 2vw, 1rem)' : '1rem',
+                                                lineHeight: 1.5,
+                                                fontFamily: theme.typography.fontFamily,
+                                                color: theme.palette.text.primary,
+                                                textShadow: baseTextShadow
+                                            }}
+                                        >
+                                            {formatMessage(entry.message ?? '', entrySpeaker, entryTheme, messageTokens)}
+                                        </Typography>
+                                    </Box>
+                                );
+                            })}
+                        </Paper>
+                    </Box>
+                )}
             </div>
         </BlurredBackground>
     );
