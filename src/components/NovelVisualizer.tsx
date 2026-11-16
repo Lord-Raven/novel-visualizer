@@ -3,7 +3,7 @@ import { Box, Button, Chip, CircularProgress, IconButton, Paper, TextField, Typo
 import { useTheme } from '@mui/material/styles';
 import { safeAlpha, safeDarken, safeGetContrastText, safeLighten } from '../utils/safeColor';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, SvgIconComponent, Computer, Warning, Forum } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Edit, Check, Clear, Send, Forward, Close, Casino, Delete, SvgIconComponent, Computer, Warning, Forum, ArrowDropUp, RecordVoiceOver } from '@mui/icons-material';
 import { AnimatePresence } from 'framer-motion';
 import ActorImage from './ActorImage';
 import { BlurredBackground } from './BlurredBackground';
@@ -86,6 +86,14 @@ export interface NovelVisualizerProps<
     allowTypingSkip?: boolean;
     onSubmitInput?: (inputText: string, skit: TSkit, index: number) => Promise<TSkit>;
     onUpdateMessage?: (index: number, message: string) => void;
+    /**
+     * Called when the user reassigns a message to a different actor while editing;
+     * `speakerId` is undefined when the message is reassigned to the narrator.
+     * When omitted, the entry's speakerId is updated on the local script.
+     */
+    onUpdateSpeaker?: (index: number, speakerId: string | undefined) => void;
+    /** Called when the user deletes a message while editing; when omitted, the entry is removed from the local script. */
+    onDeleteMessage?: (index: number) => void;
     onSkitChange?: (newSkit: TSkit) => void;
     inputPlaceholder?: string | ((context: { index: number; entry?: TEntry }) => string);
     getSubmitButtonConfig?: (skit: TSkit, index: number, inputText: string) => SubmitButtonConfig;
@@ -118,6 +126,11 @@ export interface NovelVisualizerProps<
     loading?: boolean;
     setTooltip?: (newMessage: string | null, newIcon?: SvgIconComponent) => void;
     hideInput?: boolean;
+    /**
+     * When enabled, the user cannot modify the script: the edit and reroll buttons are
+     * hidden, the input field is removed, and the continue button fills the bottom bar.
+     */
+    readOnly?: boolean;
     hideActionButtons?: boolean;
     /** Styled custom actions rendered before edit/reroll; hidden when hideActionButtons is true. */
     additionalActionButtons?: readonly ActionButtonConfig[];
@@ -165,6 +178,8 @@ export function NovelVisualizer<
         allowTypingSkip = true,
         onSubmitInput,
         onUpdateMessage,
+        onUpdateSpeaker,
+        onDeleteMessage,
         onSkitChange,
         inputPlaceholder,
         getSubmitButtonConfig,
@@ -182,6 +197,7 @@ export function NovelVisualizer<
         loading: externalLoading = false,
         setTooltip,
         hideInput = false,
+        readOnly = false,
         hideActionButtons = false,
         additionalActionButtons,
         enablePopInSpeakers = false,
@@ -209,6 +225,10 @@ export function NovelVisualizer<
     const [isEditingMessage, setIsEditingMessage] = useState<boolean>(false);
     const [editedMessage, setEditedMessage] = useState<string>('');
     const [originalMessage, setOriginalMessage] = useState<string>('');
+    const [isDeletingMessage, setIsDeletingMessage] = useState<boolean>(false);
+    // Pending speaker reassignment while editing; null means the narrator.
+    const [editedSpeakerId, setEditedSpeakerId] = useState<string | null>(null);
+    const [isSpeakerMenuOpen, setIsSpeakerMenuOpen] = useState<boolean>(false);
 
     const [isChatLogOpen, setIsChatLogOpen] = useState<boolean>(false);
     const chatLogContainerRef = useRef<HTMLDivElement>(null);
@@ -392,6 +412,8 @@ export function NovelVisualizer<
         if (prevIndexRef.current !== index) {
             if (isEditingMessage) {
                 setIsEditingMessage(false);
+                setIsDeletingMessage(false);
+                setIsSpeakerMenuOpen(false);
                 setOriginalMessage('');
             }
             prevIndexRef.current = index;
@@ -459,9 +481,16 @@ export function NovelVisualizer<
             const target = e.target as HTMLElement;
             const isInputFocused = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
 
-            if (e.key === 'Escape' && isChatLogOpen) {
+            if (e.key === 'Escape' && isSpeakerMenuOpen) {
+                e.preventDefault();
+                setIsSpeakerMenuOpen(false);
+            } else if (e.key === 'Escape' && isChatLogOpen) {
                 e.preventDefault();
                 setIsChatLogOpen(false);
+            } else if (e.key === 'Escape' && isDeletingMessage) {
+                // The edit field is disabled while a deletion is pending, so handle Escape here.
+                e.preventDefault();
+                setIsDeletingMessage(false);
             } else if (e.key === 'ArrowLeft' && !isEditingMessage && !isInputFocused && inputText.trim() === '') {
                 e.preventDefault();
                 prev();
@@ -473,7 +502,7 @@ export function NovelVisualizer<
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [inputText, index, localSkit, finishTyping, isLoading, isEditingMessage, isChatLogOpen]);
+    }, [inputText, index, localSkit, finishTyping, isLoading, isEditingMessage, isDeletingMessage, isChatLogOpen, isSpeakerMenuOpen]);
 
     // Center the current message in view whenever the chat log opens.
     // Scroll only the chat log container itself; scrollIntoView would also
@@ -492,7 +521,12 @@ export function NovelVisualizer<
     const next = () => {
         if (!localSkit || !Array.isArray(localSkit.script)) return;
         if (isEditingMessage) {
-            handleConfirmEdit();
+            // Navigation never confirms a pending deletion; it only saves text edits.
+            if (isDeletingMessage) {
+                handleCancelEdit();
+            } else {
+                handleConfirmEdit();
+            }
         }
         if (finishTyping) {
             setCurrentIndex(Math.min(scriptEntries.length - 1, index + 1));
@@ -504,7 +538,11 @@ export function NovelVisualizer<
     const prev = () => {
         if (!localSkit || !Array.isArray(localSkit.script)) return;
         if (isEditingMessage) {
-            handleConfirmEdit();
+            if (isDeletingMessage) {
+                handleCancelEdit();
+            } else {
+                handleConfirmEdit();
+            }
         }
         setCurrentIndex(Math.max(0, index - 1));
     };
@@ -546,33 +584,85 @@ export function NovelVisualizer<
     };
 
     const handleEnterEditMode = () => {
+        if (readOnly) return;
         if (!localSkit || !Array.isArray(localSkit.script)) return;
         const currentMessage = index >= 0 && index < scriptEntries.length ? scriptEntries[index]?.message ?? '' : '';
+        const currentSpeakerId = index >= 0 && index < scriptEntries.length ? scriptEntries[index]?.speakerId : undefined;
         setOriginalMessage(currentMessage);
         setEditedMessage(currentMessage);
+        setEditedSpeakerId(currentSpeakerId || null);
+        setIsSpeakerMenuOpen(false);
+        setIsDeletingMessage(false);
         setIsEditingMessage(true);
+    };
+
+    const handleToggleDeleteMessage = () => {
+        setIsDeletingMessage((pending) => !pending);
     };
 
     const handleConfirmEdit = () => {
         if (!localSkit || !Array.isArray(localSkit.script)) return;
-        const currentMessage = index >= 0 && index < scriptEntries.length ? scriptEntries[index]?.message ?? '' : '';
-        if (editedMessage === currentMessage) {
+
+        if (isDeletingMessage) {
+            // Confirmed deletion: remove the current message without touching the entries that follow.
+            const newIndex = Math.max(0, Math.min(index, scriptEntries.length - 2));
+            if (onDeleteMessage) {
+                onDeleteMessage(index);
+                setCurrentIndex(newIndex);
+            } else {
+                const updatedScript = localSkit.script.filter((_, i) => i !== index);
+                setLocalSkit({ ...localSkit, script: updatedScript, currentIndex: newIndex });
+                setIndex(newIndex);
+            }
+            // Retype the entry that now occupies this index.
+            setFinishTyping(false);
+            setMessageKey((prev) => prev + 1);
             setIsEditingMessage(false);
+            setIsDeletingMessage(false);
+            setIsSpeakerMenuOpen(false);
             setOriginalMessage('');
             return;
         }
 
-        if (onUpdateMessage) {
+        const currentMessage = index >= 0 && index < scriptEntries.length ? scriptEntries[index]?.message ?? '' : '';
+        const currentSpeakerId = index >= 0 && index < scriptEntries.length ? scriptEntries[index]?.speakerId : undefined;
+        const newSpeakerId = editedSpeakerId ?? undefined;
+        const messageChanged = editedMessage !== currentMessage;
+        const speakerChanged = newSpeakerId !== (currentSpeakerId || undefined);
+        if (!messageChanged && !speakerChanged) {
+            setIsEditingMessage(false);
+            setIsSpeakerMenuOpen(false);
+            setOriginalMessage('');
+            return;
+        }
+
+        if (messageChanged && onUpdateMessage) {
             onUpdateMessage(index, editedMessage);
-        } else {
+        }
+        if (speakerChanged && onUpdateSpeaker) {
+            onUpdateSpeaker(index, newSpeakerId);
+        }
+
+        // Apply whichever changes have no external handler to the local script.
+        const applyLocalMessage = messageChanged && !onUpdateMessage;
+        const applyLocalSpeaker = speakerChanged && !onUpdateSpeaker;
+        if (applyLocalMessage || applyLocalSpeaker) {
             const updated = { ...localSkit };
             if (index >= 0 && index < updated.script.length && updated.script[index]) {
-                updated.script[index] = { ...updated.script[index], message: editedMessage };
+                const entry = { ...updated.script[index] };
+                if (applyLocalMessage) {
+                    entry.message = editedMessage;
+                }
+                if (applyLocalSpeaker) {
+                    entry.speakerId = newSpeakerId;
+                }
+                updated.script[index] = entry;
             }
             setLocalSkit(updated);
         }
 
         setIsEditingMessage(false);
+        setIsSpeakerMenuOpen(false);
         setOriginalMessage('');
     };
 
@@ -580,6 +670,8 @@ export function NovelVisualizer<
         if (!localSkit || !Array.isArray(localSkit.script)) return;
         setEditedMessage(originalMessage);
         setIsEditingMessage(false);
+        setIsDeletingMessage(false);
+        setIsSpeakerMenuOpen(false);
         setOriginalMessage('');
     };
 
@@ -610,9 +702,13 @@ export function NovelVisualizer<
         return 'Type your next action...';
     }, [inputPlaceholder, index, localSkit, scriptEntries, sceneEnded, isLoading]);
 
-    const renderNameplateNode = () => {
+    const editedSpeakerActor = useMemo(() => {
+        return editedSpeakerId ? actors[editedSpeakerId] ?? null : null;
+    }, [editedSpeakerId, actors]);
+
+    const renderNameplateFor = (actor: TActor | null) => {
         if (renderNameplate)
-            return renderNameplate(speakerActor);
+            return renderNameplate(actor);
         return (
             <Typography
                 sx={{
@@ -622,8 +718,152 @@ export function NovelVisualizer<
                     textShadow: baseTextShadow
                 }}
             >
-                {speakerActor ? speakerActor.name : narratorLabel}
+                {actor ? actor.name : narratorLabel}
             </Typography>
+        );
+    };
+
+    // Narrator normally has a blank nameplate; show a dimmed placeholder in the
+    // speaker picker so the option is still visible and clickable.
+    const renderSpeakerOptionContent = (actor: TActor | null) => {
+        if (actor || renderNameplate || narratorLabel) {
+            return renderNameplateFor(actor);
+        }
+        return (
+            <Typography
+                sx={{
+                    fontWeight: 700,
+                    fontStyle: 'italic',
+                    color: theme.palette.text.secondary,
+                    fontSize: isVerticalLayout ? '0.85rem' : '1rem'
+                }}
+            >
+                (Narrator)
+            </Typography>
+        );
+    };
+
+    const handleSelectSpeaker = (speakerId: string | null) => {
+        if (enableHaptics) {
+            triggerHapticFeedback(8);
+        }
+        setEditedSpeakerId(speakerId);
+        setIsSpeakerMenuOpen(false);
+    };
+
+    const renderNameplateNode = () => {
+        if (!isEditingMessage) {
+            return renderNameplateFor(speakerActor);
+        }
+
+        const speakerOptions: (TActor | null)[] = [null, ...Object.values(actors)];
+
+        return (
+            <Box sx={{ position: 'relative', display: 'flex', alignItems: 'flex-end' }}>
+                <Box
+                    role="button"
+                    aria-haspopup="listbox"
+                    aria-expanded={isSpeakerMenuOpen}
+                    aria-label="Change message speaker"
+                    tabIndex={isDeletingMessage ? -1 : 0}
+                    onClick={() => {
+                        if (isDeletingMessage) return;
+                        if (enableHaptics) {
+                            triggerHapticFeedback(8);
+                        }
+                        setIsSpeakerMenuOpen((open) => !open);
+                    }}
+                    onKeyDown={(e) => {
+                        if (isDeletingMessage) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setIsSpeakerMenuOpen((open) => !open);
+                        }
+                    }}
+                    onMouseEnter={() => setTooltip?.('Reassign this message to another actor', RecordVoiceOver)}
+                    onMouseLeave={() => setTooltip?.(null)}
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.25,
+                        px: isVerticalLayout ? 0.5 : 0.75,
+                        borderRadius: 1,
+                        border: `1px dashed ${safeAlpha(accentMain, 0.5)}`,
+                        cursor: isDeletingMessage ? 'default' : 'pointer',
+                        opacity: isDeletingMessage ? 0.5 : 1,
+                        transition: 'background-color 0.2s ease, border-color 0.2s ease',
+                        '&:hover': isDeletingMessage ? undefined : {
+                            borderColor: safeAlpha(accentMain, 0.8),
+                            backgroundColor: theme.palette.action.hover
+                        }
+                    }}
+                >
+                    {renderSpeakerOptionContent(editedSpeakerActor)}
+                    <ArrowDropUp sx={{ color: accentMain, fontSize: isVerticalLayout ? '16px' : '20px' }} />
+                </Box>
+                {isSpeakerMenuOpen && !isDeletingMessage && (
+                    <>
+                        {/* Click-away layer; sits inside the message box so scene clicks stay ignored. */}
+                        <Box
+                            onClick={() => setIsSpeakerMenuOpen(false)}
+                            sx={{ position: 'fixed', inset: 0, zIndex: 11 }}
+                        />
+                        <Paper
+                            role="listbox"
+                            aria-label="Message speaker"
+                            elevation={8}
+                            sx={{
+                                position: 'absolute',
+                                bottom: '100%',
+                                left: 0,
+                                mb: 0.5,
+                                zIndex: 12,
+                                minWidth: isVerticalLayout ? '120px' : '160px',
+                                maxHeight: '40vh',
+                                overflowY: 'auto',
+                                background: safeAlpha(theme.palette.background.paper, 0.95),
+                                border: `1px solid ${safeAlpha(theme.palette.divider, 0.3)}`,
+                                borderRadius: isVerticalLayout ? 1 : 1.5,
+                                backdropFilter: 'blur(8px)',
+                                p: 0.5,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 0.25
+                            }}
+                        >
+                            {speakerOptions.map((actor) => {
+                                const optionId = actor?.id ?? null;
+                                const isSelected = optionId === editedSpeakerId;
+                                return (
+                                    <Box
+                                        key={optionId ?? '__narrator__'}
+                                        role="option"
+                                        aria-selected={isSelected}
+                                        onClick={() => handleSelectSpeaker(optionId)}
+                                        sx={{
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            minHeight: isVerticalLayout ? '22px' : '28px',
+                                            px: isVerticalLayout ? 0.5 : 1,
+                                            py: 0.25,
+                                            borderRadius: 1,
+                                            border: `1px solid ${isSelected ? safeAlpha(accentMain, 0.6) : 'transparent'}`,
+                                            backgroundColor: isSelected ? safeAlpha(accentMain, 0.15) : 'transparent',
+                                            transition: 'background-color 0.2s ease, border-color 0.2s ease',
+                                            '&:hover': {
+                                                backgroundColor: theme.palette.action.hover
+                                            }
+                                        }}
+                                    >
+                                        {renderSpeakerOptionContent(actor)}
+                                    </Box>
+                                );
+                            })}
+                        </Paper>
+                    </>
+                )}
+            </Box>
         );
     };
 
@@ -714,7 +954,11 @@ export function NovelVisualizer<
             triggerHapticFeedback(8);
         }
         if (isEditingMessage) {
-            handleConfirmEdit();
+            if (isDeletingMessage) {
+                handleCancelEdit();
+            } else {
+                handleConfirmEdit();
+            }
         }
 
         if (!inputText.trim() && index < scriptEntries.length - 1) {
@@ -1013,7 +1257,7 @@ export function NovelVisualizer<
                                         {button.content}
                                     </IconButton>
                                 ))}
-                                {!isEditingMessage ? (
+                                {!readOnly && (!isEditingMessage ? (
                                     <IconButton
                                         onClick={handleButtonPress(handleEnterEditMode)}
                                         onMouseEnter={() => {setTooltip?.('Edit message', Edit)}}
@@ -1028,7 +1272,7 @@ export function NovelVisualizer<
                                     <>
                                         <IconButton
                                             onClick={handleButtonPress(handleConfirmEdit)}
-                                            onMouseEnter={() => {setTooltip?.('Confirm changes', Check)}}
+                                            onMouseEnter={() => {setTooltip?.(isDeletingMessage ? 'Confirm deletion' : 'Confirm changes', Check)}}
                                             onMouseLeave={() => setTooltip?.(null)}
                                             size="small"
                                             sx={{
@@ -1076,10 +1320,36 @@ export function NovelVisualizer<
                                         >
                                             <Clear fontSize={isVerticalLayout ? 'inherit' : 'small'} sx={{ fontSize: isVerticalLayout ? '16px' : undefined }} />
                                         </IconButton>
+                                        <IconButton
+                                            onClick={handleButtonPress(handleToggleDeleteMessage)}
+                                            onMouseEnter={() => {setTooltip?.(isDeletingMessage ? 'Cancel deletion' : 'Delete this message', Delete)}}
+                                            onMouseLeave={() => setTooltip?.(null)}
+                                            size="small"
+                                            sx={{
+                                                color: isDeletingMessage ? errorLight : errorMain,
+                                                border: `1px solid ${safeAlpha(errorMain, isDeletingMessage ? 0.6 : 0.25)}`,
+                                                backgroundColor: isDeletingMessage ? safeAlpha(errorMain, 0.2) : 'transparent',
+                                                ...compactIconButtonSx,
+                                                opacity: 1,
+                                                transform: 'scale(1)',
+                                                transition: 'all 0.3s ease',
+                                                animation: 'fadeIn 0.3s ease',
+                                                '@keyframes fadeIn': {
+                                                    from: { opacity: 0, transform: 'scale(0.8)' },
+                                                    to: { opacity: 1, transform: 'scale(1)' }
+                                                },
+                                                '&:hover': {
+                                                    borderColor: safeAlpha(errorMain, 0.4),
+                                                    color: errorLight
+                                                }
+                                            }}
+                                        >
+                                            <Delete fontSize={isVerticalLayout ? 'inherit' : 'small'} sx={{ fontSize: isVerticalLayout ? '16px' : undefined }} />
+                                        </IconButton>
                                     </>
-                                )}
+                                ))}
 
-                                {enableReroll && (
+                                {enableReroll && !readOnly && !isEditingMessage && (
                                     <IconButton
                                         onClick={handleButtonPress(handleReroll)}
                                         onMouseEnter={() => {setTooltip?.('Regenerate events from this point', Casino)}}
@@ -1128,35 +1398,70 @@ export function NovelVisualizer<
                         }}
                     >
                         {isEditingMessage ? (
-                            <TextField
-                                fullWidth
-                                multiline
-                                value={editedMessage}
-                                onChange={(e) => setEditedMessage(e.target.value)}
-                                autoFocus
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && e.ctrlKey) {
-                                        e.preventDefault();
-                                        handleConfirmEdit();
-                                    } else if (e.key === 'Escape') {
-                                        e.preventDefault();
-                                        handleCancelEdit();
-                                    }
-                                }}
-                                sx={{
-                                    '& .MuiInputBase-root': {
-                                        fontSize: isVerticalLayout ? 'clamp(0.75rem, 2vw, 1.18rem)' : '1.18rem',
-                                        lineHeight: 1.55,
-                                        fontFamily: theme.typography.fontFamily,
-                                        color: theme.palette.text.primary,
-                                        backgroundColor: safeAlpha(theme.palette.action.selected, 0.5),
-                                        padding: isVerticalLayout ? '4px' : '8px'
-                                    },
-                                    '& .MuiInputBase-input': {
-                                        padding: 0
-                                    }
-                                }}
-                            />
+                            <Box sx={{ position: 'relative' }}>
+                                <TextField
+                                    fullWidth
+                                    multiline
+                                    value={editedMessage}
+                                    onChange={(e) => setEditedMessage(e.target.value)}
+                                    autoFocus
+                                    disabled={isDeletingMessage}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && e.ctrlKey) {
+                                            e.preventDefault();
+                                            handleConfirmEdit();
+                                        } else if (e.key === 'Escape') {
+                                            e.preventDefault();
+                                            handleCancelEdit();
+                                        }
+                                    }}
+                                    sx={{
+                                        '& .MuiInputBase-root': {
+                                            fontSize: isVerticalLayout ? 'clamp(0.75rem, 2vw, 1.18rem)' : '1.18rem',
+                                            lineHeight: 1.55,
+                                            fontFamily: theme.typography.fontFamily,
+                                            color: theme.palette.text.primary,
+                                            backgroundColor: safeAlpha(theme.palette.action.selected, 0.5),
+                                            padding: isVerticalLayout ? '4px' : '8px'
+                                        },
+                                        '& .MuiInputBase-input': {
+                                            padding: 0
+                                        }
+                                    }}
+                                />
+                                {isDeletingMessage && (
+                                    <Box
+                                        sx={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderRadius: 1,
+                                            backgroundColor: safeAlpha(theme.palette.common.black, 0.65),
+                                            zIndex: 1,
+                                            animation: 'fadeIn 0.2s ease',
+                                            '@keyframes fadeIn': {
+                                                from: { opacity: 0 },
+                                                to: { opacity: 1 }
+                                            }
+                                        }}
+                                    >
+                                        <Typography
+                                            sx={{
+                                                fontWeight: 700,
+                                                letterSpacing: '0.08em',
+                                                fontSize: isVerticalLayout ? 'clamp(0.75rem, 2vw, 1.18rem)' : '1.18rem',
+                                                fontFamily: theme.typography.fontFamily,
+                                                color: errorLight,
+                                                textShadow: baseTextShadow
+                                            }}
+                                        >
+                                            Delete Message
+                                        </Typography>
+                                    </Box>
+                                )}
+                            </Box>
                         ) : (
                             <Typography
                                 variant="body1"
@@ -1185,7 +1490,7 @@ export function NovelVisualizer<
 
                     {!hideInput && (
                         <Box sx={{ display: 'flex', gap: isVerticalLayout ? 0.5 : 1.5, alignItems: 'center' }}>
-                            <TextField
+                            {!readOnly && <TextField
                                 fullWidth
                                 value={inputText}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputText(e.target.value)}
@@ -1239,8 +1544,9 @@ export function NovelVisualizer<
                                         WebkitTextFillColor: safeAlpha(theme.palette.text.primary, 0.45)
                                     }
                                 }}
-                            />
+                            />}
                             <Button
+                                fullWidth={readOnly}
                                 onClick={handleSubmit}
                                 disabled={isLoading}
                                 variant="contained"
@@ -1329,6 +1635,7 @@ export function NovelVisualizer<
                         }}
                         sx={{
                             position: 'absolute',
+                            top: '2%',
                             inset: 0,
                             zIndex: 5,
                             display: 'flex',

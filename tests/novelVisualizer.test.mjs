@@ -107,3 +107,15 @@ test('omitting custom actions preserves built-in controls', () => {
     assert.ok(markup.includes('data-testid="CasinoIcon"'));
     assert.ok(!markup.includes('data-testid="bookmark"'));
 });
+
+test('readOnly hides edit, reroll, and input while keeping a full-width continue button', () => {
+    const markup = render({ additionalActionButtons, readOnly: true });
+    assert.ok(!markup.includes('data-testid="EditIcon"'));
+    assert.ok(!markup.includes('data-testid="CasinoIcon"'));
+    assert.ok(markup.includes('data-testid="bookmark"'));
+    assert.ok(!markup.includes('<input'));
+    const continueButton = markup.match(/<button[^>]*class="[^"]*MuiButton-fullWidth[^"]*"[^>]*>/)?.[0];
+    assert.ok(continueButton);
+    assert.ok(markup.includes('Continue'));
+});
+

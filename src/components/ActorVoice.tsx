@@ -125,7 +125,7 @@ export const ACTOR_VOICES: ActorVoice[] = [
     { id: '9e370917-9964-42b5-9d0b-5a8adfef1955', gender: 'female', accent: 'American', description: 'Playful and ditzy', volumeModifier: 1, tags: ['playful', 'ditzy'] },
     { id: 'b52d6608-66eb-4daa-87cb-541b0a63d830', gender: 'female', accent: 'American', description: 'Bratty and Nasal', volumeModifier: 1, tags: ['bratty', 'nasal'] },
     { id: '4d440d36-105a-4cb3-a836-a008c9fb5f0e', gender: 'female', accent: 'American', description: 'Rich and sassy', volumeModifier: 1, tags: ['rich', 'sassy'] },
-    { id: '171ecd2a-c4d4-4a4e-99bb-43eff6deeb9c', gender: 'female', accent: 'American', description: 'Sharp and twangy', volumeModifier: 1, tags: ['sharp', 'twangy'] },
+    { id: '171ecd2a-c4d4-4a4e-99bb-43eff6deeb9c', gender: 'female', accent: 'American', description: 'Sharp and twangy', volumeModifier: 1.2, tags: ['sharp', 'twangy'] },
     { id: 'efd80f23-39dc-4d81-8030-66c72951dc54', gender: 'female', accent: 'Scottish', description: 'Warm and playful', volumeModifier: 1, tags: ['warm', 'playful'] },
     { id: '6a6cb9c6-f41f-492b-a9f2-49f1188949a7', gender: 'male', accent: 'German', description: 'Soft and kind', volumeModifier: 1, tags: ['soft', 'kind'] },
     { id: 'fc734b40-bf22-4c0a-b926-a5fbd5b85aa0', gender: 'female', accent: 'Australian', description: 'Bright and nerdy', volumeModifier: 1, tags: ['bright', 'nerdy'] },

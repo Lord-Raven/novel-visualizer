@@ -89,6 +89,14 @@ interface NovelVisualizerProps<TActor extends NovelActor, TSkit extends NovelSki
     allowTypingSkip?: boolean;
     onSubmitInput?: (inputText: string, skit: TSkit, index: number) => Promise<TSkit>;
     onUpdateMessage?: (index: number, message: string) => void;
+    /**
+     * Called when the user reassigns a message to a different actor while editing;
+     * `speakerId` is undefined when the message is reassigned to the narrator.
+     * When omitted, the entry's speakerId is updated on the local script.
+     */
+    onUpdateSpeaker?: (index: number, speakerId: string | undefined) => void;
+    /** Called when the user deletes a message while editing; when omitted, the entry is removed from the local script. */
+    onDeleteMessage?: (index: number) => void;
     onSkitChange?: (newSkit: TSkit) => void;
     inputPlaceholder?: string | ((context: {
         index: number;
@@ -127,6 +135,11 @@ interface NovelVisualizerProps<TActor extends NovelActor, TSkit extends NovelSki
     loading?: boolean;
     setTooltip?: (newMessage: string | null, newIcon?: SvgIconComponent) => void;
     hideInput?: boolean;
+    /**
+     * When enabled, the user cannot modify the script: the edit and reroll buttons are
+     * hidden, the input field is removed, and the continue button fills the bottom bar.
+     */
+    readOnly?: boolean;
     hideActionButtons?: boolean;
     /** Styled custom actions rendered before edit/reroll; hidden when hideActionButtons is true. */
     additionalActionButtons?: readonly ActionButtonConfig[];

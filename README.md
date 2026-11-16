@@ -1,6 +1,19 @@
 # novel-visualizer
 A VN skit component for React. Uses Framer Motion. Intended for use in Chub.ai stages, but I guess I'll be agnostic about it.
 
+## Reassigning a message's speaker
+
+While editing a message, the nameplate becomes a clickable control. Clicking it
+opens a drop-up listing the nameplates of every actor in the `actors` record,
+plus a blank narrator option (shown as a dimmed "(Narrator)" placeholder when no
+custom nameplate or `narratorLabel` is provided). Selecting a nameplate stages
+the reassignment; it is applied when the edits are confirmed, setting the
+entry's `speakerId` to the chosen actor's id (or clearing it for the narrator).
+
+Provide the optional `onUpdateSpeaker(index, speakerId)` callback to handle the
+reassignment externally (`speakerId` is `undefined` for the narrator); when
+omitted, the local script entry is updated directly.
+
 ## Additional action buttons
 
 Pass an array of `ActionButtonConfig` objects to `additionalActionButtons` to render
@@ -41,3 +54,12 @@ their optional `disabled` flag is true.
 Custom actions remain visible while editing. `hideActionButtons` hides the entire
 row, including custom buttons; `enableReroll` only controls the built-in reroll
 button. Omit the prop or pass an empty array to preserve the default controls.
+
+## Read-only mode
+
+Set `readOnly` to prevent the user from modifying the script: the built-in edit
+and reroll buttons are hidden and the input field is removed, leaving the
+continue button to fill the entire bottom bar. Navigation (arrows, chat log,
+clicking to advance) still works, and custom `additionalActionButtons` remain
+visible. Unlike `hideInput`, which removes the whole bottom bar, `readOnly`
+keeps the continue button available.
