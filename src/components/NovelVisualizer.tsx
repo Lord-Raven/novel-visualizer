@@ -362,9 +362,10 @@ export function NovelVisualizer<
         return null;
     }, [scriptEntries, index, actors]);
 
+    const currentSpeakerId = index >= 0 && index < scriptEntries.length ? scriptEntries[index].speakerId : undefined;
     const speakerActor = useMemo(() => {
-        return index >= 0 && index < scriptEntries.length && scriptEntries[index].speakerId ? actors[scriptEntries[index].speakerId] : null;
-    }, [scriptEntries, index, actors]);
+        return currentSpeakerId ? actors[currentSpeakerId] ?? null : null;
+    }, [currentSpeakerId, actors]);
 
     const currentSpeechUrl = useMemo(() => {
         return index >= 0 && index < scriptEntries.length ? scriptEntries[index].speechUrl : undefined;
@@ -647,7 +648,8 @@ export function NovelVisualizer<
         const applyLocalMessage = messageChanged && !onUpdateMessage;
         const applyLocalSpeaker = speakerChanged && !onUpdateSpeaker;
         if (applyLocalMessage || applyLocalSpeaker) {
-            const updated = { ...localSkit };
+            // Copy the script array so memos keyed on it recompute immediately.
+            const updated = { ...localSkit, script: [...localSkit.script] };
             if (index >= 0 && index < updated.script.length && updated.script[index]) {
                 const entry = { ...updated.script[index] };
                 if (applyLocalMessage) {

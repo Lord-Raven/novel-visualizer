@@ -168,6 +168,41 @@ const createEditor = (props) => {
     };
 };
 
+test('local speaker reassignment shows the new nameplate immediately without mutating the original script', () => {
+    const actors = {
+        past: { id: 'past', name: 'Past participant' },
+        presentZ: { id: 'presentZ', name: 'Zoe' }
+    };
+    const script = [
+        { speakerId: 'past', message: 'Earlier' },
+        { speakerId: 'presentZ', message: 'Current' }
+    ];
+    const editor = createEditor({
+        actors,
+        skit: { currentIndex: 1, script },
+        getPresentActors: () => [actors.presentZ],
+        renderNameplate: actor => React.createElement('span', { 'data-testid': 'nameplate' }, actor?.name ?? '')
+    });
+    editor.render();
+    editor.clickIcon(Edit);
+    editor.render();
+    editor.find(node => node.props['aria-label'] === 'Change message speaker').props.onClick();
+    editor.render();
+    const list = editor.find(node => node.props.role === 'listbox');
+    const options = React.Children.toArray(list.props.children);
+    const pastOption = options.find(option => option.props.children.props.children === 'Past participant');
+    assert.ok(pastOption);
+    pastOption.props.onClick();
+    editor.render();
+    editor.clickIcon(Check);
+    editor.render();
+    // Nameplate reflects the reassignment on the very next render, before any navigation.
+    assert.equal(editor.find(node => node.props['data-testid'] === 'nameplate').props.children, 'Past participant');
+    // The caller's script array must not be mutated in place; stale array identity
+    // previously kept the old speaker's nameplate until the index changed.
+    assert.equal(script[1].speakerId, 'presentZ');
+});
+
 for (const isVerticalLayout of [false, true]) {
     test(`speaker picker preserves custom positioning and prioritizes names (${isVerticalLayout ? 'vertical' : 'standard'})`, () => {
         const actors = {

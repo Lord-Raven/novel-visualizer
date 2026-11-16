@@ -2777,9 +2777,10 @@ function NovelVisualizer(props) {
     }
     return null;
   }, [scriptEntries, index, actors]);
+  const currentSpeakerId = index >= 0 && index < scriptEntries.length ? scriptEntries[index].speakerId : void 0;
   const speakerActor = (0, import_react8.useMemo)(() => {
-    return index >= 0 && index < scriptEntries.length && scriptEntries[index].speakerId ? actors[scriptEntries[index].speakerId] : null;
-  }, [scriptEntries, index, actors]);
+    return currentSpeakerId ? actors[currentSpeakerId] ?? null : null;
+  }, [currentSpeakerId, actors]);
   const currentSpeechUrl = (0, import_react8.useMemo)(() => {
     return index >= 0 && index < scriptEntries.length ? scriptEntries[index].speechUrl : void 0;
   }, [scriptEntries, index]);
@@ -2962,10 +2963,10 @@ function NovelVisualizer(props) {
     if (readOnly) return;
     if (!localSkit || !Array.isArray(localSkit.script)) return;
     const currentMessage = index >= 0 && index < scriptEntries.length ? scriptEntries[index]?.message ?? "" : "";
-    const currentSpeakerId = index >= 0 && index < scriptEntries.length ? scriptEntries[index]?.speakerId : void 0;
+    const currentSpeakerId2 = index >= 0 && index < scriptEntries.length ? scriptEntries[index]?.speakerId : void 0;
     setOriginalMessage(currentMessage);
     setEditedMessage(currentMessage);
-    setEditedSpeakerId(currentSpeakerId || null);
+    setEditedSpeakerId(currentSpeakerId2 || null);
     setIsSpeakerMenuOpen(false);
     setIsDeletingMessage(false);
     setIsEditingMessage(true);
@@ -2994,10 +2995,10 @@ function NovelVisualizer(props) {
       return;
     }
     const currentMessage = index >= 0 && index < scriptEntries.length ? scriptEntries[index]?.message ?? "" : "";
-    const currentSpeakerId = index >= 0 && index < scriptEntries.length ? scriptEntries[index]?.speakerId : void 0;
+    const currentSpeakerId2 = index >= 0 && index < scriptEntries.length ? scriptEntries[index]?.speakerId : void 0;
     const newSpeakerId = editedSpeakerId ?? void 0;
     const messageChanged = editedMessage !== currentMessage;
-    const speakerChanged = newSpeakerId !== (currentSpeakerId || void 0);
+    const speakerChanged = newSpeakerId !== (currentSpeakerId2 || void 0);
     if (!messageChanged && !speakerChanged) {
       setIsEditingMessage(false);
       setIsSpeakerMenuOpen(false);
@@ -3013,7 +3014,7 @@ function NovelVisualizer(props) {
     const applyLocalMessage = messageChanged && !onUpdateMessage;
     const applyLocalSpeaker = speakerChanged && !onUpdateSpeaker;
     if (applyLocalMessage || applyLocalSpeaker) {
-      const updated = { ...localSkit };
+      const updated = { ...localSkit, script: [...localSkit.script] };
       if (index >= 0 && index < updated.script.length && updated.script[index]) {
         const entry = { ...updated.script[index] };
         if (applyLocalMessage) {
