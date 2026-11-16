@@ -4,9 +4,12 @@ A VN skit component for React. Uses Framer Motion. Intended for use in Chub.ai s
 ## Reassigning a message's speaker
 
 While editing a message, the nameplate becomes a clickable control. Clicking it
-opens a drop-up listing the nameplates of every actor in the `actors` record,
-plus a blank narrator option (shown as a dimmed "(Narrator)" placeholder when no
-custom nameplate or `narratorLabel` is provided). Selecting a nameplate stages
+opens a drop-up listing the names of every actor in the `actors` record,
+plus a narrator option (using `narratorLabel` or "(Narrator)"). Present actors
+appear first, followed by other actors who speak anywhere in the skit's script,
+then the remaining actors; each group is sorted by name. The narrator stays at
+the top. Custom nameplates keep their positioning while editing and are not
+rendered in the options list. Selecting a name stages
 the reassignment; it is applied when the edits are confirmed, setting the
 entry's `speakerId` to the chosen actor's id (or clearing it for the narrator).
 

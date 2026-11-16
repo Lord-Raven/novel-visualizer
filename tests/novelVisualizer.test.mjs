@@ -7,6 +7,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 const require = createRequire(import.meta.url);
 const { NovelVisualizer } = require('@lord-raven/novel-visualizer');
 const { default: Bookmark } = require('@mui/icons-material/Bookmark');
+const { default: Edit } = require('@mui/icons-material/Edit');
+const { default: Check } = require('@mui/icons-material/Check');
 
 const render = (props = {}) => renderToStaticMarkup(React.createElement(NovelVisualizer, {
     skit: { currentIndex: 0, script: [{ message: 'Hello' }] },
@@ -119,3 +121,98 @@ test('readOnly hides edit, reroll, and input while keeping a full-width continue
     assert.ok(markup.includes('Continue'));
 });
 
+const findElement = (node, predicate) => {
+    if (!React.isValidElement(node)) return undefined;
+    if (predicate(node)) return node;
+    for (const child of React.Children.toArray(node.props.children)) {
+        const found = findElement(child, predicate);
+        if (found) return found;
+    }
+};
+
+// Retain hook state between server renders so edit controls can be exercised
+// without mounting MUI or running browser/audio effects.
+const createEditor = (props) => {
+    const states = [];
+    let tree;
+    const Probe = () => {
+        const originalUseState = React.useState;
+        let cursor = 0;
+        React.useState = (initial) => {
+            const slot = cursor++;
+            if (!(slot in states)) states[slot] = typeof initial === 'function' ? initial() : initial;
+            return [states[slot], value => {
+                states[slot] = typeof value === 'function' ? value(states[slot]) : value;
+            }];
+        };
+        try {
+            tree = NovelVisualizer({
+                playerActorId: 'player',
+                getActorImageUrl: () => '',
+                enableAudio: false,
+                ...props
+            });
+            return tree;
+        } finally {
+            React.useState = originalUseState;
+        }
+    };
+    return {
+        render: () => renderToStaticMarkup(React.createElement(Probe)),
+        find: predicate => findElement(tree, predicate),
+        clickIcon: icon => {
+            const button = findElement(tree, node => node.props.children?.type === icon && node.props.onClick);
+            assert.ok(button, 'Expected an actionable icon button');
+            button.props.onClick();
+        }
+    };
+};
+
+for (const isVerticalLayout of [false, true]) {
+    test(`speaker picker preserves custom positioning and prioritizes names (${isVerticalLayout ? 'vertical' : 'standard'})`, () => {
+        const actors = {
+            outsider: { id: 'outsider', name: 'Aaron' },
+            future: { id: 'future', name: 'Future participant' },
+            past: { id: 'past', name: 'Past participant' },
+            presentZ: { id: 'presentZ', name: 'Zoe' },
+            presentA: { id: 'presentA', name: 'Amy' }
+        };
+        const updates = [];
+        const editor = createEditor({
+            isVerticalLayout,
+            actors,
+            skit: { currentIndex: 1, script: [
+                { speakerId: 'past', message: 'Earlier' },
+                { speakerId: 'presentZ', message: 'Current' },
+                { speakerId: 'future', message: 'Later' }
+            ] },
+            getPresentActors: () => [{ ...actors.presentZ }, { ...actors.presentA }],
+            renderNameplate: actor => React.createElement('span', {
+                'data-testid': 'custom-nameplate',
+                style: { position: 'absolute', left: '50%', transform: 'translateX(-50%)' }
+            }, actor?.name ?? ''),
+            onUpdateSpeaker: (...args) => updates.push(args)
+        });
+        editor.render();
+        editor.clickIcon(Edit);
+        editor.render();
+        const control = editor.find(node => node.props['aria-label'] === 'Change message speaker');
+        assert.equal(control.props.sx.display, 'contents');
+        assert.equal(control.props.sx.position, undefined);
+        control.props.onClick();
+        editor.render();
+        const list = editor.find(node => node.props.role === 'listbox');
+        const options = React.Children.toArray(list.props.children);
+        assert.deepEqual(options.map(option => option.props.children.props.children),
+            ['(Narrator)', 'Amy', 'Zoe', 'Future participant', 'Past participant', 'Aaron']);
+        assert.equal(findElement(list, node => node.props['data-testid'] === 'custom-nameplate'), undefined);
+        assert.equal(options[2].props['aria-selected'], true);
+        options[4].props.onClick();
+        editor.render();
+        assert.equal(editor.find(node => node.props.role === 'listbox'), undefined);
+        assert.equal(editor.find(node => node.props['data-testid'] === 'custom-nameplate').props.children, 'Past participant');
+        editor.clickIcon(Check);
+        editor.render();
+        assert.deepEqual(updates, [[1, 'past']]);
+    });
+}

@@ -3063,6 +3063,14 @@ function NovelVisualizer(props) {
   const editedSpeakerActor = (0, import_react8.useMemo)(() => {
     return editedSpeakerId ? actors[editedSpeakerId] ?? null : null;
   }, [editedSpeakerId, actors]);
+  const speakerOptions = (0, import_react8.useMemo)(() => {
+    const presentIds = new Set(actorsAtIndex.map((actor) => actor.id));
+    const participantIds = new Set(scriptEntries.map((entry) => entry.speakerId));
+    const priority = (actor) => presentIds.has(actor.id) ? 0 : participantIds.has(actor.id) ? 1 : 2;
+    return [null, ...Object.values(actors).sort(
+      (a, b) => priority(a) - priority(b) || a.name.localeCompare(b.name)
+    )];
+  }, [actors, actorsAtIndex, scriptEntries]);
   const renderNameplateFor = (actor) => {
     if (renderNameplate)
       return renderNameplate(actor);
@@ -3107,8 +3115,7 @@ function NovelVisualizer(props) {
     if (!isEditingMessage) {
       return renderNameplateFor(speakerActor);
     }
-    const speakerOptions = [null, ...Object.values(actors)];
-    return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_material.Box, { sx: { position: "relative", display: "flex", alignItems: "flex-end" }, children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
       /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
         import_material.Box,
         {
@@ -3134,12 +3141,8 @@ function NovelVisualizer(props) {
           onMouseEnter: () => setTooltip?.("Reassign this message to another actor", import_icons_material.RecordVoiceOver),
           onMouseLeave: () => setTooltip?.(null),
           sx: {
-            display: "flex",
-            alignItems: "center",
-            gap: 0.25,
-            px: isVerticalLayout ? 0.5 : 0.75,
-            borderRadius: 1,
-            border: `1px dashed ${safeAlpha(accentMain, 0.5)}`,
+            // Keep custom nameplates anchored to the same containing block as outside edit mode.
+            display: "contents",
             cursor: isDeletingMessage ? "default" : "pointer",
             opacity: isDeletingMessage ? 0.5 : 1,
             transition: "background-color 0.2s ease, border-color 0.2s ease",
@@ -3171,7 +3174,8 @@ function NovelVisualizer(props) {
             sx: {
               position: "absolute",
               bottom: "100%",
-              left: 0,
+              left: "50%",
+              transform: "translateX(-50%)",
               mb: 0.5,
               zIndex: 12,
               minWidth: isVerticalLayout ? "120px" : "160px",
@@ -3210,7 +3214,17 @@ function NovelVisualizer(props) {
                       backgroundColor: theme.palette.action.hover
                     }
                   },
-                  children: renderSpeakerOptionContent(actor)
+                  children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                    import_material.Typography,
+                    {
+                      sx: {
+                        fontSize: isVerticalLayout ? "0.85rem" : "1rem",
+                        fontWeight: isSelected ? 700 : 400,
+                        color: actor ? theme.palette.text.primary : theme.palette.text.secondary
+                      },
+                      children: actor ? actor.name : narratorLabel || "(Narrator)"
+                    }
+                  )
                 },
                 optionId ?? "__narrator__"
               );
